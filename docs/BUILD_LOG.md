@@ -8,7 +8,7 @@ Planning documents (threat model, eval plan, demo script) were written before ki
 
 ## Sessions
 
-### Mon Oct 26, 22:30–23:15 IST — Day 0
+### Mon Oct 26, 22:30–22:35 IST — Day 0 (first session)
 - Read the official rules signed in; chose a from-scratch governor (rules: new work only).
 - Glimmer smoke test on NVIDIA's free endpoint (outside the repo): JSON schema not enforced, image input works, ~1 min per image call.
 - `governor/`: verdict types with no `Allow` severity, escalate-only `merge`, fail-closed checker parsing, strict proposal schema (bank fields → BLOCK), vendor master + PO table + policy, ledger (paid/pending/rejected), rules: unknown vendor, PO ownership/balance/tolerance, cap/threshold, duplicate key (NFKC, dashes, zero-width), IRN duplicate, same invoice other amount, 7-day vendor window, GSTIN and sender-domain issuer binding, bank-box tamper alert; hash-chained audit. 21 tests incl. proptest monotonic merge, checker fault table, forged all-clear, window edges.
