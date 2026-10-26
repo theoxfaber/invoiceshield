@@ -1,0 +1,71 @@
+//! Payment ledger: paid and pending (REVIEW) entries per vendor.
+//! Blocked attempts are never recorded, so they cannot inflate or hide a window sum.
+use serde::{Deserialize, Serialize};
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "lowercase")]
+pub enum EntryStatus {
+    Paid,
+    Pending,
+    Rejected,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct Entry {
+    pub decision_id: String,
+    pub vendor_id: String,
+    pub invoice_key: String,
+    pub irn: Option<String>,
+    pub amount_paise: i64,
+    pub po_ref: String,
+    pub status: EntryStatus,
+    pub ts: i64,
+}
+
+#[derive(Debug, Clone, Default, Serialize, Deserialize)]
+pub struct Ledger {
+    pub entries: Vec<Entry>,
+}
+
+impl Ledger {
+    fn live(&self) -> impl Iterator<Item = &Entry> {
+        self.entries.iter().filter(|e| e.status != EntryStatus::Rejected)
+    }
+
+    pub fn exact_duplicate(&self, vendor_id: &str, invoice_key: &str, amount: i64) -> Option<&Entry> {
+        self.live()
+            .find(|e| e.vendor_id == vendor_id && e.invoice_key == invoice_key && e.amount_paise == amount)
+    }
+
+    pub fn same_invoice_other_amount(&self, vendor_id: &str, invoice_key: &str, amount: i64) -> Option<&Entry> {
+        self.live()
+            .find(|e| e.vendor_id == vendor_id && e.invoice_key == invoice_key && e.amount_paise != amount)
+    }
+
+    pub fn irn_seen(&self, irn: &str) -> Option<&Entry> {
+        self.live().find(|e| e.irn.as_deref() == Some(irn))
+    }
+
+    /// Sum of paid + pending for a vendor in (now - window, now].
+    pub fn window_sum(&self, vendor_id: &str, now: i64, window_secs: i64) -> i64 {
+        self.live()
+            .filter(|e| e.vendor_id == vendor_id && e.ts > now - window_secs && e.ts <= now)
+            .map(|e| e.amount_paise)
+            .sum()
+    }
+
+    /// Amount already committed (paid + pending) against a PO.
+    pub fn po_committed(&self, po_ref: &str) -> i64 {
+        self.live().filter(|e| e.po_ref == po_ref).map(|e| e.amount_paise).sum()
+    }
+
+    pub fn set_status(&mut self, decision_id: &str, status: EntryStatus) -> bool {
+        match self.entries.iter_mut().find(|e| e.decision_id == decision_id) {
+            Some(e) if e.status == EntryStatus::Pending => {
+                e.status = status;
+                true
+            }
+            _ => false,
+        }
+    }
+}
