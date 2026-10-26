@@ -1,0 +1,277 @@
+{
+  "vendors": [
+    {
+      "vendor_id": "V001",
+      "legal_name": "Sharma Office Supplies Pvt Ltd",
+      "gstin": "24ZZACS4821A1ZX",
+      "pan": "ZZACS4821A",
+      "beneficiary_id": "BENE_V001",
+      "bank_account": "23276810695553",
+      "ifsc": "BARB0MAKVAD",
+      "bank_name": "Bank of Baroda",
+      "email_domains": [
+        "sharmaofficesupplies.in"
+      ],
+      "category": "Stationery & consumables"
+    },
+    {
+      "vendor_id": "V002",
+      "legal_name": "Coastal Logistics",
+      "gstin": "37ZZAFC5390B1ZO",
+      "pan": "ZZAFC5390B",
+      "beneficiary_id": "BENE_V002",
+      "bank_account": "13579372664386",
+      "ifsc": "HDFC0005755",
+      "bank_name": "HDFC Bank",
+      "email_domains": [
+        "coastallogistics.co.in",
+        "coastal-logistics.in"
+      ],
+      "category": "Freight & logistics"
+    },
+    {
+      "vendor_id": "V003",
+      "legal_name": "BrightCloud Software Inc.",
+      "gstin": null,
+      "pan": null,
+      "beneficiary_id": "BENE_V003",
+      "bank_account": "754155265497",
+      "ifsc": "CHASUS33XXX",
+      "bank_name": "JPMorgan Chase Bank, N.A.",
+      "email_domains": [
+        "brightcloudsoftware.com"
+      ],
+      "category": "SaaS licences"
+    },
+    {
+      "vendor_id": "V004",
+      "legal_name": "Visakha Steel Fabricators Pvt Ltd",
+      "gstin": "37ZZACV6143D1ZE",
+      "pan": "ZZACV6143D",
+      "beneficiary_id": "BENE_V004",
+      "bank_account": "38392373066",
+      "ifsc": "SBIN0067530",
+      "bank_name": "State Bank of India",
+      "email_domains": [
+        "visakhasteelfab.in"
+      ],
+      "category": "Fabrication & machining"
+    },
+    {
+      "vendor_id": "V005",
+      "legal_name": "GreenLeaf Catering",
+      "gstin": "24ZZAPG2785E1ZZ",
+      "pan": "ZZAPG2785E",
+      "beneficiary_id": "BENE_V005",
+      "bank_account": "183172620449",
+      "ifsc": "ICIC0002648",
+      "bank_name": "ICICI Bank",
+      "email_domains": [
+        "greenleafcatering.in"
+      ],
+      "category": "Canteen catering"
+    },
+    {
+      "vendor_id": "V006",
+      "legal_name": "Nimbus IT Services Pvt Ltd",
+      "gstin": "36ZZACN8034F1ZI",
+      "pan": "ZZACN8034F",
+      "beneficiary_id": "BENE_V006",
+      "bank_account": "547161404851949",
+      "ifsc": "UTIB0002519",
+      "bank_name": "Axis Bank",
+      "email_domains": [
+        "nimbusitservices.in"
+      ],
+      "category": "IT services (AMC)"
+    },
+    {
+      "vendor_id": "V007",
+      "legal_name": "Patel Packaging",
+      "gstin": "24ZZAFP3576G1Z8",
+      "pan": "ZZAFP3576G",
+      "beneficiary_id": "BENE_V007",
+      "bank_account": "2527567031",
+      "ifsc": "KKBK0001080",
+      "bank_name": "Kotak Mahindra Bank",
+      "email_domains": [
+        "patelpackaging.co.in"
+      ],
+      "category": "Packaging"
+    },
+    {
+      "vendor_id": "V008",
+      "legal_name": "Deccan Electricals Pvt Ltd",
+      "gstin": "36ZZACD9218H1ZK",
+      "pan": "ZZACD9218H",
+      "beneficiary_id": "BENE_V008",
+      "bank_account": "86254676687125",
+      "ifsc": "HDFC0008485",
+      "bank_name": "HDFC Bank",
+      "email_domains": [
+        "deccanelectricals.co.in"
+      ],
+      "category": "Electrical works"
+    },
+    {
+      "vendor_id": "V009",
+      "legal_name": "Sharma Office Solutions",
+      "gstin": "24ZZAPS1690J1ZI",
+      "pan": "ZZAPS1690J",
+      "beneficiary_id": "BENE_V009",
+      "bank_account": "63448484255",
+      "ifsc": "SBIN0061075",
+      "bank_name": "State Bank of India",
+      "email_domains": [
+        "sharmaofficesolutions.in"
+      ],
+      "category": "Stationery & office furniture"
+    },
+    {
+      "vendor_id": "V010",
+      "legal_name": "Nimbus Infotech LLP",
+      "gstin": "29ZZAFN4407K1Z3",
+      "pan": "ZZAFN4407K",
+      "beneficiary_id": "BENE_V010",
+      "bank_account": "485652947136",
+      "ifsc": "ICIC0007867",
+      "bank_name": "ICICI Bank",
+      "email_domains": [
+        "nimbusinfotech.co.in"
+      ],
+      "category": "IT hardware supply"
+    },
+    {
+      "vendor_id": "V011",
+      "legal_name": "Rao Civil Works",
+      "gstin": "37ZZAPR7752L1Z1",
+      "pan": "ZZAPR7752L",
+      "beneficiary_id": "BENE_V011",
+      "bank_account": "8497539963324",
+      "ifsc": "CNRB0006862",
+      "bank_name": "Canara Bank",
+      "email_domains": [
+        "raocivilworks.in"
+      ],
+      "category": "Civil maintenance"
+    },
+    {
+      "vendor_id": "V012",
+      "legal_name": "Shree Ganesh Cartons Pvt Ltd",
+      "gstin": "24ZZACG5061M1ZI",
+      "pan": "ZZACG5061M",
+      "beneficiary_id": "BENE_V012",
+      "bank_account": "797894619818894",
+      "ifsc": "UTIB0006225",
+      "bank_name": "Axis Bank",
+      "email_domains": [
+        "ganeshcartons.in"
+      ],
+      "category": "Packaging"
+    }
+  ],
+  "pos": [
+    {
+      "po_ref": "PO-2026-0101",
+      "owner_vendor_id": "V001",
+      "category": "Stationery",
+      "open_balance_paise": 8000000
+    },
+    {
+      "po_ref": "PO-2026-0102",
+      "owner_vendor_id": "V001",
+      "category": "Printer consumables",
+      "open_balance_paise": 6000000
+    },
+    {
+      "po_ref": "PO-2026-0201",
+      "owner_vendor_id": "V002",
+      "category": "Freight",
+      "open_balance_paise": 5000000
+    },
+    {
+      "po_ref": "PO-2026-0202",
+      "owner_vendor_id": "V002",
+      "category": "Freight (annual)",
+      "open_balance_paise": 32000000
+    },
+    {
+      "po_ref": "PO-2026-0301",
+      "owner_vendor_id": "V003",
+      "category": "SaaS",
+      "open_balance_paise": 8400000
+    },
+    {
+      "po_ref": "PO-2026-0401",
+      "owner_vendor_id": "V004",
+      "category": "Fabrication",
+      "open_balance_paise": 21000000
+    },
+    {
+      "po_ref": "PO-2026-0402",
+      "owner_vendor_id": "V004",
+      "category": "Machining",
+      "open_balance_paise": 6500000
+    },
+    {
+      "po_ref": "PO-2026-0501",
+      "owner_vendor_id": "V005",
+      "category": "Canteen catering",
+      "open_balance_paise": 12000000
+    },
+    {
+      "po_ref": "PO-2026-0601",
+      "owner_vendor_id": "V006",
+      "category": "IT services",
+      "open_balance_paise": 9000000
+    },
+    {
+      "po_ref": "PO-2026-0701",
+      "owner_vendor_id": "V007",
+      "category": "Packaging (corrugated)",
+      "open_balance_paise": 15000000
+    },
+    {
+      "po_ref": "PO-2026-0702",
+      "owner_vendor_id": "V007",
+      "category": "Packaging (shrink wrap)",
+      "open_balance_paise": 4000000
+    },
+    {
+      "po_ref": "PO-2026-0801",
+      "owner_vendor_id": "V008",
+      "category": "Electrical works",
+      "open_balance_paise": 50000000
+    },
+    {
+      "po_ref": "PO-2026-0901",
+      "owner_vendor_id": "V009",
+      "category": "Stationery",
+      "open_balance_paise": 7500000
+    },
+    {
+      "po_ref": "PO-2026-1001",
+      "owner_vendor_id": "V010",
+      "category": "IT hardware",
+      "open_balance_paise": 3000000
+    },
+    {
+      "po_ref": "PO-2026-1101",
+      "owner_vendor_id": "V011",
+      "category": "Civil maintenance",
+      "open_balance_paise": 20000000
+    },
+    {
+      "po_ref": "PO-2026-1201",
+      "owner_vendor_id": "V012",
+      "category": "Packaging (cartons)",
+      "open_balance_paise": 9000000
+    }
+  ],
+  "policy": {
+    "approval_threshold_paise": 10000000,
+    "payout_cap_paise": 50000000,
+    "po_tolerance_bp": 200,
+    "window_secs": 604800
+  }
+}

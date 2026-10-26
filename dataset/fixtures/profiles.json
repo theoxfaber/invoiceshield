@@ -1,0 +1,172 @@
+{
+  "_note": "Fictional fixture. Any match with a real business, account or domain is coincidental.",
+  "buyer": {
+    "legal_name": "Bhavani Precision Components Pvt Ltd",
+    "address": "Plot 14, GIDC Makarpura, Vadodara, Gujarat 390010",
+    "pan": "ZZACB7319B",
+    "state_code": "24",
+    "ap_email": "ap@bhavaniprecision.in",
+    "cfo": "R. Mehta, CFO",
+    "cfo_email": "cfo@bhavaniprecision.in",
+    "gstin": "24ZZACB7319B1Z5"
+  },
+  "vendors": {
+    "V001": {
+      "template": "T1",
+      "invoice_no_example": "SOS/26-27/0231",
+      "address": "12, Raopura Main Road, Vadodara, Gujarat 390001",
+      "phone": "+91 265 241 7730",
+      "state_code": "24",
+      "currency": "INR"
+    },
+    "V002": {
+      "template": "T2",
+      "invoice_no_example": "CL-26-0458",
+      "address": "Door 9-14-7, Port Area, Visakhapatnam, Andhra Pradesh 530035",
+      "phone": "+91 891 256 4402",
+      "state_code": "37",
+      "currency": "INR"
+    },
+    "V003": {
+      "template": "T2-USD",
+      "invoice_no_example": "BC-INV-10077",
+      "address": "1200 Harbor Blvd, Suite 400, Oakland, CA 94607, USA",
+      "phone": "+1 510 555 0148",
+      "state_code": null,
+      "currency": "USD"
+    },
+    "V004": {
+      "template": "T3",
+      "invoice_no_example": "VSF/0412/26",
+      "address": "Plot 22, Autonagar, Visakhapatnam, Andhra Pradesh 530012",
+      "phone": "+91 891 270 1189",
+      "state_code": "37",
+      "currency": "INR"
+    },
+    "V005": {
+      "template": "T3",
+      "invoice_no_example": "GL-1024",
+      "address": "4, Shreeji Complex, Manjalpur, Vadodara, Gujarat 390011",
+      "phone": "+91 98250 41637",
+      "state_code": "24",
+      "currency": "INR"
+    },
+    "V006": {
+      "template": "T2",
+      "invoice_no_example": "NITS-2026-117",
+      "address": "3rd Floor, Cyber Pearl, HITEC City, Hyderabad, Telangana 500081",
+      "phone": "+91 40 4012 7765",
+      "state_code": "36",
+      "currency": "INR"
+    },
+    "V007": {
+      "template": "T1",
+      "invoice_no_example": "PP/26-27/089",
+      "address": "Shed 31, Phase II, GIDC Vatva, Ahmedabad, Gujarat 382445",
+      "phone": "+91 79 2583 0914",
+      "state_code": "24",
+      "currency": "INR"
+    },
+    "V008": {
+      "template": "T1",
+      "invoice_no_example": "DE/26/0311",
+      "address": "8-2-293, Road No. 14, Banjara Hills, Hyderabad, Telangana 500034",
+      "phone": "+91 40 2354 6610",
+      "state_code": "36",
+      "currency": "INR"
+    },
+    "V009": {
+      "template": "T2",
+      "invoice_no_example": "SOL-0045",
+      "address": "27, Alkapuri Arcade, Vadodara, Gujarat 390007",
+      "phone": "+91 98795 22184",
+      "state_code": "24",
+      "currency": "INR"
+    },
+    "V010": {
+      "template": "T1",
+      "invoice_no_example": "NIL/26/0021",
+      "address": "No. 41, 2nd Cross, Koramangala 5th Block, Bengaluru, Karnataka 560095",
+      "phone": "+91 80 4153 2296",
+      "state_code": "29",
+      "currency": "INR"
+    },
+    "V011": {
+      "template": "T3",
+      "invoice_no_example": "RCW-07",
+      "address": "D.No. 5-61, Gajuwaka, Visakhapatnam, Andhra Pradesh 530026",
+      "phone": "+91 94403 18257",
+      "state_code": "37",
+      "currency": "INR"
+    },
+    "V012": {
+      "template": "T2",
+      "invoice_no_example": "SGC/26-27/0150",
+      "address": "Survey 118, Changodar Industrial Estate, Ahmedabad, Gujarat 382213",
+      "phone": "+91 79 2696 4471",
+      "state_code": "24",
+      "currency": "INR"
+    }
+  },
+  "po_totals_paise": {
+    "PO-2026-0101": 12000000,
+    "PO-2026-0102": 6000000,
+    "PO-2026-0201": 5000000,
+    "PO-2026-0202": 40000000,
+    "PO-2026-0301": 25200000,
+    "PO-2026-0401": 35000000,
+    "PO-2026-0402": 6500000,
+    "PO-2026-0501": 48000000,
+    "PO-2026-0601": 18000000,
+    "PO-2026-0701": 15000000,
+    "PO-2026-0702": 4000000,
+    "PO-2026-0801": 50000000,
+    "PO-2026-0901": 10000000,
+    "PO-2026-1001": 24000000,
+    "PO-2026-1101": 20000000,
+    "PO-2026-1201": 9000000
+  },
+  "fx": {
+    "USD_INR": 84.0
+  },
+  "attackers": {
+    "X_bank_change": {
+      "bank_name": "Canara Bank",
+      "ifsc": "CNRB0002778",
+      "bank_account": "3269010273503",
+      "story": "We have moved our current account to Canara Bank, Makarpura branch, after our Bank of Baroda account was closed for KYC re-verification. Please update your records and release payment to the new account below."
+    },
+    "X_ifsc_changed": {
+      "bank_name": "Bank of Baroda",
+      "ifsc": "BARB0ALKVAD",
+      "bank_account": "69420809939301"
+    },
+    "X_upi": {
+      "upi": "sharmaofficesupplies.pay@okaxis"
+    },
+    "R2_insider_edit": {
+      "bank_name": "ICICI Bank",
+      "ifsc": "ICIC0006999",
+      "bank_account": "821166576157"
+    },
+    "L01": {
+      "legal_name": "Sharrna Office Supplies Pvt Ltd",
+      "gstin": "24ZZACS4891A1ZJ",
+      "domain": "sharrnaofficesupplies.in"
+    },
+    "L02": {
+      "domain": "sharma-officesupplies.co.in"
+    },
+    "L03": {
+      "gstin_one_off": "24ZZACS4821A1Z8"
+    },
+    "L04": {
+      "legal_name": "Apex Global Traders",
+      "gstin": "27ZZACA9921Q1Z1",
+      "domain": "apexglobaltraders.in"
+    },
+    "L05": {
+      "domain": "bhavaniprecisions.in"
+    }
+  }
+}

@@ -10,3 +10,9 @@ Day 0 observations (Glimmer on NVIDIA's free trial endpoint): `response_format` 
 
 ## 2026-10-26 — Fixtures must look plausible
 A smoke test showed that an attack invoice with an obviously fake IFSC (containing "FAKE") makes the unshielded agent refuse. That would make the baseline look safer than it is. Attack fixtures therefore use real-format bank details and believable stories, while every name, GSTIN and account stays fictional.
+
+## 2026-10-26 23:30 IST — Fixture identifiers: real format, fictional values
+Replaces the pre-event `FAKE`/`7777`/`9999`/`.test` conventions. GSTINs use a ZZ-series PAN with a valid check character; IFSCs use real bank codes (BARB, CNRB, HDFC, ICIC, SBIN, UTIB, KKBK) in each bank's real branch-code shape with made-up branch codes; account numbers have each bank's usual length; domains are plausible `.in`/`.co.in` names. V004 renamed to Visakha Steel Fabricators to avoid RINL's "Vizag Steel" brand. No email is sent and no payment is made to any of these; README carries a "fictional, any match is coincidental" line. The Day 0 smoke showed fake-looking identifiers make the unshielded agent refuse, which would understate the risk.
+
+## 2026-10-26 23:30 IST — Model calls: cache by full-request hash + sample index
+Glimmer runs at temperature 1.0, so each eval case is sampled k times (sample = 0..k-1) and each sample cached once. Failed calls are never cached. The demo replays the cache (`offline=True`).
