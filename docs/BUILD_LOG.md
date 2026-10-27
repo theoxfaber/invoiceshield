@@ -65,3 +65,8 @@ Planning documents (threat model, eval plan, demo script) were written before ki
 - Decision recorded in `docs/DECISIONS.md`: GO on Plan B with Muse Glimmer 30B (NIM, cached replay) and the template-crop + OCR segmenter; SAM 3.1 only if GPU credits arrive. Live Glimmer text call re-checked at 19:4x IST (21.8 s).
 - Environment note: this sandbox session had no `cargo` on PATH and was missing Python deps (httpx was reinstalled; reportlab/pypdf were not). Reinstall before running tests.
 - Next (unchanged): `text_source` to the governor (OCR-sourced GSTIN → REVIEW), photo variants, frozen 77-case generator, blind K set by Oct 29 evening.
+
+### Tue Oct 27, 20:40 IST: Day 1 (build loop, chunk 7): OCR source reaches the governor
+- `Evidence.text_source` (Rust) fed from the assembler; `"ocr"` → REVIEW reason `evidence_read_by_ocr` (EXTRACTION), so a scan can never be auto-paid on OCR-read fields alone. Python 55 tests pass (the governor release binary must be rebuilt after Rust changes: `cargo build --release`, shield client uses it).
+- Environment note: cc/mold also missing after reset; reinstall build-essential.
+- Next: photo variants (rotation/noise) of scans, frozen 77-case generator, blind K set by Oct 29 evening.

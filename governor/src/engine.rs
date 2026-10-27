@@ -60,6 +60,9 @@ pub struct Evidence {
     /// True when the vendor's foreign / no-GSTIN status means GSTIN is not expected.
     #[serde(default)]
     pub has_text_layer: bool,
+    /// "text_layer" or "ocr". OCR-read evidence is never trusted to clear an issuer on its own.
+    #[serde(default)]
+    pub text_source: Option<String>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -246,6 +249,10 @@ impl Governor {
                 None => ctx.add("issuer_gstin_unreadable", Verdict::Review, Control::Extraction,
                     "no GSTIN in the text layer (scan or photo); a human must confirm the issuer"),
             }
+        }
+        if req.evidence.text_source.as_deref() == Some("ocr") {
+            ctx.add("evidence_read_by_ocr", Verdict::Review, Control::Extraction,
+                "the document is an image; every extracted field came from OCR, so a human must confirm it");
         }
         if let Some(d) = req.evidence.sender_domain.as_deref() {
             let d = normalize::domain(d);

@@ -152,3 +152,9 @@ def test_sequences_through_real_governor(tmp_path):
             assert [s["verdict"] for s in r["steps"]] == steps, sid
         assert run_sequence(gov, by_id["S05"], tmp_path)["harmful"] is True   # the stated limit is real, not hidden
         assert run_sequence(gov, by_id["D02"], tmp_path)["harmful"] is False
+
+
+def test_ocr_source_is_passed_to_governor():
+    from assembler.evidence import Evidence
+    ev = Evidence("h", 1, "GSTIN: 24ZZACS4821A1ZX", metadata={"text_source": "ocr"})
+    assert governor_evidence(ev, BUYER_GSTIN)["text_source"] == "ocr"

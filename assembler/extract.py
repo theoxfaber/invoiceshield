@@ -40,6 +40,7 @@ def governor_evidence(ev: Evidence, buyer_gstin: str) -> dict:
     accts = _uniq(ACCT_RE.findall(text))
     out = {
         "has_text_layer": bool(text.strip()),
+        "text_source": (ev.metadata or {}).get("text_source"),
         "text_layer_gstin": gstins[0] if gstins else None,
         "sender_domain": sender_domain(ev.email_from),
         "printed_bank_account": re.sub(r"\s+", "", box_acct.group(1)) if box_acct else None,
