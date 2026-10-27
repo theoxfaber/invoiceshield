@@ -175,97 +175,158 @@
       "po_ref": "PO-2026-0101",
       "owner_vendor_id": "V001",
       "category": "Stationery",
-      "open_balance_paise": 8000000
+      "open_balance_paise": 8000000,
+      "contracted_items": [
+        "Stationery",
+        "Stationery & consumables"
+      ]
     },
     {
       "po_ref": "PO-2026-0102",
       "owner_vendor_id": "V001",
       "category": "Printer consumables",
-      "open_balance_paise": 6000000
+      "open_balance_paise": 6000000,
+      "contracted_items": [
+        "Printer consumables",
+        "Stationery & consumables"
+      ]
     },
     {
       "po_ref": "PO-2026-0201",
       "owner_vendor_id": "V002",
       "category": "Freight",
-      "open_balance_paise": 5000000
+      "open_balance_paise": 5000000,
+      "contracted_items": [
+        "Freight",
+        "Freight & logistics"
+      ]
     },
     {
       "po_ref": "PO-2026-0202",
       "owner_vendor_id": "V002",
       "category": "Freight (annual)",
-      "open_balance_paise": 32000000
+      "open_balance_paise": 32000000,
+      "contracted_items": [
+        "Freight & logistics",
+        "Freight (annual)"
+      ]
     },
     {
       "po_ref": "PO-2026-0301",
       "owner_vendor_id": "V003",
       "category": "SaaS",
-      "open_balance_paise": 8400000
+      "open_balance_paise": 8400000,
+      "contracted_items": [
+        "SaaS",
+        "SaaS licences"
+      ]
     },
     {
       "po_ref": "PO-2026-0401",
       "owner_vendor_id": "V004",
       "category": "Fabrication",
-      "open_balance_paise": 21000000
+      "open_balance_paise": 21000000,
+      "contracted_items": [
+        "Fabrication",
+        "Fabrication & machining"
+      ]
     },
     {
       "po_ref": "PO-2026-0402",
       "owner_vendor_id": "V004",
       "category": "Machining",
-      "open_balance_paise": 6500000
+      "open_balance_paise": 6500000,
+      "contracted_items": [
+        "Fabrication & machining",
+        "Machining"
+      ]
     },
     {
       "po_ref": "PO-2026-0501",
       "owner_vendor_id": "V005",
       "category": "Canteen catering",
-      "open_balance_paise": 12000000
+      "open_balance_paise": 12000000,
+      "contracted_items": [
+        "Canteen catering"
+      ]
     },
     {
       "po_ref": "PO-2026-0601",
       "owner_vendor_id": "V006",
       "category": "IT services",
-      "open_balance_paise": 9000000
+      "open_balance_paise": 9000000,
+      "contracted_items": [
+        "IT services",
+        "IT services (AMC)"
+      ]
     },
     {
       "po_ref": "PO-2026-0701",
       "owner_vendor_id": "V007",
       "category": "Packaging (corrugated)",
-      "open_balance_paise": 15000000
+      "open_balance_paise": 15000000,
+      "contracted_items": [
+        "Packaging",
+        "Packaging (corrugated)"
+      ]
     },
     {
       "po_ref": "PO-2026-0702",
       "owner_vendor_id": "V007",
       "category": "Packaging (shrink wrap)",
-      "open_balance_paise": 4000000
+      "open_balance_paise": 4000000,
+      "contracted_items": [
+        "Packaging",
+        "Packaging (shrink wrap)"
+      ]
     },
     {
       "po_ref": "PO-2026-0801",
       "owner_vendor_id": "V008",
       "category": "Electrical works",
-      "open_balance_paise": 50000000
+      "open_balance_paise": 50000000,
+      "contracted_items": [
+        "Electrical works"
+      ]
     },
     {
       "po_ref": "PO-2026-0901",
       "owner_vendor_id": "V009",
       "category": "Stationery",
-      "open_balance_paise": 7500000
+      "open_balance_paise": 7500000,
+      "contracted_items": [
+        "Stationery",
+        "Stationery & office furniture"
+      ]
     },
     {
       "po_ref": "PO-2026-1001",
       "owner_vendor_id": "V010",
       "category": "IT hardware",
-      "open_balance_paise": 3000000
+      "open_balance_paise": 3000000,
+      "contracted_items": [
+        "IT hardware",
+        "IT hardware supply"
+      ]
     },
     {
       "po_ref": "PO-2026-1101",
       "owner_vendor_id": "V011",
       "category": "Civil maintenance",
-      "open_balance_paise": 20000000
+      "open_balance_paise": 20000000,
+      "contracted_items": [
+        "Civil maintenance"
+      ]
     },
     {
       "po_ref": "PO-2026-1201",
       "owner_vendor_id": "V012",
       "category": "Packaging (cartons)",
-      "open_balance_paise": 9000000
+      "open_balance_paise": 9000000,
+      "contracted_items": [
+        "Packaging",
+        "Packaging (cartons)"
+      ]
     }
   ],
   "policy": {

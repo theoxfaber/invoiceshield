@@ -138,3 +138,17 @@ def test_printed_total_parses_indian_grouping():
     assert printed_total_paise("Total Payable\n59,000.00\nBank") == 5_900_000
     assert printed_total_paise("Total Payable 1,23,456.50") == 12_345_650
     assert printed_total_paise("no total here") is None
+
+
+def test_sequences_through_real_governor(tmp_path):
+    """Duplicates, splits and wrong-vendor sequences: nothing in the headline set pays twice or over the threshold."""
+    from eval.run_sequences import run_sequence
+    from dataset.gen.make_sequences import sequences
+    by_id = {s["id"]: s for s in sequences()}
+    with GovernorProc() as gov:
+        for sid, steps in {"D02": ["allow", "block"], "D04": ["allow", "review"], "S01": ["allow", "allow", "review"],
+                           "S05": ["allow", "allow", "allow"], "W01": ["block"], "BS2": ["allow", "allow", "allow"]}.items():
+            r = run_sequence(gov, by_id[sid], tmp_path)
+            assert [s["verdict"] for s in r["steps"]] == steps, sid
+        assert run_sequence(gov, by_id["S05"], tmp_path)["harmful"] is True   # the stated limit is real, not hidden
+        assert run_sequence(gov, by_id["D02"], tmp_path)["harmful"] is False

@@ -28,3 +28,9 @@ The ON agent needs vendor IDs to propose a payment. This makes ON and OFF differ
 
 ## 2026-10-27 08:30 IST: Eval reset endpoint exists only in eval mode
 `/v1/eval/reset` returns 404 unless the server runs with `GOVERNOR_EVAL_CLOCK=1`, so samples of one invoice do not trip the duplicate rule. It is never available in a normal run.
+
+## 2026-10-27 11:30 IST: Amount rules are REVIEW-only and check the document against itself and the PO
+Three checks: the proposal must equal the printed Total Payable; item lines must sum to it; every non-tax line must name something the PO contracts for (`contracted_items`). They sit in the governor (Rust), fed by deterministic extraction, and can only escalate. Known cost: a PO with several legitimate line types needs those listed or its invoices go to REVIEW; a vendor that words a padded fee with a contracted term ("IT services expedite") would pass, which is why the real protection against over-billing remains the PO balance and tolerance. I02 was fixed after it showed up on the dev set, so it counts as a regression test, never as held-out evidence.
+
+## 2026-10-27 11:30 IST: Slow-drip splits stay a stated limit
+Three ₹40,000 invoices 8 days apart are each legitimate-looking and never cross ₹1,00,000 in any 7-day window. The governor pays them. We report this as a deliberate limit instead of widening the window until it breaks genuine monthly billing (benign BS3).

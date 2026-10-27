@@ -104,3 +104,70 @@ fn reset_state_forgets_the_ledger() {
     assert_eq!(g.evaluate(&req, 1_002).verdict, Verdict::Allow);
     assert_eq!(g.audit.verify(), None);
 }
+
+// ---- amount rules (EXTRACTION): printed total, arithmetic, unlisted charges ----
+use invoiceshield_governor::engine::ItemLine;
+
+fn lines(items: &[(&str, i64, bool)]) -> Vec<ItemLine> {
+    items.iter().map(|(d, a, t)| ItemLine { description: (*d).into(), amount_paise: *a, is_tax: *t }).collect()
+}
+
+fn run(g: &mut Governor, amount: i64, ev: Evidence) -> invoiceshield_governor::engine::Decision {
+    let p = json!({"vendor_id":"V001","invoice_no":"SOS/26-27/0299","amount_paise":amount,"po_ref":"PO-2026-0101"});
+    g.evaluate(&Request { proposal: p, evidence: ev, checker_raw: Some(CLEAN.into()) }, 1_000)
+}
+
+#[test]
+fn clean_item_table_that_adds_up_still_allows() {
+    let mut g = gov();
+    let mut ev = v001(&g);
+    ev.printed_total_paise = Some(59_000_00);
+    ev.item_lines = lines(&[("Stationery & consumables as per PO-2026-0101", 50_000_00, false), ("CGST 9% + SGST 9%", 9_000_00, true)]);
+    let d = run(&mut g, 59_000_00, ev);
+    assert_eq!(d.verdict, Verdict::Allow, "{:?}", d.reasons);
+}
+
+#[test]
+fn fee_padding_inside_po_balance_is_review_not_pay() {
+    // I02 shape: a fee the PO does not buy, total still under balance and threshold.
+    let mut g = gov();
+    let mut ev = v001(&g);
+    ev.printed_total_paise = Some(70_400_00);
+    ev.item_lines = lines(&[("Stationery & consumables as per PO-2026-0101", 30_000_00, false), ("IGST @ 18%", 5_400_00, true),
+                            ("Expedite / priority handling fee", 35_000_00, false)]);
+    let d = run(&mut g, 70_400_00, ev);
+    assert_eq!(d.verdict, Verdict::Review);
+    assert!(d.reasons.iter().any(|r| r.rule == "charge_not_on_po"));
+    assert!(!d.tamper_alert);
+}
+
+#[test]
+fn proposal_that_differs_from_printed_total_is_review() {
+    let mut g = gov();
+    let mut ev = v001(&g);
+    ev.printed_total_paise = Some(59_000_00);
+    let d = run(&mut g, 49_000_00, ev);
+    assert_eq!(d.verdict, Verdict::Review);
+    assert!(d.reasons.iter().any(|r| r.rule == "amount_differs_from_printed_total"));
+}
+
+#[test]
+fn total_that_does_not_equal_its_lines_is_review() {
+    // I01 shape: 40,677.97 + 7,322.03 = 48,000.00 but the document prints 84,000.00.
+    let mut g = gov();
+    let mut ev = v001(&g);
+    ev.printed_total_paise = Some(84_000_00);
+    ev.item_lines = lines(&[("Stationery & consumables as per PO-2026-0101", 40_677_97, false), ("CGST 9% + SGST 9%", 7_322_03, true)]);
+    let d = run(&mut g, 84_000_00, ev);
+    assert_ne!(d.verdict, Verdict::Allow); // also over this PO's open balance, so BLOCK
+    assert!(d.reasons.iter().any(|r| r.rule == "invoice_does_not_add_up"));
+}
+
+#[test]
+fn absent_extraction_adds_no_amount_reason() {
+    // A scan has no text layer: the amount rules stay silent and the GSTIN rule asks a human.
+    let mut g = gov();
+    let ev = Evidence { has_text_layer: false, ..Default::default() };
+    let d = run(&mut g, 59_000_00, ev);
+    assert!(!d.reasons.iter().any(|r| r.rule.starts_with("amount_") || r.rule == "charge_not_on_po"));
+}

@@ -117,7 +117,9 @@ def build():
         })
         profiles[vid] = {"template": tpl, "invoice_no_example": inv, "address": addr, "phone": phone,
                          "state_code": state, "currency": "USD" if vid == "V003" else "INR"}
-    pos = [{"po_ref": p, "owner_vendor_id": o, "category": c, "open_balance_paise": bal * 100}
+    vcat = {v["vendor_id"]: v["category"] for v in vendors}
+    pos = [{"po_ref": p, "owner_vendor_id": o, "category": c, "open_balance_paise": bal * 100,
+            "contracted_items": sorted({c, vcat[o]})}
            for p, o, c, _tot, bal in POS]
     po_totals = {p: tot * 100 for p, _o, _c, tot, _b in POS}
 

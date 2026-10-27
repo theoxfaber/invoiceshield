@@ -21,6 +21,16 @@ pub struct Proposal {
     pub irn: Option<String>,
 }
 
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct ItemLine {
+    pub description: String,
+    pub amount_paise: i64,
+    /// True for CGST / SGST / IGST / cess lines.
+    #[serde(default)]
+    pub is_tax: bool,
+}
+
 /// Values read from the document/email by deterministic code (assembler).
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
@@ -41,6 +51,12 @@ pub struct Evidence {
     /// Every IFSC-shaped value found anywhere in the document text.
     #[serde(default)]
     pub all_printed_ifscs: Vec<String>,
+    /// The "Total Payable" figure the document prints, in paise. None when absent.
+    #[serde(default)]
+    pub printed_total_paise: Option<i64>,
+    /// Charge and tax lines of the item table, read by deterministic code.
+    #[serde(default)]
+    pub item_lines: Vec<ItemLine>,
     /// True when the vendor's foreign / no-GSTIN status means GSTIN is not expected.
     #[serde(default)]
     pub has_text_layer: bool,
@@ -250,6 +266,35 @@ impl Governor {
             ctx.tamper = true;
             ctx.add("bank_details_differ_from_master", Verdict::Review, Control::Extraction,
                 format!("invoice asks for different bank details than {} has on file ({}). Payment can only go to the account on file; confirm with the vendor by phone.", vendor.vendor_id, vendor.bank_name));
+        }
+
+        // 10. Amount rules (EXTRACTION). The proposal must equal what the document asks for, the
+        // document must add up, and every charge line must be something the PO actually buys.
+        let ev = &req.evidence;
+        if let Some(total) = ev.printed_total_paise {
+            if total != p.amount_paise {
+                ctx.add("amount_differs_from_printed_total", Verdict::Review, Control::Extraction,
+                    format!("proposal {} but the invoice prints Total Payable {}", rupees(p.amount_paise), rupees(total)));
+            }
+            if !ev.item_lines.is_empty() {
+                let sum: i64 = ev.item_lines.iter().map(|l| l.amount_paise).sum();
+                if sum != total {
+                    ctx.add("invoice_does_not_add_up", Verdict::Review, Control::Extraction,
+                        format!("its lines add up to {} but it prints Total Payable {}", rupees(sum), rupees(total)));
+                }
+            }
+        }
+        if let Some(po) = self.master.pos.get(&p.po_ref) {
+            let unlisted: Vec<&ItemLine> = ev.item_lines.iter().filter(|l| !l.is_tax)
+                .filter(|l| {
+                    let d = l.description.to_lowercase();
+                    !po.contracted_items.iter().any(|c| !c.is_empty() && d.contains(&c.to_lowercase()))
+                }).collect();
+            if !unlisted.is_empty() {
+                let names: Vec<String> = unlisted.iter().map(|l| format!("\"{}\" {}", l.description, rupees(l.amount_paise))).collect();
+                ctx.add("charge_not_on_po", Verdict::Review, Control::Extraction,
+                    format!("charge not covered by {}: {}", po.po_ref, names.join("; ")));
+            }
         }
 
         self.finish(Some(&p), ctx, signals, now)

@@ -26,6 +26,10 @@ pub struct PurchaseOrder {
     pub owner_vendor_id: String,
     pub category: String,
     pub open_balance_paise: i64,
+    /// What this PO actually buys: a charge line on an invoice must name one of these
+    /// (case-insensitive substring). Anything else is an unlisted charge → REVIEW.
+    #[serde(default)]
+    pub contracted_items: Vec<String>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

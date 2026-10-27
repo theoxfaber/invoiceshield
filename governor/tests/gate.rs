@@ -15,7 +15,7 @@ fn vendor(id: &str, name: &str, gstin: &str, acct: &str, ifsc: &str, domain: &st
     }
 }
 fn po(po_ref: &str, owner: &str, cat: &str, rupees: i64) -> PurchaseOrder {
-    PurchaseOrder { po_ref: po_ref.into(), owner_vendor_id: owner.into(), category: cat.into(), open_balance_paise: rupees * 100 }
+    PurchaseOrder { po_ref: po_ref.into(), owner_vendor_id: owner.into(), category: cat.into(), open_balance_paise: rupees * 100, contracted_items: vec![cat.into()] }
 }
 fn master() -> Master {
     let mut m = Master { policy: Policy::default(), ..Default::default() };

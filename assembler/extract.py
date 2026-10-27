@@ -46,6 +46,8 @@ def governor_evidence(ev: Evidence, buyer_gstin: str) -> dict:
         "printed_ifsc": box_ifsc.group(1).upper() if box_ifsc else None,
         "all_printed_accounts": accts,
         "all_printed_ifscs": _uniq(IFSC_RE.findall(upper)),
+        "printed_total_paise": printed_total_paise(text),
+        "item_lines": item_lines(text),
     }
     return out
 
@@ -60,3 +62,41 @@ def printed_total_paise(text: str) -> int | None:
         return None
     rupees, _, paise = m[-1].replace(",", "").partition(".")
     return int(rupees) * 100 + int((paise + "00")[:2]) if rupees.isdigit() else None
+
+
+AMOUNT_ONLY_RE = re.compile(r"^(?:INR|Rs\.?|₹)?\s*([\d,]+\.\d{2})$")
+AMOUNT_TAIL_RE = re.compile(r"^(.*\S)\s+(?:INR|Rs\.?|₹)?\s*([\d,]+\.\d{2})$")
+TAX_RE = re.compile(r"\b(CGST|SGST|IGST|UTGST|GST|CESS)\b", re.I)
+
+
+def _paise(s: str) -> int:
+    rupees, _, paise = s.replace(",", "").partition(".")
+    return int(rupees) * 100 + int((paise + "00")[:2])
+
+
+def item_lines(text: str) -> list[dict]:
+    """Rows of the item table: everything between the 'Description / Amount' header and 'Total Payable'.
+
+    A row is a description followed by an amount, on one line or on two (the text layer of a PDF
+    may put them either way). Tax rows are flagged; every other row is a charge."""
+    lines = [l.strip() for l in (text or "").splitlines() if l.strip()]
+    start = next((i for i, l in enumerate(lines) if l.lower().startswith("description")), None)
+    end = next((i for i, l in enumerate(lines) if l.lower().startswith("total payable")), None)
+    if start is None or end is None or end <= start:
+        return []
+    rows, pending = [], None
+    for l in lines[start + 1:end]:
+        if l.lower().startswith("amount"):
+            continue
+        m = AMOUNT_ONLY_RE.match(l)
+        if m and pending is not None:
+            rows.append((pending, _paise(m.group(1))))
+            pending = None
+            continue
+        m = AMOUNT_TAIL_RE.match(l)
+        if m:
+            rows.append((m.group(1), _paise(m.group(2))))
+            pending = None
+            continue
+        pending = l
+    return [{"description": d, "amount_paise": a, "is_tax": bool(TAX_RE.search(d))} for d, a in rows]

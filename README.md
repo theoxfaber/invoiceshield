@@ -7,13 +7,13 @@ An AI agent pays vendor invoices. InvoiceShield sits between the agent and the m
 Built for Indian small businesses and CA firms hit by vendor bank-detail-change fraud. Applies Meta's own guidance for agents (the "Agents Rule of Two" and the pattern where the model proposes and only a separate policy layer can grant permission) to accounts payable.
 
 ## Status
-- `governor/`: Rust gate (payee from master, PO ownership and balance, approval threshold and cap, duplicate key with Unicode normalisation and IRN, rolling 7-day per-vendor split detection, issuer binding on GSTIN and sender domain, bank-detail-change tamper alert, escalate-only checker merge, hash-chained audit). `cargo test` in `governor/`.
+- `governor/`: Rust gate (payee from master, PO ownership and balance, approval threshold and cap, duplicate key with Unicode normalisation and IRN, rolling 7-day per-vendor split detection, amount rules (proposal = printed total, lines add up, every charge is on the PO), issuer binding on GSTIN and sender domain, bank-detail-change tamper alert, escalate-only checker merge, hash-chained audit). `cargo test` in `governor/`.
 - `governor-server` (Axum): `/v1/actions`, `/v1/decisions/{id}`, operator-only `/resolve`, `/v1/audit/verify`.
 - `structural/`: GSTIN mod-36 checksum and PAN binding.
 - `providers/`: Muse Glimmer 30B client (NVIDIA NIM), cached by request hash; strict JSON parsing (any parse failure = REVIEW).
 - `dataset/fixtures/`: fictional vendor master. All names, GSTINs, accounts and domains are made up; any match with a real business, account or domain is coincidental.
 - `agent/`: shield-OFF baseline (pays the account printed on the invoice) and shield-ON agent (its payment tool has no bank field). `checker/`: quarantined Glimmer document checker (prompt v1; escalate-only). `assembler/`: deterministic evidence (text layer, GSTIN, sender domain, every printed account/IFSC). `shield/`: pipeline agent + checker -> governor -> rail.
-- `dataset/gen/`: invoice generator and a 24-case development risk set. `eval/`: Day 1 results for shield OFF, shield ON and a hijacked-agent arm (`eval/EVAL_LOG.md`, raw rows in `eval/results/`).
+- `dataset/gen/`: invoice generator, a 24-case development risk set and 19 duplicate / split / wrong-vendor / benign sequences (`eval/run_sequences.py`). `eval/`: Day 1 results for shield OFF, shield ON and a hijacked-agent arm (`eval/EVAL_LOG.md`, raw rows in `eval/results/`).
 - Still in progress: the full 77-case frozen evaluation, the vision path, the demo UI. See `docs/BUILD_LOG.md`.
 
 Everything here was built during the event; see `docs/BUILD_LOG.md`.
