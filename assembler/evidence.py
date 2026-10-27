@@ -37,7 +37,12 @@ def assemble(pdf_path: str | Path, cover_email: dict) -> Evidence:
     raw = Path(pdf_path).read_bytes()
     reader = PdfReader(str(pdf_path))
     text = "\n".join((p.extract_text() or "") for p in reader.pages).strip()
+    source = "text_layer"
+    if len(text) < 20:  # image-only PDF: local OCR, never trusted blindly
+        from assembler.scan import ocr_text
+        text, source = ocr_text(pdf_path), "ocr"
     meta = {k.lstrip("/"): str(v) for k, v in (reader.metadata or {}).items()}
+    meta["text_source"] = source
     return Evidence(
         pdf_sha256=hashlib.sha256(raw).hexdigest(), pages=len(reader.pages), text=text, metadata=meta,
         email_from=cover_email.get("from", ""), email_to=cover_email.get("to", ""),

@@ -55,3 +55,8 @@ Planning documents (threat model, eval plan, demo script) were written before ki
 ### Tue Oct 27, 14:15 IST: Day 1 (build loop, chunk 5): USD vendor template
 - `make_t1` takes a currency (defaults from the vendor profile): V003 now renders as a USD invoice (no GSTIN, no GST row, SWIFT instead of IFSC, "Amount (USD)"). `assembler/extract.py` reads USD/$ prefixes on Total Payable and item rows, closing the INR-only gap noted in chunk 4. Amounts stay in minor units (cents), so the Rust amount rules apply unchanged. Test added; Python 52 pass, Rust green.
 - Next: vision path for scans/photos (page render → Glimmer image view; text-less GSTIN → REVIEW fallback), scan/photo variants of T1, then the frozen 77-case generator and the single-run adaptive set.
+
+### Tue Oct 27, 17:30 IST: Day 1 (build loop, chunk 6): scan path (local OCR)
+- `assembler/scan.py`: `make_scan` rasterises a generated invoice to an image-only PDF (grayscale, slight blur); `ocr_text` runs pdftoppm + tesseract locally. `assemble()` falls back to OCR when the text layer is empty and records `text_source: ocr` in metadata. Clean T1 scan round-trips: GSTIN, bank box and printed total all extract identically. Tests 54 pass.
+- Open point: OCR'd evidence still reports `has_text_layer: true` to the governor; decide whether OCR-sourced GSTIN should force REVIEW (design says text-less GSTIN → REVIEW). Vision (Glimmer image view) not started; OCR is the deterministic baseline.
+- Next: pass `text_source` to the governor (OCR + noisy photo → REVIEW rule), photo variants (rotation/noise), then frozen 77-case generator and single-run adaptive set.
