@@ -34,6 +34,13 @@ pub struct Evidence {
     pub printed_bank_account: Option<String>,
     #[serde(default)]
     pub printed_ifsc: Option<String>,
+    /// Every account-number-shaped value found anywhere in the document text, including
+    /// text outside the bank box (a pasted "correct account" line is one more value here).
+    #[serde(default)]
+    pub all_printed_accounts: Vec<String>,
+    /// Every IFSC-shaped value found anywhere in the document text.
+    #[serde(default)]
+    pub all_printed_ifscs: Vec<String>,
     /// True when the vendor's foreign / no-GSTIN status means GSTIN is not expected.
     #[serde(default)]
     pub has_text_layer: bool,
@@ -233,8 +240,12 @@ impl Governor {
         }
 
         // 9. Bank box on the document ≠ master → tamper alert (never changes the payee).
-        let acct_mismatch = req.evidence.printed_bank_account.as_deref().is_some_and(|a| digits(a) != digits(&vendor.bank_account));
-        let ifsc_mismatch = req.evidence.printed_ifsc.as_deref().is_some_and(|i| normalize::gstin(i) != normalize::gstin(&vendor.ifsc));
+        let master_acct = digits(&vendor.bank_account);
+        let master_ifsc = normalize::gstin(&vendor.ifsc);
+        let acct_mismatch = req.evidence.printed_bank_account.iter().chain(req.evidence.all_printed_accounts.iter())
+            .any(|a| digits(a) != master_acct);
+        let ifsc_mismatch = req.evidence.printed_ifsc.iter().chain(req.evidence.all_printed_ifscs.iter())
+            .any(|i| normalize::gstin(i) != master_ifsc);
         if acct_mismatch || ifsc_mismatch {
             ctx.tamper = true;
             ctx.add("bank_details_differ_from_master", Verdict::Review, Control::Extraction,
@@ -292,6 +303,14 @@ impl Governor {
             "deterministic_verdict": deterministic, "reasons": ctx.reasons, "signals": signals,
         }));
         Decision { decision_id, verdict, deterministic_verdict: deterministic, reasons: ctx.reasons, signals, payee, tamper_alert: ctx.tamper, audit_hash }
+    }
+
+    /// Eval only (the server exposes it solely under GOVERNOR_EVAL_CLOCK=1): forget all state
+    /// so independent samples of the same invoice do not trip the duplicate rules.
+    pub fn reset_state(&mut self) {
+        self.ledger = Ledger::default();
+        self.audit = AuditLog::default();
+        self.next_id = 1;
     }
 
     /// Human decision on a pending REVIEW (out of band, never via the agent).

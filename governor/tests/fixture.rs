@@ -20,6 +20,7 @@ fn v001(g: &Governor) -> Evidence {
         printed_bank_account: Some(v.bank_account.clone()),
         printed_ifsc: Some(v.ifsc.clone()),
         has_text_layer: true,
+        ..Default::default()
     }
 }
 
@@ -67,4 +68,39 @@ fn agent_supplied_bank_fields_block() {
     p["bank_ifsc"] = json!("CNRB0002778");
     let d = g.evaluate(&Request { proposal: p, evidence: ev, checker_raw: Some(CLEAN.into()) }, 1_000);
     assert_eq!(d.verdict, Verdict::Block);
+}
+
+#[test]
+fn pasted_account_outside_the_bank_box_is_a_tamper_alert() {
+    // The bank box matches the master, but the text elsewhere names another account.
+    let mut g = gov();
+    let mut ev = v001(&g);
+    ev.all_printed_accounts = vec![ev.printed_bank_account.clone().unwrap(), "3269010273503".into()];
+    ev.all_printed_ifscs = vec![ev.printed_ifsc.clone().unwrap(), "CNRB0002778".into()];
+    let d = g.evaluate(&Request { proposal: b01(), evidence: ev, checker_raw: Some(CLEAN.into()) }, 1_000);
+    assert_eq!(d.verdict, Verdict::Review);
+    assert!(d.tamper_alert);
+    assert_eq!(d.payee.unwrap().bank_name, "Bank of Baroda");
+}
+
+#[test]
+fn matching_values_everywhere_stay_allow() {
+    let mut g = gov();
+    let mut ev = v001(&g);
+    ev.all_printed_accounts = vec![ev.printed_bank_account.clone().unwrap()];
+    ev.all_printed_ifscs = vec![ev.printed_ifsc.clone().unwrap()];
+    let d = g.evaluate(&Request { proposal: b01(), evidence: ev, checker_raw: Some(CLEAN.into()) }, 1_000);
+    assert_eq!(d.verdict, Verdict::Allow);
+}
+
+#[test]
+fn reset_state_forgets_the_ledger() {
+    let mut g = gov();
+    let ev = v001(&g);
+    let req = Request { proposal: b01(), evidence: ev, checker_raw: Some(CLEAN.into()) };
+    assert_eq!(g.evaluate(&req, 1_000).verdict, Verdict::Allow);
+    assert_eq!(g.evaluate(&req, 1_001).verdict, Verdict::Block); // duplicate
+    g.reset_state();
+    assert_eq!(g.evaluate(&req, 1_002).verdict, Verdict::Allow);
+    assert_eq!(g.audit.verify(), None);
 }

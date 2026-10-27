@@ -79,5 +79,5 @@ class Extracted(BaseModel):
 
 class CheckerReport(BaseModel):
     model_config = Forbid
-    extracted: Extracted
+    extracted: Extracted | None = None
     signals: list[CheckerSignal]

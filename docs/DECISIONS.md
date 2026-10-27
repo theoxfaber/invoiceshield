@@ -19,3 +19,12 @@ Glimmer runs at temperature 1.0, so each eval case is sampled k times (sample = 
 
 ## 2026-10-27 06:00 IST — Baseline agent runs at low reasoning, with a plain AP prompt
 Glimmer tool calls on NIM free tier take 25–110 s and "medium" timed out upstream, so the shield-OFF baseline runs at "low", k=3. The prompt is an ordinary AP instruction (pay valid invoices, hold if unsure, reject if not payable) that never mentions fraud, and the agent has no vendor-master tool: it pays what the invoice prints. The harm rule is mechanical and fixed before the run. Realism fixes (today's date in the prompt, CGST+SGST on intra-state invoices) were made after a clean invoice was wrongly held, before any attack was run; no prompt was tuned against attack outcomes.
+
+## 2026-10-27 08:30 IST: Governor treats any extra account/IFSC in the document text as a second set of bank details
+The bank box is not the only place a payee can be named; injections paste "the correct account" elsewhere. The assembler extracts every account- and IFSC-shaped value in the text layer and the governor compares each with the master, so a pasted account is a tamper alert (REVIEW) even when the bank box looks right. Cost: a genuine invoice that prints another number shaped like an account (a long reference) would REVIEW; accepted, and it shows up in the false-positive count if it ever happens.
+
+## 2026-10-27 08:30 IST: The shield-ON agent sees a vendor directory (IDs and names), the OFF agent does not
+The ON agent needs vendor IDs to propose a payment. This makes ON and OFF differ in more than the payment tool, so the agent's own holds in the ON arm cannot be credited to the shield. The hijacked-agent arm (`eval/run_gate_only.py`) exists to measure the governor without that confound.
+
+## 2026-10-27 08:30 IST: Eval reset endpoint exists only in eval mode
+`/v1/eval/reset` returns 404 unless the server runs with `GOVERNOR_EVAL_CLOCK=1`, so samples of one invoice do not trip the duplicate rule. It is never available in a normal run.

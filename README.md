@@ -12,6 +12,8 @@ Built for Indian small businesses and CA firms hit by vendor bank-detail-change 
 - `structural/`: GSTIN mod-36 checksum and PAN binding.
 - `providers/`: Muse Glimmer 30B client (NVIDIA NIM), cached by request hash; strict JSON parsing (any parse failure = REVIEW).
 - `dataset/fixtures/`: fictional vendor master. All names, GSTINs, accounts and domains are made up; any match with a real business, account or domain is coincidental.
-- Agent, checker, invoice generator and red-team eval: in progress. See `docs/BUILD_LOG.md`.
+- `agent/`: shield-OFF baseline (pays the account printed on the invoice) and shield-ON agent (its payment tool has no bank field). `checker/`: quarantined Glimmer document checker (prompt v1; escalate-only). `assembler/`: deterministic evidence (text layer, GSTIN, sender domain, every printed account/IFSC). `shield/`: pipeline agent + checker -> governor -> rail.
+- `dataset/gen/`: invoice generator and a 24-case development risk set. `eval/`: Day 1 results for shield OFF, shield ON and a hijacked-agent arm (`eval/EVAL_LOG.md`, raw rows in `eval/results/`).
+- Still in progress: the full 77-case frozen evaluation, the vision path, the demo UI. See `docs/BUILD_LOG.md`.
 
 Everything here was built during the event; see `docs/BUILD_LOG.md`.

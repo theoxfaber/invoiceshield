@@ -87,6 +87,20 @@ async fn resolve(State(s): State<Shared>, h: HeaderMap, Path(id): Path<String>, 
     Json(serde_json::json!({"decision_id": id, "approved": r.approve})).into_response()
 }
 
+/// Eval-only reset; 404 unless the server was started with GOVERNOR_EVAL_CLOCK=1.
+async fn eval_reset(State(s): State<Shared>, h: HeaderMap) -> impl IntoResponse {
+    if !s.eval_clock {
+        return StatusCode::NOT_FOUND.into_response();
+    }
+    if !authorized(&h, &s.key) {
+        return StatusCode::UNAUTHORIZED.into_response();
+    }
+    let mut app = s.app.lock().await;
+    app.gov.reset_state();
+    app.decisions.clear();
+    Json(serde_json::json!({"reset": true})).into_response()
+}
+
 async fn audit_verify(State(s): State<Shared>) -> impl IntoResponse {
     let app = s.app.lock().await;
     let n = app.gov.audit.records.len();
@@ -113,6 +127,7 @@ async fn main() {
         .route("/v1/decisions/:id", get(get_decision))
         .route("/v1/decisions/:id/resolve", post(resolve))
         .route("/v1/audit/verify", get(audit_verify))
+        .route("/v1/eval/reset", post(eval_reset))
         .with_state(shared);
     let port = std::env::var("GOVERNOR_PORT").unwrap_or_else(|_| "8080".into());
     let listener = tokio::net::TcpListener::bind(format!("127.0.0.1:{port}")).await.expect("bind");
