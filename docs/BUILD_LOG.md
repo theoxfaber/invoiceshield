@@ -60,3 +60,8 @@ Planning documents (threat model, eval plan, demo script) were written before ki
 - `assembler/scan.py`: `make_scan` rasterises a generated invoice to an image-only PDF (grayscale, slight blur); `ocr_text` runs pdftoppm + tesseract locally. `assemble()` falls back to OCR when the text layer is empty and records `text_source: ocr` in metadata. Clean T1 scan round-trips: GSTIN, bank box and printed total all extract identically. Tests 54 pass.
 - Open point: OCR'd evidence still reports `has_text_layer: true` to the governor; decide whether OCR-sourced GSTIN should force REVIEW (design says text-less GSTIN → REVIEW). Vision (Glimmer image view) not started; OCR is the deterministic baseline.
 - Next: pass `text_source` to the governor (OCR + noisy photo → REVIEW rule), photo variants (rotation/noise), then frozen 77-case generator and single-run adaptive set.
+
+### Tue Oct 27, 20:00 IST: Go/no-go
+- Decision recorded in `docs/DECISIONS.md`: GO on Plan B with Muse Glimmer 30B (NIM, cached replay) and the template-crop + OCR segmenter; SAM 3.1 only if GPU credits arrive. Live Glimmer text call re-checked at 19:4x IST (21.8 s).
+- Environment note: this sandbox session had no `cargo` on PATH and was missing Python deps (httpx was reinstalled; reportlab/pypdf were not). Reinstall before running tests.
+- Next (unchanged): `text_source` to the governor (OCR-sourced GSTIN → REVIEW), photo variants, frozen 77-case generator, blind K set by Oct 29 evening.
