@@ -74,3 +74,8 @@ Planning documents (threat model, eval plan, demo script) were written before ki
 ### Tue Oct 27, 23:30 IST: Day 1 (build loop, chunk 8): photo variant
 - `assembler/scan.py::make_photo`: rotation, uneven lighting, noise, blur on top of the scan path (stand-in for a phone photo). Goes through OCR and so reaches the governor as `text_source: ocr` → REVIEW. Test added; Python 56 pass.
 - Next: frozen 77-case generator (mix of T1/T2/T3, scan, photo), blind K set by Oct 29 evening.
+
+### Wed Oct 28, 02:40 IST: Day 2 (build loop, chunk 9): benign dev set
+- `dataset/gen/make_benign.py` + `eval/run_benign.py`: 24 legitimate invoices (16 text PDFs over all 12 vendors/PO pairs incl. USD V003, 4 scans, 4 photos) through the real governor with a clear checker. Result: 24/24 as expected (16 ALLOW, 8 scan/photo REVIEW via `evidence_read_by_ocr`), 0 false BLOCK. Dev set, not the frozen held-out set. Python 56 tests still pass.
+- Friction note: every scan/photo goes to REVIEW by design, so friction on image invoices is 8/8; report it openly.
+- Next: frozen 77-case generator + manifest hash, blind K set by Oct 29 evening, T2 template.
