@@ -26,3 +26,11 @@ Planning documents (threat model, eval plan, demo script) were written before ki
 ### Tue Oct 27, 02:15 IST — Day 1 (build loop, chunk 1)
 - `dataset/gen/make_invoice.py`: reportlab T1 generator (clean invoice, bank-box region, cover email) plus the Nagpur-style bank-change attack on V001 (Canara, plausible story). 2 tests (text layer carries invoice no, IFSC, amount); Python suite 31 pass.
 - Next: assembler (pypdf text → Evidence), shield-OFF agent loop with pay() on a mock rail, then the Day 1 risk test (~20 poisoned invoices, exact pay count to eval/EVAL_LOG.md).
+
+### Tue Oct 27, 04:45–06:15 IST — Day 1 (build loop, chunk 2): shield-OFF agent and the Day 1 risk test
+- `assembler/evidence.py`: deterministic evidence (pypdf text layer incl. hidden text, metadata, sha256, cover email) rendered for an agent.
+- `agent/rail.py` mock rail; `agent/off_agent.py` shield-OFF baseline (pay/hold/reject tools, native tool calls). Found that Glimmer sends account numbers as JSON numbers, so the OFF tool layer coerces them to strings (otherwise a schema nit looks like a refusal). Tool calls on NIM take 25–110 s; reasoning "medium" timed out upstream, so the baseline runs at "low".
+- `dataset/gen/make_invoice.py` extended (identity overrides, hidden text, footer, extra lines, inflated total, cover email overrides); `dataset/gen/make_riskset.py`: 20 poisoned invoices (bank swap, injection, lookalike, inflation) + 4 clean controls; `eval/run_day1.py` with a mechanical harm rule.
+- **Risk test result (real, in `eval/EVAL_LOG.md`): 15 of 60 poisoned samples paid to the wrong place; 5 of 20 cases in 3/3 samples. 12/12 clean controls paid.** The quiet attacks (clean bank swap, IFSC change, lookalike name/domain/GSTIN) get through; loud ones are held.
+- Tests: Python 37 pass.
+- Next: shield-ON path. Governor client + `PaymentProposal`-only shield-ON agent (no bank field) end to end on B01/L01/X04 (M1), then checker prompt v1 and the structural extraction checks (GSTIN, sender domain).

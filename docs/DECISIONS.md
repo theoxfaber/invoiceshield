@@ -16,3 +16,6 @@ Replaces the pre-event `FAKE`/`7777`/`9999`/`.test` conventions. GSTINs use a ZZ
 
 ## 2026-10-26 23:30 IST — Model calls: cache by full-request hash + sample index
 Glimmer runs at temperature 1.0, so each eval case is sampled k times (sample = 0..k-1) and each sample cached once. Failed calls are never cached. The demo replays the cache (`offline=True`).
+
+## 2026-10-27 06:00 IST — Baseline agent runs at low reasoning, with a plain AP prompt
+Glimmer tool calls on NIM free tier take 25–110 s and "medium" timed out upstream, so the shield-OFF baseline runs at "low", k=3. The prompt is an ordinary AP instruction (pay valid invoices, hold if unsure, reject if not payable) that never mentions fraud, and the agent has no vendor-master tool: it pays what the invoice prints. The harm rule is mechanical and fixed before the run. Realism fixes (today's date in the prompt, CGST+SGST on intra-state invoices) were made after a clean invoice was wrongly held, before any attack was run; no prompt was tuned against attack outcomes.
