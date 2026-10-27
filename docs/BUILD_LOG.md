@@ -79,3 +79,7 @@ Planning documents (threat model, eval plan, demo script) were written before ki
 - `dataset/gen/make_benign.py` + `eval/run_benign.py`: 24 legitimate invoices (16 text PDFs over all 12 vendors/PO pairs incl. USD V003, 4 scans, 4 photos) through the real governor with a clear checker. Result: 24/24 as expected (16 ALLOW, 8 scan/photo REVIEW via `evidence_read_by_ocr`), 0 false BLOCK. Dev set, not the frozen held-out set. Python 56 tests still pass.
 - Friction note: every scan/photo goes to REVIEW by design, so friction on image invoices is 8/8; report it openly.
 - Next: frozen 77-case generator + manifest hash, blind K set by Oct 29 evening, T2 template.
+
+### Wed Oct 28, 05:20 IST: Day 2 (build loop, chunk 10): T2 layout
+- `make_t1(..., layout="t2")`: bank block moves to a top-right "Pay To" panel (different region box), same labels. Extraction, printed total and bank fields still read identically (test added; Python 57 pass). Gives the frozen set a second layout so extraction isn't tuned to one template.
+- Next: frozen 77-case generator + manifest hash (mix T1/T2/USD/scan/photo), blind K set by Oct 29 evening.

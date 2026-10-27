@@ -14,3 +14,15 @@ def test_attack_changes_bank(tmp_path):
     t = PdfReader(m["pdf"]).pages[0].extract_text()
     assert "CNRB0002778" in t and "BARB0MAKVAD" not in t
     assert "Canara" in m["cover_email"]["body"]
+
+def test_t2_layout_extracts_same_fields(tmp_path):
+    from assembler.evidence import Evidence
+    from assembler.extract import governor_evidence
+    m = make_t1("V001", "SOS/26-27/0240", "PO-2026-0101", 5900000, tmp_path / "t2.pdf", layout="t2")
+    t = PdfReader(m["pdf"]).pages[0].extract_text()
+    assert "Pay To" in t and "BARB0MAKVAD" in t
+    assert m["regions"]["bank_box"][0] == 326
+    from assembler.evidence import assemble
+    ev = assemble(m["pdf"], m["cover_email"])
+    g = governor_evidence(ev, "x")
+    assert g["printed_ifsc"] == "BARB0MAKVAD" and g["printed_total_paise"] == 5900000

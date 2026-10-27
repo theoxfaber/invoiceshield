@@ -14,7 +14,7 @@ def _vendor(vid):
 
 def make_t1(vid, invoice_no, po_ref, amount_paise, out, bank=None, note=None, date="27/10/2026",
             name=None, gstin=None, domain=None, hidden=None, footer=None, extra_lines=None,
-            shown_total_paise=None, cover_body=None, cover_from=None, cover_subject=None, currency=None):
+            shown_total_paise=None, cover_body=None, cover_from=None, cover_subject=None, currency=None, layout="t1"):
     """Fictional T1 invoice. Returns metadata dict.
 
     bank: override {bank_name, ifsc, bank_account} (attack).
@@ -65,14 +65,15 @@ def make_t1(vid, invoice_no, po_ref, amount_paise, out, bank=None, note=None, da
     line(yy, "Total Payable", bold=True); line(yy, f"{total_paise/100:,.2f}", x=440, bold=True)
     if usd:
         line(yy - 14, "Payable in US dollars by wire. Bank charges borne by payer's bank.", 8)
-    y0 = H - 360
-    line(y0, "Bank details for remittance", bold=True)
+    t2 = layout == "t2"  # T2: bank block top-right beside the invoice header, not below the totals
+    bx, y0 = (330, H - 100) if t2 else (40, H - 360)
+    line(y0, "Pay To (remittance details)" if t2 else "Bank details for remittance", bold=True, x=bx)
     for i, (k, lab) in enumerate((("bank_name", "Bank"), ("bank_account", "A/c No"), ("ifsc", "SWIFT" if usd else "IFSC"))):
-        line(y0 - 16 * (i + 1), f"{lab}: {bank[k]}")
+        line(y0 - 16 * (i + 1), f"{lab}: {bank[k]}", x=bx)
     # region box in PDF points, origin top-left
-    regions["bank_box"] = [36, H - (y0 + 14), 330, 16 * 4 + 6]
+    regions["bank_box"] = [bx - 4, H - (y0 + 14), 230 if t2 else 330, 16 * 4 + 6]
     if note:
-        line(y0 - 80, note, 9)
+        line(y0 - 80, note, 9, x=40 if t2 else bx)
     if footer:
         for i, ln in enumerate(footer.split("\n")):
             line(124 - 11 * i, ln, 8)
