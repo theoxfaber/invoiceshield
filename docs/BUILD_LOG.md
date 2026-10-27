@@ -51,3 +51,7 @@ Planning documents (threat model, eval plan, demo script) were written before ki
 - `dataset/gen/make_sequences.py` + `eval/run_sequences.py`: 16 attack sequences (6 duplicates, 5 splits, 5 wrong-vendor) and 3 benign, real PDFs through the real governor with a simulated clock. Headline 15/15 contained; the slow-drip split (S05) is paid in full by design and reported as a stated limit; benign 3/3 allowed.
 - Known gap: the printed-total rule assumes INR; the USD vendor (V003, T3 template) needs a currency field before that template is generated.
 - Next: vision path for scans/photos (page render → Glimmer image view, text-less GSTIN → REVIEW is the fallback), T2/T3 templates (incl. the USD invoice), then the frozen 77-case generator and the single-run adaptive set.
+
+### Tue Oct 27, 14:15 IST: Day 1 (build loop, chunk 5): USD vendor template
+- `make_t1` takes a currency (defaults from the vendor profile): V003 now renders as a USD invoice (no GSTIN, no GST row, SWIFT instead of IFSC, "Amount (USD)"). `assembler/extract.py` reads USD/$ prefixes on Total Payable and item rows, closing the INR-only gap noted in chunk 4. Amounts stay in minor units (cents), so the Rust amount rules apply unchanged. Test added; Python 52 pass, Rust green.
+- Next: vision path for scans/photos (page render → Glimmer image view; text-less GSTIN → REVIEW fallback), scan/photo variants of T1, then the frozen 77-case generator and the single-run adaptive set.

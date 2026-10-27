@@ -40,3 +40,13 @@ def test_governor_evidence_carries_the_new_fields(tmp_path):
 def test_no_table_means_no_rows():
     assert item_lines("just a photo caption, nothing tabular") == []
     assert printed_total_paise("nothing") is None
+
+
+def test_usd_vendor_template_extracts_and_adds_up(tmp_path):
+    m = make_t1("V003", "BC-INV-10077", "PO-2026-0301", 1200000, tmp_path / "u.pdf")
+    ev = assemble(m["pdf"], m["cover_email"])
+    assert "USD" in ev.text and "CGST" not in ev.text
+    rows = item_lines(ev.text)
+    assert sum(r["amount_paise"] for r in rows) == printed_total_paise(ev.text) == 1200000
+    ge = governor_evidence(ev, BUYER_GSTIN)
+    assert ge["text_layer_gstin"] is None and ge["printed_bank_account"] == "754155265497"

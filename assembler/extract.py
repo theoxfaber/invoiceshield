@@ -52,7 +52,7 @@ def governor_evidence(ev: Evidence, buyer_gstin: str) -> dict:
     return out
 
 
-TOTAL_RE = re.compile(r"Total\s+Payable\s*[:\-]?\s*(?:INR|Rs\.?|₹)?\s*([\d,]+(?:\.\d{1,2})?)", re.I)
+TOTAL_RE = re.compile(r"Total\s+Payable\s*[:\-]?\s*(?:INR|USD|US\$|\$|Rs\.?|₹)?\s*([\d,]+(?:\.\d{1,2})?)", re.I)
 
 
 def printed_total_paise(text: str) -> int | None:
@@ -64,8 +64,8 @@ def printed_total_paise(text: str) -> int | None:
     return int(rupees) * 100 + int((paise + "00")[:2]) if rupees.isdigit() else None
 
 
-AMOUNT_ONLY_RE = re.compile(r"^(?:INR|Rs\.?|₹)?\s*([\d,]+\.\d{2})$")
-AMOUNT_TAIL_RE = re.compile(r"^(.*\S)\s+(?:INR|Rs\.?|₹)?\s*([\d,]+\.\d{2})$")
+AMOUNT_ONLY_RE = re.compile(r"^(?:INR|USD|US\$|\$|Rs\.?|₹)?\s*([\d,]+\.\d{2})$")
+AMOUNT_TAIL_RE = re.compile(r"^(.*\S)\s+(?:INR|USD|US\$|\$|Rs\.?|₹)?\s*([\d,]+\.\d{2})$")
 TAX_RE = re.compile(r"\b(CGST|SGST|IGST|UTGST|GST|CESS)\b", re.I)
 
 
