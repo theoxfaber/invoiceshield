@@ -21,3 +21,12 @@ def test_scan_has_no_text_layer_and_ocr_recovers_it(tmp_path):
 def test_ocr_keeps_the_printed_total(tmp_path):
     _, ev = _scan(tmp_path)
     assert printed_total_paise(ev.text) in (4720000, None)
+
+
+def test_photo_variant_goes_ocr(tmp_path):
+    from assembler.scan import make_photo
+    m = make_t1("V006", "NITS-2026-901", "PO-2026-0601", 4720000, tmp_path / "i.pdf")
+    make_photo(m["pdf"], tmp_path / "p.pdf")
+    ev = assemble(tmp_path / "p.pdf", m["cover_email"])
+    assert ev.metadata["text_source"] == "ocr"
+    assert len(ev.text) > 50

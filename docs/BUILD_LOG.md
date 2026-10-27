@@ -70,3 +70,7 @@ Planning documents (threat model, eval plan, demo script) were written before ki
 - `Evidence.text_source` (Rust) fed from the assembler; `"ocr"` → REVIEW reason `evidence_read_by_ocr` (EXTRACTION), so a scan can never be auto-paid on OCR-read fields alone. Python 55 tests pass (the governor release binary must be rebuilt after Rust changes: `cargo build --release`, shield client uses it).
 - Environment note: cc/mold also missing after reset; reinstall build-essential.
 - Next: photo variants (rotation/noise) of scans, frozen 77-case generator, blind K set by Oct 29 evening.
+
+### Tue Oct 27, 23:30 IST: Day 1 (build loop, chunk 8): photo variant
+- `assembler/scan.py::make_photo`: rotation, uneven lighting, noise, blur on top of the scan path (stand-in for a phone photo). Goes through OCR and so reaches the governor as `text_source: ocr` → REVIEW. Test added; Python 56 pass.
+- Next: frozen 77-case generator (mix of T1/T2/T3, scan, photo), blind K set by Oct 29 evening.

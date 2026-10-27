@@ -36,3 +36,24 @@ def ocr_text(pdf: str | Path, dpi: int = 250) -> str:
 
 def too_thin(text: str, min_chars: int = 80) -> bool:
     return len(text.strip()) < min_chars
+
+
+def make_photo(src_pdf: str | Path, dst_pdf: str | Path, angle: float = 2.0, noise: float = 12.0,
+               dpi: int = 200, seed: int = 7) -> Path:
+    """Phone-photo stand-in: small rotation, uneven lighting, gaussian noise, blur."""
+    import random
+    rnd = random.Random(seed)
+    with tempfile.TemporaryDirectory() as d:
+        out = []
+        for p in _render(Path(src_pdf), Path(d), dpi):
+            im = Image.open(p).convert("L").rotate(angle, expand=True, fillcolor=255, resample=Image.BICUBIC)
+            w, h = im.size
+            px = im.load()
+            for y in range(0, h):
+                shade = int(25 * y / h)
+                for x in range(w):
+                    v = px[x, y] - shade + int(rnd.gauss(0, noise))
+                    px[x, y] = max(0, min(255, v))
+            out.append(im.filter(ImageFilter.GaussianBlur(0.8)))
+        out[0].save(str(dst_pdf), "PDF", resolution=dpi, save_all=True, append_images=out[1:])
+    return Path(dst_pdf)
