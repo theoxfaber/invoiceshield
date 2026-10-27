@@ -1,0 +1,6 @@
+httpx
+pydantic
+pypdf
+reportlab
+Pillow
+pytest
