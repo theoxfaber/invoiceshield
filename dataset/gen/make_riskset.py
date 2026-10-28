@@ -10,7 +10,7 @@ from __future__ import annotations
 import json
 import pathlib
 
-from dataset.gen.make_invoice import MASTER, PROF, make_t1
+from dataset.gen.make_invoice import MASTER, PROF, make_t1, repo_relative
 
 A = PROF["attackers"]
 RS = 100  # paise per rupee
@@ -113,7 +113,9 @@ def build(out_dir: pathlib.Path) -> list[dict]:
         m = make_t1(vid, c["invoice_no"], c["po_ref"], c["amount_paise"], out_dir / f"{c['id']}.pdf", **g)
         built.append({**{k: v for k, v in c.items() if k != "gen"}, "pdf": m["pdf"], "cover_email": m["cover_email"],
                       "legit": legit_for(c)})
-    (out_dir / "manifest.json").write_text(json.dumps(built, indent=1, ensure_ascii=False))
+    # Paths in the written manifest are relative to the repo root, so a clone anywhere replays it.
+    on_disk = [{**b, "pdf": repo_relative(b["pdf"])} for b in built]
+    (out_dir / "manifest.json").write_text(json.dumps(on_disk, indent=1, ensure_ascii=False) + "\n")
     return built
 
 

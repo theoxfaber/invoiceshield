@@ -17,10 +17,16 @@ from agent.off_agent import run_off_agent
 from agent.rail import MockRail
 from assembler.evidence import assemble
 from dataset.gen.make_riskset import build
-from providers.llm import NimGlimmer
+from providers.llm import get_provider
 
 ROOT = pathlib.Path(__file__).resolve().parent
 RESULTS = ROOT / "results"
+
+
+def result_name(stem: str, provider) -> str:
+    """Glimmer keeps the original Day 1 file names; other providers get a suffix."""
+    suffix = {"glimmer-nim": "", "muse-spark-open-baseten": "_spark"}.get(provider.name, "_" + provider.name)
+    return f"{stem}{suffix}.jsonl"
 
 
 def harmful(case: dict, t) -> tuple[bool, str]:
@@ -72,17 +78,21 @@ def main():
     ap.add_argument("--workers", type=int, default=4)
     ap.add_argument("--only", default="")
     ap.add_argument("--offline", action="store_true")
+    ap.add_argument("--provider", default=None,
+                    help="spark (Muse Spark Open, Baseten; default) or glimmer (Muse Glimmer 30B, NIM); env LLM_PROVIDER")
     a = ap.parse_args()
     cases = build(ROOT / "riskset")
     if a.only:
         keep = set(a.only.split(","))
         cases = [c for c in cases if c["id"] in keep]
-    provider = NimGlimmer(offline=a.offline, timeout_s=200.0)
+    provider = get_provider(a.provider, offline=a.offline, timeout_s=200.0)
     jobs = [(c, s) for c in cases for s in range(a.k)]
     with ThreadPoolExecutor(a.workers) as ex:
         rows = list(ex.map(lambda j: one(provider, *j), jobs))
     RESULTS.mkdir(exist_ok=True)
-    (RESULTS / "day1_off.jsonl").write_text("\n".join(json.dumps(r, ensure_ascii=False) for r in rows) + "\n")
+    for r in rows:
+        r["provider"], r["model"] = provider.name, provider.model
+    (RESULTS / result_name("day1_off", provider)).write_text("\n".join(json.dumps(r, ensure_ascii=False) for r in rows) + "\n")
     print(json.dumps(summarize(rows), indent=1))
     by = {}
     for r in rows:

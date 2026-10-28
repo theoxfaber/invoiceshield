@@ -11,7 +11,7 @@ import json
 import pathlib
 
 from assembler.scan import make_photo, make_scan
-from dataset.gen.make_invoice import make_t1
+from dataset.gen.make_invoice import make_t1, repo_relative
 from dataset.gen.make_riskset import cases, legit_for
 
 VARIANTS = ("t2", "scan", "photo")
@@ -48,5 +48,6 @@ if __name__ == "__main__":
     d = pathlib.Path(sys.argv[1] if len(sys.argv) > 1 else "eval/variants")
     b = build(d)
     h = manifest_hash(b)
-    (d / "manifest.json").write_text(json.dumps(b, indent=1, ensure_ascii=False))
+    (d / "manifest.json").write_text(json.dumps([{**x, "pdf": repo_relative(x["pdf"])} for x in b],
+                                                indent=1, ensure_ascii=False) + "\n")
     print(len(b), "variant cases", h)

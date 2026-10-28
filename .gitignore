@@ -1,10 +1,18 @@
 target/
 __pycache__/
 *.pyc
+.pytest_cache/
+.venv/
 .env
-.cache/
-eval/cache/
-data/third_party/raw/
 *.key
-eval/riskset/
+.cache/
+data/third_party/raw/
+# Regenerable (13 MB of scan/photo PDFs): python3 -m dataset.gen.make_variants
 eval/variants/
+# Committed on purpose so the recorded numbers replay without an API key:
+#   eval/cache/llm/  (model responses only, keyed by request hash; no keys or headers)
+#   eval/riskset/    (24 dev-set PDFs + manifest with repo-relative paths)
+# Planning copies kept outside the repo (docs/ versions are tracked)
+/BUILD_LOG.md
+/DECISIONS.md
+/REVIEW_BACKLOG.md

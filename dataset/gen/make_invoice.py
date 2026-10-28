@@ -6,6 +6,22 @@ from reportlab.pdfgen import canvas
 FIX = pathlib.Path(__file__).resolve().parents[1] / "fixtures"
 MASTER = json.load(open(FIX / "master.json"))
 PROF = json.load(open(FIX / "profiles.json"))
+REPO = pathlib.Path(__file__).resolve().parents[2]
+
+
+def repo_relative(path) -> str:
+    """Path as written into manifests: relative to the repo root when inside it (portable)."""
+    p = pathlib.Path(path).resolve()
+    try:
+        return p.relative_to(REPO).as_posix()
+    except ValueError:
+        return str(path)
+
+
+def resolve_repo_path(path) -> pathlib.Path:
+    """Inverse of repo_relative: a manifest path read back from disk."""
+    p = pathlib.Path(path)
+    return p if p.is_absolute() else REPO / p
 
 
 def _vendor(vid):
@@ -35,7 +51,9 @@ def make_t1(vid, invoice_no, po_ref, amount_paise, out, bank=None, note=None, da
     gst = 0.0 if usd else item_paise / 100 - base
     total_paise = shown_total_paise if shown_total_paise is not None else amount_paise
     W, H = A4
-    c = canvas.Canvas(str(out), pagesize=A4)
+    # invariant=1: no creation timestamp or random document ID, so re-running a generator
+    # reproduces byte-identical PDFs (committed riskset files stay stable).
+    c = canvas.Canvas(str(out), pagesize=A4, invariant=1)
     regions = {}
 
     def line(y, text, size=10, x=40, bold=False):

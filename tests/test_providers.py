@@ -109,3 +109,27 @@ def test_proposal_ok_and_checker_no_allow():
     assert parse_model(rep, CheckerReport)[0].signals[0].severity == "block"
     assert parse_model({"extracted": {}, "signals": [], "override": True}, CheckerReport)[0] is None
     assert parse_model({"account_number": "23276810695553", "ifsc": "BARB0MAKVAD", "amount_paise": 1, "payee_name": "x"}, OffPayment)[0]
+
+
+def test_spark_provider_payload_and_selection(tmp_path, monkeypatch):
+    from providers.llm import BasetenMuseSpark, get_provider
+    seen = []
+
+    def h(req):
+        seen.append((str(req.url), json.loads(req.content)))
+        return httpx.Response(200, json={"choices": [{"message": {"role": "assistant", "content": '{"a":1}',
+                                          "reasoning_content": "r"}, "finish_reason": "stop"}]})
+
+    p = BasetenMuseSpark("placeholder", transport=httpx.MockTransport(h), cache_dir=tmp_path)
+    r = p.chat([{"role": "system", "content": "You are AP."}, {"role": "user", "content": "x"}], reasoning="low")
+    url, body = seen[0]
+    assert r.ok and r.content == '{"a":1}' and r.reasoning == "r"
+    assert url == "https://inference.baseten.co/v1/chat/completions"
+    assert body["model"] == "meta-models/muse-spark-open-1026"
+    assert body["messages"][0]["content"] == "You are AP."  # no Glimmer reasoning line
+    monkeypatch.delenv("LLM_PROVIDER", raising=False)
+    assert get_provider(cache_dir=tmp_path).name == "muse-spark-open-baseten"
+    monkeypatch.setenv("LLM_PROVIDER", "glimmer")
+    assert get_provider(cache_dir=tmp_path).name == "glimmer-nim"
+    with pytest.raises(ValueError):
+        get_provider("gpt", cache_dir=tmp_path)

@@ -1,6 +1,6 @@
 """Quarantined document checker (prompt v1).
 
-A separate Glimmer call with no tools, no payment authority and no knowledge of what the
+A separate model call (Muse Spark Open or Glimmer) with no tools, no payment authority and no knowledge of what the
 payment agent proposed. It reads the same email + invoice text and reports problems as
 signals. Its output can only escalate: the governor ignores anything but review/block
 signals, and treats unparseable output as REVIEW.

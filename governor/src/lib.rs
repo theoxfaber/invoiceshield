@@ -4,6 +4,7 @@ pub mod audit;
 pub mod engine;
 pub mod ledger;
 pub mod master;
+pub mod master_change;
 pub mod normalize;
 pub mod verdict;
 

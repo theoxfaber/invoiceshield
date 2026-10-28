@@ -1,4 +1,6 @@
-"""LLM provider interface + Muse Glimmer 30B on NVIDIA NIM.
+"""LLM provider interface: Muse Spark Open on Baseten (default) and Muse Glimmer 30B on NVIDIA NIM.
+
+Select with LLM_PROVIDER=spark|glimmer (or --provider on the eval runners); see get_provider().
 
 Design rules (docs/DECISIONS.md):
 - Glimmer runs at temperature 1.0 (Meta: don't run it greedy). Reasoning
@@ -23,6 +25,9 @@ import httpx
 
 NIM_URL = "https://integrate.api.nvidia.com/v1/chat/completions"
 GLIMMER = "meta/muse-glimmer-30b"
+BASETEN_URL = "https://inference.baseten.co/v1/chat/completions"
+MUSE_SPARK_OPEN = "meta-models/muse-spark-open-1026"
+DEFAULT_PROVIDER = "spark"
 DEFAULT_CACHE = Path(__file__).resolve().parents[1] / "eval" / "cache" / "llm"
 
 
@@ -68,12 +73,14 @@ def cache_key(payload: dict, sample: int) -> str:
 
 class NimGlimmer:
     name = "glimmer-nim"
+    key_env = "NVIDIA_API_KEY"
+    reasoning_in_prompt = True
 
     def __init__(self, api_key: str | None = None, *, model: str = GLIMMER, url: str = NIM_URL,
                  cache_dir: Path | None = DEFAULT_CACHE, timeout_s: float = 240.0,
                  retries: int = 3, transport: httpx.BaseTransport | None = None,
                  offline: bool = False):
-        self.api_key = api_key if api_key is not None else os.environ.get("NVIDIA_API_KEY", "")
+        self.api_key = api_key if api_key is not None else os.environ.get(self.key_env, "")
         self.model, self.url, self.cache_dir = model, url, cache_dir
         self.retries, self.offline = retries, offline
         self.client = httpx.Client(timeout=timeout_s, transport=transport)
@@ -81,7 +88,7 @@ class NimGlimmer:
     def _payload(self, messages, tools, reasoning, max_tokens) -> dict:
         p: dict[str, Any] = {
             "model": self.model,
-            "messages": with_reasoning(messages, reasoning),
+            "messages": with_reasoning(messages, reasoning) if self.reasoning_in_prompt else [dict(m) for m in messages],
             "temperature": 1.0,
             "max_tokens": max(4000, max_tokens),
             "stream": False,
@@ -101,7 +108,7 @@ class NimGlimmer:
         if self.offline:
             return ChatResult(error="offline: no cached response", cache_key=key)
         if not self.api_key:
-            return ChatResult(error="no NVIDIA_API_KEY", cache_key=key)
+            return ChatResult(error=f"no {self.key_env}", cache_key=key)
         res = self._call(payload)
         res.cache_key = key
         if path and res.ok:  # never cache failures; a retry later may succeed
@@ -128,6 +135,34 @@ class NimGlimmer:
                     break
             time.sleep(min(30, 2 ** attempt * 3))
         return ChatResult(error=last)
+
+
+class BasetenMuseSpark(NimGlimmer):
+    """Muse Spark Open (Meta) on Baseten's OpenAI-compatible endpoint.
+
+    It always reasons (reasoning arrives in `reasoning_content`, the answer in `content`), so the
+    Glimmer "Reasoning strength" line is not sent and `reasoning` is ignored. No JSON mode or
+    structured outputs: callers strict-parse text exactly as for Glimmer. Native tool calls work.
+    Same temperature (1.0), same cache (the model id is part of the request hash, so Glimmer and
+    Spark entries never collide), same fail-closed error handling.
+    """
+    name = "muse-spark-open-baseten"
+    key_env = "BASETEN_API_KEY"
+    reasoning_in_prompt = False
+
+    def __init__(self, api_key: str | None = None, *, model: str = MUSE_SPARK_OPEN, url: str = BASETEN_URL, **kw):
+        super().__init__(api_key, model=model, url=url, **kw)
+
+
+PROVIDERS = {"spark": BasetenMuseSpark, "glimmer": NimGlimmer}
+
+
+def get_provider(name: str | None = None, **kw) -> NimGlimmer:
+    """`name` or $LLM_PROVIDER or the default (Muse Spark Open on Baseten)."""
+    key = (name or os.environ.get("LLM_PROVIDER") or DEFAULT_PROVIDER).strip().lower()
+    if key not in PROVIDERS:
+        raise ValueError(f"unknown LLM provider {key!r}; choose one of {sorted(PROVIDERS)}")
+    return PROVIDERS[key](**kw)
 
 
 def parse_response(r: httpx.Response, latency: float) -> ChatResult:
