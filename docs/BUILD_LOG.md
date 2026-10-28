@@ -83,3 +83,7 @@ Planning documents (threat model, eval plan, demo script) were written before ki
 ### Wed Oct 28, 05:20 IST: Day 2 (build loop, chunk 10): T2 layout
 - `make_t1(..., layout="t2")`: bank block moves to a top-right "Pay To" panel (different region box), same labels. Extraction, printed total and bank fields still read identically (test added; Python 57 pass). Gives the frozen set a second layout so extraction isn't tuned to one template.
 - Next: frozen 77-case generator + manifest hash (mix T1/T2/USD/scan/photo), blind K set by Oct 29 evening.
+
+### Wed Oct 28, 08:45 IST: Day 2 (build loop, chunk 11): attack variants
+- `dataset/gen/make_variants.py`: every risk-set attack re-rendered as T2 layout and as a T1 scan (24 base → 48 variant cases), ground truth inherited, SHA-256 manifest hash for freezing. Test added; Python 58 pass. Not yet run through OFF/ON (dev material).
+- Next: run variants through gate-only + shield ON, log counts in EVAL_LOG; then assemble the 77-case frozen set (X/K/R rows) and blind K set by Oct 29 evening.

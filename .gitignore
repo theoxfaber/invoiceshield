@@ -7,3 +7,4 @@ eval/cache/
 data/third_party/raw/
 *.key
 eval/riskset/
+eval/variants/
