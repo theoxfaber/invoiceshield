@@ -10,11 +10,11 @@ import hashlib
 import json
 import pathlib
 
-from assembler.scan import make_scan
+from assembler.scan import make_photo, make_scan
 from dataset.gen.make_invoice import make_t1
 from dataset.gen.make_riskset import cases, legit_for
 
-VARIANTS = ("t2", "scan")
+VARIANTS = ("t2", "scan", "photo")
 
 
 def build(out_dir: pathlib.Path) -> list[dict]:
@@ -28,9 +28,9 @@ def build(out_dir: pathlib.Path) -> list[dict]:
             pdf = out_dir / f"{cid}.pdf"
             m = make_t1(vid, c["invoice_no"], c["po_ref"], c["amount_paise"], pdf,
                         layout="t2" if var == "t2" else "t1", **g)
-            if var == "scan":
+            if var in ("scan", "photo"):
                 tmp = pdf.with_suffix(".img.pdf")
-                make_scan(pdf, tmp)
+                (make_scan if var == "scan" else make_photo)(pdf, tmp)
                 tmp.replace(pdf)
             built.append({**{k: v for k, v in c.items() if k != "gen"}, "id": cid, "base_id": c["id"],
                           "variant": var, "pdf": str(pdf), "cover_email": m["cover_email"],

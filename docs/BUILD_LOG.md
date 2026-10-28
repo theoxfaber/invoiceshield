@@ -91,3 +91,7 @@ Planning documents (threat model, eval plan, demo script) were written before ki
 ### Wed Oct 28, 11:30 IST: Day 2 (build loop, chunk 12): variants through the gate
 - `eval.run_gate_only variants` runs the 48 variants through the real governor (hijacked agent, blind checker): 0 harmful ALLOWs; controls 4 ALLOW / 4 REVIEW (scans). Numbers in EVAL_LOG.
 - Next: shield-ON run on variants with Glimmer (cached), then assemble the 77-case frozen set and blind K set by Oct 29 evening.
+
+### Wed Oct 28, 14:30 IST: Day 2 (build loop, chunk 13): photo variant of attacks
+- `make_variants` now also renders each attack as a phone-photo variant (24 base → 72 variant cases, T2 / scan / photo). Test updated. Not yet run through the gate (dev material).
+- Next: gate-only + shield-ON runs on the photo variants, then assemble the 77-case frozen set and blind K set by Oct 29 evening.
