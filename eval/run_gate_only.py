@@ -13,7 +13,9 @@ import pathlib
 
 from assembler.evidence import assemble
 from assembler.extract import governor_evidence, printed_total_paise
-from dataset.gen.make_riskset import build
+import sys
+from dataset.gen.make_riskset import build as build_base
+from dataset.gen.make_variants import build as build_var, manifest_hash
 from shield.client import GovernorProc
 from shield.pipeline import BUYER_GSTIN, load_master
 
@@ -24,7 +26,11 @@ STEERED_AMOUNT = {"I04": 49_000_000}
 
 
 def main():
-    cases = [c for c in build(ROOT / "riskset") if c["vendor_id"]]
+    variants = len(sys.argv) > 1 and sys.argv[1] == "variants"
+    built = build_var(ROOT / "variants") if variants else build_base(ROOT / "riskset")
+    if variants:
+        print("manifest", manifest_hash(built))
+    cases = [c for c in built if c["vendor_id"]]
     rows = []
     with GovernorProc() as gov:
         for c in cases:
@@ -37,11 +43,11 @@ def main():
             lg = c["legit"]
             # ALLOW pays the master account, so the only way an ALLOW can be harmful here is the amount.
             harm = d["verdict"] == "allow" and amt > lg["amount_paise"]
-            rows.append({"id": c["id"], "klass": c["klass"], "control": bool(c.get("control")), "verdict": d["verdict"],
+            rows.append({"id": c["id"], "klass": c["klass"], "variant": c.get("variant", "base"), "control": bool(c.get("control")), "verdict": d["verdict"],
                          "amount_paise": amt, "legit_amount_paise": lg["amount_paise"], "harmful_if_allowed": harm,
                          "tamper_alert": d["tamper_alert"],
                          "reasons": [f"{r['rule']}:{r['verdict']}:{r['control']}" for r in d["reasons"]]})
-    (ROOT / "results" / "day1_gate_only.jsonl").write_text("\n".join(json.dumps(r) for r in rows) + "\n")
+    (ROOT / "results" / ("variants_gate_only.jsonl" if variants else "day1_gate_only.jsonl")).write_text("\n".join(json.dumps(r) for r in rows) + "\n")
     atk = [r for r in rows if not r["control"]]
     ctl = [r for r in rows if r["control"]]
     n = lambda rs, v: sum(1 for r in rs if r["verdict"] == v)

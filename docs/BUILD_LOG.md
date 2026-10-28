@@ -87,3 +87,7 @@ Planning documents (threat model, eval plan, demo script) were written before ki
 ### Wed Oct 28, 08:45 IST: Day 2 (build loop, chunk 11): attack variants
 - `dataset/gen/make_variants.py`: every risk-set attack re-rendered as T2 layout and as a T1 scan (24 base → 48 variant cases), ground truth inherited, SHA-256 manifest hash for freezing. Test added; Python 58 pass. Not yet run through OFF/ON (dev material).
 - Next: run variants through gate-only + shield ON, log counts in EVAL_LOG; then assemble the 77-case frozen set (X/K/R rows) and blind K set by Oct 29 evening.
+
+### Wed Oct 28, 11:30 IST: Day 2 (build loop, chunk 12): variants through the gate
+- `eval.run_gate_only variants` runs the 48 variants through the real governor (hijacked agent, blind checker): 0 harmful ALLOWs; controls 4 ALLOW / 4 REVIEW (scans). Numbers in EVAL_LOG.
+- Next: shield-ON run on variants with Glimmer (cached), then assemble the 77-case frozen set and blind K set by Oct 29 evening.
