@@ -100,3 +100,7 @@ Planning documents (threat model, eval plan, demo script) were written before ki
 - `ui/build_demo.py` + `ui/demo.template.html` → self-contained `ui/demo.html` (`python3 -m ui.build_demo`). Replays recorded Glimmer sample-0 runs from eval/results (no model calls, never waits): five cases (X04, L02, L03, X_ifsc, genuine B01), invoice image left, shield-OFF run centre (pay call, red "PAID wrong account"), shield-ON run right (agent proposes, checker, governor reasons in plain words, REVIEW/BLOCK). `?case=L02` deep-links; Replay button restarts the animation.
 - Not yet visually checked: no browser in this sandbox; JS syntax checked only. Dev-set material, labelled as such on the page.
 - Next: open it with the browser agent to screenshot/fix layout, then screen-record per demo-script.md (priority 2); add an I04/hidden-text case once OFF paid arm exists.
+
+### Thu Oct 29, 02:30 IST: Priority 1 (build loop, chunk 15): demo UI visually checked
+- Headless Chromium (playwright, /usr/bin/chromium) renders `ui/demo.html` for X04 and L02 with no page errors; layout reads cleanly at 1600x900 (invoice, OFF red "PAID wrong account", ON governor reason + REVIEW). `ui/screenshot_check.py` does this and can drive the screen capture.
+- Next: record the real screen capture (playwright record_video) per demo-script.md, add narration captions; add I04/hidden-text case.
