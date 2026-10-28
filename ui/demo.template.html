@@ -1,0 +1,59 @@
+<!doctype html><html lang="en"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>InvoiceShield demo</title>
+<style>
+:root{--bg:#0f1420;--card:#171e2e;--line:#2a3550;--tx:#e8ecf5;--mu:#8e9ab5;--red:#ff5d5d;--grn:#3ddc97;--amb:#ffb84d}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--tx);font:16px/1.45 system-ui,sans-serif}
+header{padding:18px 28px;border-bottom:1px solid var(--line);display:flex;gap:16px;align-items:center;flex-wrap:wrap}
+h1{font-size:20px;margin:0}.sub{color:var(--mu);font-size:14px}
+nav{display:flex;gap:8px;flex-wrap:wrap;margin-left:auto}
+nav button{background:var(--card);color:var(--tx);border:1px solid var(--line);padding:8px 12px;border-radius:8px;cursor:pointer;font-size:14px}
+nav button.on{border-color:var(--grn);background:#1d2a3a}
+main{display:grid;grid-template-columns:1fr 1fr 1fr;gap:18px;padding:22px 28px}
+@media(max-width:1100px){main{grid-template-columns:1fr}}
+.col{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:16px;min-height:420px}
+.col h2{margin:0 0 10px;font-size:13px;letter-spacing:.08em;text-transform:uppercase;color:var(--mu)}
+.col img{width:100%;border-radius:6px;background:#fff}
+.run{margin-top:14px}.step{opacity:0;transform:translateY(6px);transition:.4s;margin:10px 0;padding:10px 12px;border-radius:8px;background:#0f1626;border:1px solid var(--line)}
+.step.show{opacity:1;transform:none}.k{color:var(--mu);font-size:12px}
+.verdict{font-size:22px;font-weight:700;padding:12px;border-radius:8px;text-align:center}
+.paid{background:#3a1a1f;color:var(--red);border:1px solid var(--red)}
+.ok{background:#12301f;color:var(--grn);border:1px solid var(--grn)}
+.rev{background:#3a2c12;color:var(--amb);border:1px solid var(--amb)}
+.blk{background:#12301f;color:var(--grn);border:1px solid var(--grn)}
+.tag{display:inline-block;font-size:11px;padding:2px 6px;border-radius:4px;border:1px solid var(--line);color:var(--mu);margin-left:6px}
+code{font-family:ui-monospace,monospace;font-size:13px}
+footer{padding:10px 28px 28px;color:var(--mu);font-size:13px}
+.play{background:var(--grn);color:#06241a;border:0;padding:8px 16px;border-radius:8px;font-weight:700;cursor:pointer}
+</style>
+<header><div><h1>InvoiceShield</h1><div class="sub">Same invoice, same model. Shield OFF vs ON. Replay of recorded Muse Glimmer runs, mock payment rail.</div></div>
+<nav id="nav"></nav><button class="play" id="play">Replay</button></header>
+<main>
+<section class="col"><h2>The invoice</h2><div id="inv"></div></section>
+<section class="col"><h2>Shield OFF: agent has a pay tool</h2><div id="off" class="run"></div></section>
+<section class="col"><h2>Shield ON: agent can only propose</h2><div id="on" class="run"></div></section>
+</main>
+<footer>Recorded sample 0 of the development risk set (dev set, not the frozen held-out set). Fictional vendors and bank details. The governor is a deterministic Rust service; the model never holds the payment tool.</footer>
+<script>
+const D=__DATA__;let cur=0,timers=[];
+const $=i=>document.getElementById(i);
+function esc(s){return String(s).replace(/[&<>]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;'}[c]))}
+function steps(el,list){el.innerHTML='';list.forEach((h,i)=>{const d=document.createElement('div');d.className='step';d.innerHTML=h;el.appendChild(d);timers.push(setTimeout(()=>d.classList.add('show'),400+i*900))})}
+function show(i){cur=i;timers.forEach(clearTimeout);timers=[];const c=D[i];
+ document.querySelectorAll('nav button').forEach((b,j)=>b.classList.toggle('on',j==i));
+ $('inv').innerHTML=`<img src="data:image/png;base64,${c.image}"><div class="k" style="margin-top:8px">${esc(c.title)} · ${esc(c.invoice_no)} · from <code>${esc(c.email_from)}</code></div>`;
+ const o=c.off,n=c.on;
+ const offSteps=[`<div class="k">Agent reads the invoice</div>${esc(o.agent_reason||'Invoice looks consistent with the PO.')}`,
+  `<div class="k">Agent calls <code>pay_invoice</code></div><code>${esc(o.payee)}<br>A/c ${esc(o.account)} · ${esc(o.ifsc)}<br>${esc(o.amount)}</code>`,
+  `<div class="verdict ${o.harmful?'paid':'ok'}">${o.harmful?'PAID '+esc(o.amount)+' TO THE WRONG ACCOUNT':'PAID '+esc(o.amount)}</div>${o.harmful?'<div class="k" style="margin-top:6px">'+esc(o.why)+'</div>':''}`];
+ const rs=n.reasons.map(r=>`<div><b>${esc(r.rule)}</b><span class="tag">${esc(r.severity)}</span><br><span class="k">${esc(r.text)}</span></div>`).join('');
+ const onSteps=[`<div class="k">Agent proposes (no pay tool, no bank fields)</div>${esc(n.agent_reason||'Proposal: vendor, invoice, amount, PO.')}<br><code>${esc(n.amount)}</code>`,
+  `<div class="k">Quarantined checker (no tools) reads the document</div>Returns signals only; the governor decides.`,
+  `<div class="k">Rust governor checks the trusted vendor master</div><code>Trusted account ${esc(n.trusted_account)} · ${esc(n.trusted_ifsc)}</code>`];
+ if(n.outcome=='paid') onSteps.push(`<div class="verdict ok">ALLOW. Paid ${esc(n.amount)} to the master account</div><div class="k" style="margin-top:6px">Genuine invoice: no friction.</div>`);
+ else if(n.outcome.startsWith('agent_')) onSteps.push(`<div class="verdict ok">NOT PAID: agent held it</div>`);
+ else onSteps.push(`<div class="k">Governor reasons</div>${rs}`,`<div class="verdict ${n.outcome=='block'?'blk':'rev'}">${n.outcome.toUpperCase()}: nothing paid</div>`);
+ steps($('off'),offSteps);steps($('on'),onSteps)}
+D.forEach((c,i)=>{const b=document.createElement('button');b.textContent=c.title;b.onclick=()=>show(i);$('nav').appendChild(b)});
+$('play').onclick=()=>show(cur);
+const q=new URLSearchParams(location.search).get('case');show(Math.max(0,D.findIndex(c=>c.id==q)));
+</script></html>

@@ -95,3 +95,8 @@ Planning documents (threat model, eval plan, demo script) were written before ki
 ### Wed Oct 28, 14:30 IST: Day 2 (build loop, chunk 13): photo variant of attacks
 - `make_variants` now also renders each attack as a phone-photo variant (24 base → 72 variant cases, T2 / scan / photo). Test updated. Not yet run through the gate (dev material).
 - Next: gate-only + shield-ON runs on the photo variants, then assemble the 77-case frozen set and blind K set by Oct 29 evening.
+
+### Wed Oct 28, 23:10 IST: Priority 1 (build loop, chunk 14): demo UI v1
+- `ui/build_demo.py` + `ui/demo.template.html` → self-contained `ui/demo.html` (`python3 -m ui.build_demo`). Replays recorded Glimmer sample-0 runs from eval/results (no model calls, never waits): five cases (X04, L02, L03, X_ifsc, genuine B01), invoice image left, shield-OFF run centre (pay call, red "PAID wrong account"), shield-ON run right (agent proposes, checker, governor reasons in plain words, REVIEW/BLOCK). `?case=L02` deep-links; Replay button restarts the animation.
+- Not yet visually checked: no browser in this sandbox; JS syntax checked only. Dev-set material, labelled as such on the page.
+- Next: open it with the browser agent to screenshot/fix layout, then screen-record per demo-script.md (priority 2); add an I04/hidden-text case once OFF paid arm exists.
