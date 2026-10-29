@@ -121,3 +121,7 @@ Planning documents (threat model, eval plan, demo script) were written before ki
 ### Thu Oct 29, 08:30 IST: Priority 2 (build loop, chunk 17): captions in the capture
 - `ui/record_demo.py` now overlays a one-line caption per case in the real recording. Still no voice-over; I04 case and 3:00 trim pending.
 - Next: narration/timing to 3:00 per demo-script.md, I04 hidden-text case.
+
+### Thu Oct 29, 11:20 IST: checkpoint (build loop, chunk 18)
+- Checked state: no recorded OFF/ON results exist for I04 (hidden text), so it can't be added to the replay UI without a new cached run; recorder still captions five cases at 14 s each (~70 s). No code change this chunk.
+- Next: run I04 OFF/ON (cached), add it to ui/build_demo.py CASES, then narration timing to 3:00.
