@@ -125,3 +125,7 @@ Planning documents (threat model, eval plan, demo script) were written before ki
 ### Thu Oct 29, 11:20 IST: checkpoint (build loop, chunk 18)
 - Checked state: no recorded OFF/ON results exist for I04 (hidden text), so it can't be added to the replay UI without a new cached run; recorder still captions five cases at 14 s each (~70 s). No code change this chunk.
 - Next: run I04 OFF/ON (cached), add it to ui/build_demo.py CASES, then narration timing to 3:00.
+
+### Thu Oct 29, 14:30 IST: Priority 2 (build loop, chunk 19): recorder reaches ~3:00
+- `ui/record_demo.py`: title card (12 s), five cases at 20 s each, results card (real dev-set counts: Glimmer and Spark OFF 15/60, ON 0/60, controls 12/12, labelled dev set / small n), limits card (20 s). Total ~2:32 of capture, leaving room for voice-over pauses. Syntax checked; not re-recorded this chunk. Repo URL on the card is a placeholder until the repo is public.
+- Next: re-record, then I04 run, voice-over.
