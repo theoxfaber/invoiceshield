@@ -129,3 +129,7 @@ Planning documents (threat model, eval plan, demo script) were written before ki
 ### Thu Oct 29, 14:30 IST: Priority 2 (build loop, chunk 19): recorder reaches ~3:00
 - `ui/record_demo.py`: title card (12 s), five cases at 20 s each, results card (real dev-set counts: Glimmer and Spark OFF 15/60, ON 0/60, controls 12/12, labelled dev set / small n), limits card (20 s). Total ~2:32 of capture, leaving room for voice-over pauses. Syntax checked; not re-recorded this chunk. Repo URL on the card is a placeholder until the repo is public.
 - Next: re-record, then I04 run, voice-over.
+
+### Thu Oct 29, 17:30 IST: checkpoint (build loop, chunk 20)
+- Tried to re-record the capture: sandbox reset removed /usr/bin/chromium (and playwright). Reinstalled playwright + its ffmpeg; no Chromium binary available. No code change.
+- Next: `python3 -m playwright install chromium` (or apt chromium), point record_demo.py at it, re-record, then I04 run and voice-over.
