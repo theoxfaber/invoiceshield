@@ -141,3 +141,13 @@ Planning documents (threat model, eval plan, demo script) were written before ki
 ### Thu Oct 29, 23:20 IST: checkpoint (build loop, chunk 22)
 - `apt-get install chromium` not available (package not found); third stall on a local browser, so logging and moving on. README already covers judge packaging. No code change.
 - Next: use the browser agent to screen-record ui/demo.html (or ship the replay UI plus captions), then I04 run, voice-over.
+
+### Fri Oct 30, 00:15 IST: browser unblocked
+- Sandbox is arm64 with no root. Fix: `pip install playwright==1.47.0 && python3 -m playwright install chromium` (chromium-1134 downloads), then extract missing libs from Debian arm64 debs (libatk1.0-0t64, libatk-bridge2.0-0t64, libatspi2.0-0t64, libxcomposite1, libxdamage1, libxres1) with `dpkg-deb -x` into ~/xl and `export LD_LIBRARY_PATH=$HOME/xl/usr/lib/aarch64-linux-gnu`. demo-v3.html renders.
+
+### Fri Oct 30, 00:40 IST: 3-minute submission video (real screen capture)
+- New `ui/video/`: `segs.json` + `tts.py` (edge-tts, en-US-AndrewMultilingualNeural, +5%), `build_audio.py` (timeline, two-pass loudnorm to -16 LUFS, captions.srt, script.txt), `record_submission.py` (Playwright 1.47 chromium, real mouse clicks and key presses on `ui/demo-v3.html`, CDP screencast at 1920x1080 with the page zoomed 1.25x), `encode.py` (1080p30 H.264 + AAC + soft subs, duration check).
+- `ui/demo-v3.html`: recorder hook `window.__sched(stepTimes, runMs)` so replay steps land on narration lines; the default pace is unchanged. (The v3 build script lives outside the repo in brag-output-v5/work and does not have this hook yet.)
+- `ui/record_demo.py`: dropped the hard-coded `/usr/bin/chromium` and now uses Playwright's own chromium.
+- Output (outside the repo): `hackathon/invoiceshield/submission-video/final.mp4`, 2:57, plus final.srt, poster.jpg, script.txt, README.md. Story: L02 look-alike domain, ₹59,000; shield OFF pays the wrong account, shield ON blocks; X04/X_ifsc held; B01 genuine paid; Rule of Two; vendor record; dev-set results (15/60 → 0/60, 12/12, Glimmer same, held-out not run); limits.
+- Next: run the frozen held-out set, then update the results view and the narration line; review the video before submitting.

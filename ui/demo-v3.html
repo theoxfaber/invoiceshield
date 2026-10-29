@@ -443,10 +443,10 @@ function renderDetail(){
  if(STATIC||RM||step!=null){els.forEach((e,i)=>{if(step==null||i<step)e.classList.add('done')});
   if(step==null||step>govIdx&&govIdx>=0)reveal(); if(step==null||step>=els.length)fin();else $('banner').classList.add('show');return}
  requestAnimationFrame(()=>$('banner').classList.add('show'));
- const t0=350;
- els.forEach((e,i)=>{later(()=>e.classList.add('run'),t0+i*PACE);
-  later(()=>{e.classList.remove('run');e.classList.add('done');if(i===govIdx)reveal()},t0+i*PACE+PACE*.62)});
- later(fin,t0+(els.length-1)*PACE+PACE*.62+180);
+ const t0=350, SS=window.__steps, AT=i=>SS&&SS[i]!=null?SS[i]:t0+i*PACE, RUN=SS?(window.__run||900):PACE*.62;
+ els.forEach((e,i)=>{later(()=>e.classList.add('run'),AT(i));
+  later(()=>{e.classList.remove('run');e.classList.add('done');if(i===govIdx)reveal()},AT(i)+RUN)});
+ later(fin,AT(els.length-1)+RUN+180);
 }
 function renderResults(){
  const T=X.totals, g=X.grid, ids=Object.keys(g).filter(k=>!g[k].control);
@@ -563,7 +563,7 @@ addEventListener('resize',()=>{if(view=='intro'||view=='close')startGL()});
 window.__cursorTo=(sel,dx=0,dy=0)=>{const el=typeof sel=='string'?document.querySelector(sel):sel;if(!el)return false;const r=el.getBoundingClientRect(),c=$('cursor');
  c.style.left=(r.left+r.width*.5+dx)+'px';c.style.top=(r.top+r.height*.55+dy)+'px';return true};
 window.__click=(sel)=>{const el=document.querySelector(sel),c=$('cursor');if(!el)return false;c.classList.remove('click');void c.offsetWidth;c.classList.add('click');setTimeout(()=>el.click(),120);return true};
-window.__pace=n=>{PACE=n};window.__play=()=>{window.__hold=false;show(cur)};
+window.__pace=n=>{PACE=n};window.__sched=(a,r)=>{window.__steps=a;window.__run=r};window.__play=()=>{window.__hold=false;show(cur)};
 window.__scrollDetail=y=>{const d=$('detail');d.scrollTo({top:y,behavior:RM?'auto':'smooth'})};
 window.__state=o=>{if(o.case){const j=D.findIndex(c=>c.id==o.case);if(j>=0)cur=j}if(o.arm){arm=o.arm;document.querySelectorAll('#seg button').forEach(b=>b.classList.toggle('on',b.dataset.arm==arm))}setView(o.view||'inbox')};
 const qc=Q.get('case'); cur=Math.max(0,D.findIndex(c=>c.id==(qc||'L02')));

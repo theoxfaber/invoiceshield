@@ -1,0 +1,50 @@
+[
+[
+"s01",
+"Companies are starting to let AI agents pay their invoices. That's great news for scammers. The quietest fraud in accounts payable is a supplier's bank details changing, with nobody noticing."
+],
+[
+"s02",
+"Here's an email from Sharma Office Supplies, a vendor this business already pays. Same purchase order. Same amount: fifty-nine thousand rupees. But look at the sender. One extra hyphen, and a different ending. And the bank account printed on the PDF is new."
+],
+[
+"s03",
+"Shield off. A normal agent, running on Meta's Muse Spark Open, served on Baseten, holds the payment tool. It reads the invoice, trusts it, and pays. Fifty-nine thousand rupees, straight into the scammer's account."
+],
+[
+"s04",
+"Now the same invoice, the same agent, with InvoiceShield on. The agent still reads everything, but it can only propose a payment: vendor, invoice number, amount, purchase order. Its tool has no bank field at all."
+],
+[
+"s05",
+"A separate checker model reads the document in isolation, with no tools. Then the decision goes to a policy engine written in Rust, which compares everything with the verified vendor record. The sender's domain isn't on file. The account isn't the verified one. Blocked. Nothing moves."
+],
+[
+"s06",
+"It isn't tuned to one trick. A clean sender, but a swapped account number: held for a person to review. Same account, quietly moved to a new bank branch: held again."
+],
+[
+"s07",
+"And a genuine invoice from the same supplier? Paid, to the account on record, with no friction. A shield that blocks everything would be useless."
+],
+[
+"s08",
+"This is Meta's Agents Rule of Two, applied to accounts payable. An agent that reads untrusted documents should not also hold the power to move money. So the Rust governor is the authority. Model signals can only escalate a decision, never approve one. And if the checker crashes, times out, or returns garbage, the governor fails closed."
+],
+[
+"s09",
+"The payee always comes from the trusted vendor master. An invoice can never change it. The bank account on a PDF is only ever a tamper signal."
+],
+[
+"s10",
+"On our twenty-four-case development set, twenty fake invoices and four genuine ones, three runs each, on a mock payment rail: with the shield off, fifteen of sixty fake-invoice runs paid the wrong account. With it on, zero. And twelve of twelve genuine invoices still paid. Muse Glimmer thirty B gave the same result. It's a small set we built the rules on; the frozen held-out test is still to come."
+],
+[
+"s11",
+"Here's what it does not stop. It contains the damage; it doesn't eliminate prompt injection. A hijacked agent can still pay a real vendor that has a real order and a consistent invoice. A poisoned vendor master defeats it. And so can small payments, split and spread out over time."
+],
+[
+"s12",
+"InvoiceShield. Pay the vendor record. Never the PDF."
+]
+]
