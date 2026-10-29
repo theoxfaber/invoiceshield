@@ -159,3 +159,7 @@ Planning documents (threat model, eval plan, demo script) were written before ki
 - Clean FP run (eval/EVAL_LOG.md): first run 38 PAY / 17 REVIEW / 5 BLOCK (gate) exposed two extraction bugs (labelled refs outside the vocabulary; multi-column item table). Fixed, both runs kept. Final: gate **56/4/0**, Muse Spark model path **56/4/0**; all 4 non-PAY are "Round off" lines (`charge_not_on_po`), left unfixed on purpose. Fresh seed 20261101, run once after the fixes: 58/2/0, again round-off only. A generator bug (4 invoices dated after the agent's "today") made Spark hold 3; fixed in the generator, raw run kept.
 - Dev numbers unchanged: gate-only, benign 24/24, sequences, variants, and cached ON replays (Glimmer and Spark 0/60 wrong-place pays, controls 12/12); OFF 15/60 does not touch the extractor. Video/README numbers stand.
 - Next: decide the round-off rule before the held-out run; currency (#6).
+
+### Fri Oct 30, 05:20 IST: checkpoint (build loop)
+- Round-off rule drafted (ignore a "round" line under ₹1 in `charge_not_on_po`, engine.rs ~l.294) but not committed: the Rust toolchain/zig-cc linker shim is gone after a sandbox reset (`cc` not found), so it could not be tested. Reverted.
+- Next: restore the linker shim, apply the round-off change with a test, rerun clean-FP, then freeze rules and run the held-out set once.
