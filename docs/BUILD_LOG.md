@@ -117,3 +117,7 @@ Planning documents (threat model, eval plan, demo script) were written before ki
 ### Thu Oct 29, 05:40 IST: Priority 2 (build loop, chunk 16): screen-capture recorder
 - `ui/record_demo.py`: records a real Chromium render of `ui/demo.html` through five cases (X04, L02, L03, X_ifsc, B01), 1600x900 webm, ~70 s, 9 MB (not committed). Needs `python3 -m playwright install ffmpeg`. Raw capture only: no captions or voice-over yet; replays recorded runs, labelled dev set.
 - Next: caption overlays per demo-script.md, trim to 3:00 with narration, add I04 hidden-text case.
+
+### Thu Oct 29, 08:30 IST: Priority 2 (build loop, chunk 17): captions in the capture
+- `ui/record_demo.py` now overlays a one-line caption per case in the real recording. Still no voice-over; I04 case and 3:00 trim pending.
+- Next: narration/timing to 3:00 per demo-script.md, I04 hidden-text case.
