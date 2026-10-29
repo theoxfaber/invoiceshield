@@ -11,8 +11,7 @@ from assembler.evidence import Evidence
 
 GSTIN_RE = re.compile(r"(?<![A-Z0-9])\d{2}[A-Z]{5}\d{4}[A-Z][1-9A-Z]Z[0-9A-Z](?![A-Z0-9])")
 IFSC_RE = re.compile(r"(?<![A-Z0-9])[A-Z]{4}0[A-Z0-9]{6}(?![A-Z0-9])")
-ACCT_RE = re.compile(r"(?<![\d,.])\d{9,18}(?![\d,.])")
-BOX_ACCT_RE = re.compile(r"A/?c\.?\s*(?:No\.?|Number)?\s*[:\-]?\s*(\d[\d ]{7,22}\d)", re.I)
+BOX_ACCT_RE = re.compile(r"\bA/?c\.?\s*(?:No\.?|Number)?\s*[:\-]?\s*(\d[\d ]{7,22}\d)", re.I)
 BOX_IFSC_RE = re.compile(r"IFSC(?:\s*Code)?\s*[:\-]?\s*([A-Z]{4}0[A-Z0-9]{6})", re.I)
 
 
@@ -23,6 +22,69 @@ def _uniq(xs):
             seen.add(x)
             out.append(x)
     return out
+
+
+# --- Account numbers: context-aware ------------------------------------------------------------
+# A bare run of 9-18 digits is not evidence of a bank account: invoices print phone numbers,
+# IRN/Ack numbers, PO and order references, pincodes and UTRs in the same shape. A digit run
+# counts as an account only when the text around it says so:
+#   * the nearest label before it (same line, or the previous line when the number opens the
+#     line) is a bank label (A/c, Account, Acct, Beneficiary, Bank, IFSC, SWIFT, remit, pay to...);
+#   * or the nearest label is a non-bank one (Ph, GSTIN, IRN, Ack, PO, Invoice No, Ref, UTR...) but
+#     an IFSC/SWIFT code follows on the same line ("Ref 3269010273503 IFSC CNRB0002778" is a
+#     payee in disguise, not a reference);
+#   * or there is no label at all and a bank/payment word or an IFSC/SWIFT code is close by.
+# The bank box is labelled, so it is always captured; text pasted anywhere else that names an
+# account in bank words, or next to an IFSC, is captured too, so the tamper alert for injected
+# payees keeps working. Residual gap (documented): a pasted account disguised under a non-bank
+# label with no IFSC beside it raises no alert; it still cannot be paid, because the payee
+# comes only from the vendor master.
+ACCT_RE = re.compile(r"(?<![0-9A-Za-z])(?<!\d[.,])\d{9,18}(?![0-9A-Za-z])(?![.,]\d)")
+# OCR reads "A/c" as "Alc", "A1c", "A|c", so the slash slot is loose but never empty
+# (a plain "AC" is usually air conditioning).
+_BANK_LABEL = (r"\b(?:a\s?[/\\l1|]\s?c\b\.?|acct\b|accnt\b|account(?:[_\s]?(?:no|number|num))?\b|beneficiary|bank\b"
+               r"|ifsc|swift|bic\b|iban|remit\w*|pay(?:\s+to)?\b|payment\s+to|transfer\b|credit\s+(?:to|the)\b"
+               r"|deposit|neft|rtgs|imps|wire\b)")
+_OTHER_LABEL = (r"\b(?:ph\b\.?|phone|tel\b\.?|telephone|mob\b\.?|mobile|cell\b|fax|whats\s?app|contact|call\b|toll[\s-]?free|helpline"
+                r"|gstin|gst\s*no|pan\b|cin\b|tan\b|udyam|msme|irn\b|ack\w*|e-?way|ewb\b|lut\b|hsn\b|sac\b"
+                r"|p\.?\s?o\b\.?|purchase\s+order|order\b|invoice|inv\b\.?|bill\s*no|challan|dc\s*no"
+                r"|ref\w*|utr\b|txn\b|transaction|cheque|chq\b|dd\s*no|receipt|voucher|grn\b|docket|awb\b|lr\s*no|tracking|consignment"
+                r"|pin\b|pin\s*code|pincode|zip\b|postal|routing|aba\b|micr\b|sort\s*code|branch\s*code|serial|s/?n\b|imei|licen[cs]e|ticket|case\b)")
+_LABEL_RE = re.compile(rf"(?P<bank>{_BANK_LABEL})|(?P<other>{_OTHER_LABEL})", re.I)
+_BANK_WORD_RE = re.compile(_BANK_LABEL, re.I)
+_SWIFT_RE = re.compile(r"\b(?:SWIFT|BIC)\s*(?:code)?\s*[:\-]?\s*[A-Z]{6}[A-Z0-9]{2}(?:[A-Z0-9]{3})?\b", re.I)
+
+
+def _line_start(text: str, i: int) -> int:
+    return text.rfind("\n", 0, i) + 1
+
+
+def _bank_code_in(seg: str) -> bool:
+    return bool(IFSC_RE.search(seg.upper()) or _SWIFT_RE.search(seg))
+
+
+def classify_number(text: str, start: int, end: int) -> str:
+    """'account' or 'other' for the digit run text[start:end] (rules in the block comment above)."""
+    ls = _line_start(text, start)
+    if not text[ls:start].strip() and ls > 0:
+        ls = _line_start(text, ls - 1)  # a number that opens its line takes the previous line's label
+    labels = list(_LABEL_RE.finditer(text[max(ls, start - 48):start]))
+    nearest = labels[-1] if labels else None
+    le = text.find("\n", end)
+    code_after = _bank_code_in(text[end:(le if le != -1 else len(text))][:40])
+    if nearest is not None and nearest.group("bank"):
+        return "account"
+    if nearest is not None:
+        return "account" if code_after else "other"
+    if _BANK_WORD_RE.search(text[max(0, start - 80):start]) or _bank_code_in(text[max(0, start - 40):end + 40]):
+        return "account"
+    return "other"
+
+
+def printed_accounts(text: str) -> list[str]:
+    """Every account number the document prints in a bank context (bank box or anywhere else)."""
+    text = text or ""
+    return _uniq(m.group() for m in ACCT_RE.finditer(text) if classify_number(text, m.start(), m.end()) == "account")
 
 
 def sender_domain(email_from: str) -> str | None:
@@ -37,7 +99,7 @@ def governor_evidence(ev: Evidence, buyer_gstin: str) -> dict:
     gstins = [g for g in _uniq(GSTIN_RE.findall(upper)) if g != buyer_gstin.upper()]
     box_acct = BOX_ACCT_RE.search(text)
     box_ifsc = BOX_IFSC_RE.search(text)
-    accts = _uniq(ACCT_RE.findall(text))
+    accts = printed_accounts(text)
     out = {
         "has_text_layer": bool(text.strip()),
         "text_source": (ev.metadata or {}).get("text_source"),
