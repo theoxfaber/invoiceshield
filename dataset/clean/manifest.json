@@ -1,0 +1,1622 @@
+[
+ {
+  "pdf": "dataset/clean/C01.pdf",
+  "vendor_id": "V008",
+  "invoice_no": "DE/26/3481",
+  "po_ref": "PO-2026-0801",
+  "amount_paise": 9565500,
+  "currency": "INR",
+  "layout": "letter",
+  "date": "19.08.2026",
+  "n_lines": 3,
+  "tax": {
+   "tax_mode": "split",
+   "rate": 5,
+   "round_amounts": true
+  },
+  "has_round_off": false,
+  "group": "SEQ1",
+  "seq_index": 0,
+  "now": 1787816000,
+  "cover_email": {
+   "from": "accounts@deccanelectricals.co.in",
+   "to": "ap@bhavaniprecision.in",
+   "subject": "Invoice DE/26/3481 - PO-2026-0801",
+   "body": "Dear Sir/Madam,\n\nWe enclose invoice no. DE/26/3481 (PO PO-2026-0801). Bank details are as per our records with you.\n\nWarm regards,\nDeccan Electricals Pvt Ltd\nMobile: +91-92435-38543"
+  },
+  "id": "C01"
+ },
+ {
+  "pdf": "dataset/clean/C02.pdf",
+  "vendor_id": "V008",
+  "invoice_no": "DE/26/8228",
+  "po_ref": "PO-2026-0801",
+  "amount_paise": 6832200,
+  "currency": "INR",
+  "layout": "sidebar",
+  "date": "03.09.2026",
+  "n_lines": 2,
+  "tax": {
+   "tax_mode": "combined",
+   "rate": 18,
+   "round_amounts": true
+  },
+  "has_round_off": false,
+  "group": "SEQ1",
+  "seq_index": 1,
+  "now": 1790408000,
+  "cover_email": {
+   "from": "accounts@deccanelectricals.co.in",
+   "to": "ap@bhavaniprecision.in",
+   "subject": "Invoice DE/26/8228 - PO-2026-0801",
+   "body": "Dear Accounts Team,\n\nPlease find attached invoice DE/26/8228 against PO-2026-0801. Kindly process payment as per terms.\n\nRegards,\nDeccan Electricals Pvt Ltd\nPh: +91 40 2354 6610"
+  },
+  "id": "C02"
+ },
+ {
+  "pdf": "dataset/clean/C03.pdf",
+  "vendor_id": "V008",
+  "invoice_no": "DE/26/3508",
+  "po_ref": "PO-2026-0801",
+  "amount_paise": 9699630,
+  "currency": "INR",
+  "layout": "sidebar",
+  "date": "2026-10-07",
+  "n_lines": 2,
+  "tax": {
+   "tax_mode": "combined",
+   "rate": 18,
+   "round_amounts": false
+  },
+  "has_round_off": false,
+  "group": "SEQ1",
+  "seq_index": 2,
+  "now": 1793000000,
+  "cover_email": {
+   "from": "accounts@deccanelectricals.co.in",
+   "to": "ap@bhavaniprecision.in",
+   "subject": "Invoice DE/26/3508 - PO-2026-0801",
+   "body": "Hello,\n\nAttached is our invoice DE/26/3508 dated 2026-10-07 for electrical works under PO PO-2026-0801.\n\nThanks,\nAccounts, Deccan Electricals Pvt Ltd"
+  },
+  "id": "C03"
+ },
+ {
+  "pdf": "dataset/clean/C04.pdf",
+  "vendor_id": "V002",
+  "invoice_no": "CL-26-7063",
+  "po_ref": "PO-2026-0202",
+  "amount_paise": 7799792,
+  "currency": "INR",
+  "layout": "classic",
+  "date": "13.08.2026",
+  "n_lines": 2,
+  "tax": {
+   "tax_mode": "rcm",
+   "rate": 0,
+   "round_amounts": false
+  },
+  "has_round_off": false,
+  "group": "SEQ2",
+  "seq_index": 0,
+  "now": 1787816000,
+  "cover_email": {
+   "from": "ar@coastal-logistics.in",
+   "to": "ap@bhavaniprecision.in",
+   "subject": "Invoice CL-26-7063 - PO-2026-0202",
+   "body": "Dear Sir/Madam,\n\nWe enclose invoice no. CL-26-7063 (PO PO-2026-0202). Bank details are as per our records with you.\n\nWarm regards,\nCoastal Logistics\nMobile: (0565) 4536497"
+  },
+  "id": "C04"
+ },
+ {
+  "pdf": "dataset/clean/C05.pdf",
+  "vendor_id": "V002",
+  "invoice_no": "CL-26-4573",
+  "po_ref": "PO-2026-0202",
+  "amount_paise": 8454666,
+  "currency": "INR",
+  "layout": "sidebar",
+  "date": "26-Sep-2026",
+  "n_lines": 2,
+  "tax": {
+   "tax_mode": "split",
+   "rate": 12,
+   "round_amounts": false
+  },
+  "has_round_off": false,
+  "group": "SEQ2",
+  "seq_index": 1,
+  "now": 1790408000,
+  "cover_email": {
+   "from": "billing@coastal-logistics.in",
+   "to": "ap@bhavaniprecision.in",
+   "subject": "Invoice CL-26-4573 - PO-2026-0202",
+   "body": "Dear Sir/Madam,\n\nWe enclose invoice no. CL-26-4573 (PO PO-2026-0202). Bank details are as per our records with you.\n\nWarm regards,\nCoastal Logistics\nMobile: +91 891 256 4402"
+  },
+  "id": "C05"
+ },
+ {
+  "pdf": "dataset/clean/C06.pdf",
+  "vendor_id": "V002",
+  "invoice_no": "CL-26-7325",
+  "po_ref": "PO-2026-0202",
+  "amount_paise": 5313568,
+  "currency": "INR",
+  "layout": "classic",
+  "date": "04.10.2026",
+  "n_lines": 2,
+  "tax": {
+   "tax_mode": "split",
+   "rate": 18,
+   "round_amounts": false
+  },
+  "has_round_off": false,
+  "group": "SEQ2",
+  "seq_index": 2,
+  "now": 1793000000,
+  "cover_email": {
+   "from": "finance@coastal-logistics.in",
+   "to": "ap@bhavaniprecision.in",
+   "subject": "Invoice CL-26-7325 - PO-2026-0202",
+   "body": "Hello,\n\nAttached is our invoice CL-26-7325 dated 04.10.2026 for freight (annual) under PO PO-2026-0202.\n\nThanks,\nAccounts, Coastal Logistics"
+  },
+  "id": "C06"
+ },
+ {
+  "pdf": "dataset/clean/C07.pdf",
+  "vendor_id": "V004",
+  "invoice_no": "VSF549",
+  "po_ref": "PO-2026-0401",
+  "amount_paise": 6562500,
+  "currency": "INR",
+  "layout": "classic",
+  "date": "26/08/2026",
+  "n_lines": 5,
+  "tax": {
+   "tax_mode": "split",
+   "rate": 5,
+   "round_amounts": true
+  },
+  "has_round_off": false,
+  "group": "SEQ3",
+  "seq_index": 0,
+  "now": 1787816000,
+  "cover_email": {
+   "from": "finance@visakhasteelfab.in",
+   "to": "ap@bhavaniprecision.in",
+   "subject": "Invoice VSF549 - PO-2026-0401",
+   "body": "Dear Accounts Team,\n\nPlease find attached invoice VSF549 against PO-2026-0401. Kindly process payment as per terms.\n\nRegards,\nVisakha Steel Fabricators Pvt Ltd\nPh: 0510-8156347"
+  },
+  "id": "C07"
+ },
+ {
+  "pdf": "dataset/clean/C08.pdf",
+  "vendor_id": "V004",
+  "invoice_no": "VSF157",
+  "po_ref": "PO-2026-0401",
+  "amount_paise": 6827154,
+  "currency": "INR",
+  "layout": "classic",
+  "date": "07.09.2026",
+  "n_lines": 4,
+  "tax": {
+   "tax_mode": "combined",
+   "rate": 12,
+   "round_amounts": false
+  },
+  "has_round_off": false,
+  "group": "SEQ3",
+  "seq_index": 1,
+  "now": 1790408000,
+  "cover_email": {
+   "from": "accounts@visakhasteelfab.in",
+   "to": "ap@bhavaniprecision.in",
+   "subject": "Invoice VSF157 - PO-2026-0401",
+   "body": "Dear Sir/Madam,\n\nWe enclose invoice no. VSF157 (PO PO-2026-0401). Bank details are as per our records with you.\n\nWarm regards,\nVisakha Steel Fabricators Pvt Ltd\nMobile: 0867-4241244"
+  },
+  "id": "C08"
+ },
+ {
+  "pdf": "dataset/clean/C09.pdf",
+  "vendor_id": "V004",
+  "invoice_no": "VSF201",
+  "po_ref": "PO-2026-0401",
+  "amount_paise": 5668100,
+  "currency": "INR",
+  "layout": "hsn",
+  "date": "16.10.2026",
+  "n_lines": 4,
+  "tax": {
+   "tax_mode": "split",
+   "rate": 12,
+   "round_amounts": false
+  },
+  "has_round_off": true,
+  "group": "SEQ3",
+  "seq_index": 2,
+  "now": 1793000000,
+  "cover_email": {
+   "from": "ar@visakhasteelfab.in",
+   "to": "ap@bhavaniprecision.in",
+   "subject": "Invoice VSF201 - PO-2026-0401",
+   "body": "Hello,\n\nAttached is our invoice VSF201 dated 16.10.2026 for fabrication under PO PO-2026-0401.\n\nThanks,\nAccounts, Visakha Steel Fabricators Pvt Ltd"
+  },
+  "id": "C09"
+ },
+ {
+  "pdf": "dataset/clean/C10.pdf",
+  "vendor_id": "V005",
+  "invoice_no": "GL-2048",
+  "po_ref": "PO-2026-0501",
+  "amount_paise": 3214400,
+  "currency": "INR",
+  "layout": "hsn",
+  "date": "10.08.2026",
+  "n_lines": 5,
+  "tax": {
+   "tax_mode": "combined",
+   "rate": 12,
+   "round_amounts": true
+  },
+  "has_round_off": false,
+  "group": "SEQ4",
+  "seq_index": 0,
+  "now": 1787816000,
+  "cover_email": {
+   "from": "accounts@greenleafcatering.in",
+   "to": "ap@bhavaniprecision.in",
+   "subject": "Invoice GL-2048 - PO-2026-0501",
+   "body": "Hello,\n\nAttached is our invoice GL-2048 dated 10.08.2026 for canteen catering under PO PO-2026-0501.\n\nThanks,\nAccounts, GreenLeaf Catering"
+  },
+  "id": "C10"
+ },
+ {
+  "pdf": "dataset/clean/C11.pdf",
+  "vendor_id": "V005",
+  "invoice_no": "GL-2409",
+  "po_ref": "PO-2026-0501",
+  "amount_paise": 3748500,
+  "currency": "INR",
+  "layout": "sidebar",
+  "date": "01-Sep-2026",
+  "n_lines": 6,
+  "tax": {
+   "tax_mode": "split",
+   "rate": 5,
+   "round_amounts": true
+  },
+  "has_round_off": false,
+  "group": "SEQ4",
+  "seq_index": 1,
+  "now": 1790408000,
+  "cover_email": {
+   "from": "ar@greenleafcatering.in",
+   "to": "ap@bhavaniprecision.in",
+   "subject": "Invoice GL-2409 - PO-2026-0501",
+   "body": "Dear Accounts Team,\n\nPlease find attached invoice GL-2409 against PO-2026-0501. Kindly process payment as per terms.\n\nRegards,\nGreenLeaf Catering\nPh: +91 9396922833"
+  },
+  "id": "C11"
+ },
+ {
+  "pdf": "dataset/clean/C12.pdf",
+  "vendor_id": "V005",
+  "invoice_no": "GL-7512",
+  "po_ref": "PO-2026-0501",
+  "amount_paise": 2548800,
+  "currency": "INR",
+  "layout": "classic",
+  "date": "22/10/2026",
+  "n_lines": 3,
+  "tax": {
+   "tax_mode": "split",
+   "rate": 18,
+   "round_amounts": true
+  },
+  "has_round_off": false,
+  "group": "SEQ4",
+  "seq_index": 2,
+  "now": 1793000000,
+  "cover_email": {
+   "from": "billing@greenleafcatering.in",
+   "to": "ap@bhavaniprecision.in",
+   "subject": "Invoice GL-7512 - PO-2026-0501",
+   "body": "Dear Accounts Team,\n\nPlease find attached invoice GL-7512 against PO-2026-0501. Kindly process payment as per terms.\n\nRegards,\nGreenLeaf Catering\nPh: 9908370206"
+  },
+  "id": "C12"
+ },
+ {
+  "pdf": "dataset/clean/C13.pdf",
+  "vendor_id": "V009",
+  "invoice_no": "SOL-6095",
+  "po_ref": "PO-2026-0901",
+  "amount_paise": 2128200,
+  "currency": "INR",
+  "layout": "sidebar",
+  "date": "Oct 12, 2026",
+  "n_lines": 6,
+  "tax": {
+   "tax_mode": "split",
+   "rate": 18,
+   "round_amounts": false
+  },
+  "has_round_off": true,
+  "group": null,
+  "seq_index": 0,
+  "now": 1793000000,
+  "cover_email": {
+   "from": "accounts@sharmaofficesolutions.in",
+   "to": "ap@bhavaniprecision.in",
+   "subject": "Invoice SOL-6095 - PO-2026-0901",
+   "body": "Dear Sir/Madam,\n\nWe enclose invoice no. SOL-6095 (PO PO-2026-0901). Bank details are as per our records with you.\n\nWarm regards,\nSharma Office Solutions\nMobile: (0117) 5792171"
+  },
+  "id": "C13"
+ },
+ {
+  "pdf": "dataset/clean/C14.pdf",
+  "vendor_id": "V007",
+  "invoice_no": "PP985",
+  "po_ref": "PO-2026-0702",
+  "amount_paise": 2016000,
+  "currency": "INR",
+  "layout": "letter",
+  "date": "06/10/2026",
+  "n_lines": 3,
+  "tax": {
+   "tax_mode": "split",
+   "rate": 12,
+   "round_amounts": true
+  },
+  "has_round_off": false,
+  "group": null,
+  "seq_index": 0,
+  "now": 1793000000,
+  "cover_email": {
+   "from": "billing@patelpackaging.co.in",
+   "to": "ap@bhavaniprecision.in",
+   "subject": "Invoice PP985 - PO-2026-0702",
+   "body": "Dear Accounts Team,\n\nPlease find attached invoice PP985 against PO-2026-0702. Kindly process payment as per terms.\n\nRegards,\nPatel Packaging\nPh: +91 9354129989"
+  },
+  "id": "C14"
+ },
+ {
+  "pdf": "dataset/clean/C15.pdf",
+  "vendor_id": "V003",
+  "invoice_no": "BC-INV-12394",
+  "po_ref": "PO-2026-0301",
+  "amount_paise": 5560000,
+  "currency": "USD",
+  "layout": "letter",
+  "date": "16.10.2026",
+  "n_lines": 4,
+  "tax": {
+   "tax_mode": "none",
+   "rate": 0,
+   "round_amounts": true
+  },
+  "has_round_off": false,
+  "group": null,
+  "seq_index": 0,
+  "now": 1793000000,
+  "cover_email": {
+   "from": "ar@brightcloudsoftware.com",
+   "to": "ap@bhavaniprecision.in",
+   "subject": "Invoice BC-INV-12394 - PO-2026-0301",
+   "body": "Dear Sir/Madam,\n\nWe enclose invoice no. BC-INV-12394 (PO PO-2026-0301). Bank details are as per our records with you.\n\nWarm regards,\nBrightCloud Software Inc.\nMobile: 9552140459"
+  },
+  "id": "C15"
+ },
+ {
+  "pdf": "dataset/clean/C16.pdf",
+  "vendor_id": "V001",
+  "invoice_no": "SOS/26-27/2573",
+  "po_ref": "PO-2026-0101",
+  "amount_paise": 2657142,
+  "currency": "INR",
+  "layout": "sidebar",
+  "date": "Oct 25, 2026",
+  "n_lines": 4,
+  "tax": {
+   "tax_mode": "split",
+   "rate": 18,
+   "round_amounts": false
+  },
+  "has_round_off": false,
+  "group": null,
+  "seq_index": 0,
+  "now": 1793000000,
+  "cover_email": {
+   "from": "finance@sharmaofficesupplies.in",
+   "to": "ap@bhavaniprecision.in",
+   "subject": "Invoice SOS/26-27/2573 - PO-2026-0101",
+   "body": "Hello,\n\nAttached is our invoice SOS/26-27/2573 dated Oct 25, 2026 for stationery under PO PO-2026-0101.\n\nThanks,\nAccounts, Sharma Office Supplies Pvt Ltd"
+  },
+  "id": "C16"
+ },
+ {
+  "pdf": "dataset/clean/C17.pdf",
+  "vendor_id": "V007",
+  "invoice_no": "PP736",
+  "po_ref": "PO-2026-0702",
+  "amount_paise": 1132679,
+  "currency": "INR",
+  "layout": "sidebar",
+  "date": "08.10.2026",
+  "n_lines": 4,
+  "tax": {
+   "tax_mode": "combined",
+   "rate": 12,
+   "round_amounts": false
+  },
+  "has_round_off": false,
+  "group": null,
+  "seq_index": 0,
+  "now": 1793000000,
+  "cover_email": {
+   "from": "accounts@patelpackaging.co.in",
+   "to": "ap@bhavaniprecision.in",
+   "subject": "Invoice PP736 - PO-2026-0702",
+   "body": "Dear Sir/Madam,\n\nWe enclose invoice no. PP736 (PO PO-2026-0702). Bank details are as per our records with you.\n\nWarm regards,\nPatel Packaging\nMobile: +91 9691523739"
+  },
+  "id": "C17"
+ },
+ {
+  "pdf": "dataset/clean/C18.pdf",
+  "vendor_id": "V011",
+  "invoice_no": "RCW182",
+  "po_ref": "PO-2026-1101",
+  "amount_paise": 5775050,
+  "currency": "INR",
+  "layout": "letter",
+  "date": "02-Oct-2026",
+  "n_lines": 5,
+  "tax": {
+   "tax_mode": "split",
+   "rate": 18,
+   "round_amounts": false
+  },
+  "has_round_off": false,
+  "group": null,
+  "seq_index": 0,
+  "now": 1793000000,
+  "cover_email": {
+   "from": "ar@raocivilworks.in",
+   "to": "ap@bhavaniprecision.in",
+   "subject": "Invoice RCW182 - PO-2026-1101",
+   "body": "Hello,\n\nAttached is our invoice RCW182 dated 02-Oct-2026 for civil maintenance under PO PO-2026-1101.\n\nThanks,\nAccounts, Rao Civil Works"
+  },
+  "id": "C18"
+ },
+ {
+  "pdf": "dataset/clean/C19.pdf",
+  "vendor_id": "V011",
+  "invoice_no": "RCW751",
+  "po_ref": "PO-2026-1101",
+  "amount_paise": 2121000,
+  "currency": "INR",
+  "layout": "classic",
+  "date": "14-Oct-2026",
+  "n_lines": 2,
+  "tax": {
+   "tax_mode": "split",
+   "rate": 5,
+   "round_amounts": true
+  },
+  "has_round_off": false,
+  "group": null,
+  "seq_index": 0,
+  "now": 1793000000,
+  "cover_email": {
+   "from": "accounts@raocivilworks.in",
+   "to": "ap@bhavaniprecision.in",
+   "subject": "Invoice RCW751 - PO-2026-1101",
+   "body": "Hello,\n\nAttached is our invoice RCW751 dated 14-Oct-2026 for civil maintenance under PO PO-2026-1101.\n\nThanks,\nAccounts, Rao Civil Works"
+  },
+  "id": "C19"
+ },
+ {
+  "pdf": "dataset/clean/C20.pdf",
+  "vendor_id": "V003",
+  "invoice_no": "BC-INV-14870",
+  "po_ref": "PO-2026-0301",
+  "amount_paise": 7530000,
+  "currency": "USD",
+  "layout": "letter",
+  "date": "07/10/2026",
+  "n_lines": 1,
+  "tax": {
+   "tax_mode": "none",
+   "rate": 0,
+   "round_amounts": true
+  },
+  "has_round_off": false,
+  "group": null,
+  "seq_index": 0,
+  "now": 1793000000,
+  "cover_email": {
+   "from": "ar@brightcloudsoftware.com",
+   "to": "ap@bhavaniprecision.in",
+   "subject": "Invoice BC-INV-14870 - PO-2026-0301",
+   "body": "Dear Sir/Madam,\n\nWe enclose invoice no. BC-INV-14870 (PO PO-2026-0301). Bank details are as per our records with you.\n\nWarm regards,\nBrightCloud Software Inc.\nMobile: +91 9816817222"
+  },
+  "id": "C20"
+ },
+ {
+  "pdf": "dataset/clean/C21.pdf",
+  "vendor_id": "V010",
+  "invoice_no": "NIL/26/9478",
+  "po_ref": "PO-2026-1001",
+  "amount_paise": 1296156,
+  "currency": "INR",
+  "layout": "classic",
+  "date": "26.10.2026",
+  "n_lines": 4,
+  "tax": {
+   "tax_mode": "combined",
+   "rate": 18,
+   "round_amounts": false
+  },
+  "has_round_off": false,
+  "group": null,
+  "seq_index": 0,
+  "now": 1793000000,
+  "cover_email": {
+   "from": "billing@nimbusinfotech.co.in",
+   "to": "ap@bhavaniprecision.in",
+   "subject": "Invoice NIL/26/9478 - PO-2026-1001",
+   "body": "Dear Sir/Madam,\n\nWe enclose invoice no. NIL/26/9478 (PO PO-2026-1001). Bank details are as per our records with you.\n\nWarm regards,\nNimbus Infotech LLP\nMobile: +91-92599-86909"
+  },
+  "id": "C21"
+ },
+ {
+  "pdf": "dataset/clean/C22.pdf",
+  "vendor_id": "V001",
+  "invoice_no": "SOS/26-27/6676",
+  "po_ref": "PO-2026-0102",
+  "amount_paise": 5251000,
+  "currency": "INR",
+  "layout": "classic",
+  "date": "28/10/2026",
+  "n_lines": 5,
+  "tax": {
+   "tax_mode": "split",
+   "rate": 18,
+   "round_amounts": true
+  },
+  "has_round_off": false,
+  "group": null,
+  "seq_index": 0,
+  "now": 1793000000,
+  "cover_email": {
+   "from": "accounts@sharmaofficesupplies.in",
+   "to": "ap@bhavaniprecision.in",
+   "subject": "Invoice SOS/26-27/6676 - PO-2026-0102",
+   "body": "Dear Accounts Team,\n\nPlease find attached invoice SOS/26-27/6676 against PO-2026-0102. Kindly process payment as per terms.\n\nRegards,\nSharma Office Supplies Pvt Ltd\nPh: 0754-2302794"
+  },
+  "id": "C22"
+ },
+ {
+  "pdf": "dataset/clean/C23.pdf",
+  "vendor_id": "V003",
+  "invoice_no": "BC-INV-15605",
+  "po_ref": "PO-2026-0301",
+  "amount_paise": 2563548,
+  "currency": "USD",
+  "layout": "letter",
+  "date": "2026-10-14",
+  "n_lines": 4,
+  "tax": {
+   "tax_mode": "none",
+   "rate": 0,
+   "round_amounts": false
+  },
+  "has_round_off": false,
+  "group": null,
+  "seq_index": 0,
+  "now": 1793000000,
+  "cover_email": {
+   "from": "accounts@brightcloudsoftware.com",
+   "to": "ap@bhavaniprecision.in",
+   "subject": "Invoice BC-INV-15605 - PO-2026-0301",
+   "body": "Dear Sir/Madam,\n\nWe enclose invoice no. BC-INV-15605 (PO PO-2026-0301). Bank details are as per our records with you.\n\nWarm regards,\nBrightCloud Software Inc.\nMobile: (0280) 8026737"
+  },
+  "id": "C23"
+ },
+ {
+  "pdf": "dataset/clean/C24.pdf",
+  "vendor_id": "V001",
+  "invoice_no": "SOS/26-27/9809",
+  "po_ref": "PO-2026-0102",
+  "amount_paise": 4675066,
+  "currency": "INR",
+  "layout": "letter",
+  "date": "2026-10-08",
+  "n_lines": 5,
+  "tax": {
+   "tax_mode": "combined",
+   "rate": 18,
+   "round_amounts": false
+  },
+  "has_round_off": false,
+  "group": null,
+  "seq_index": 0,
+  "now": 1793000000,
+  "cover_email": {
+   "from": "finance@sharmaofficesupplies.in",
+   "to": "ap@bhavaniprecision.in",
+   "subject": "Invoice SOS/26-27/9809 - PO-2026-0102",
+   "body": "Dear Sir/Madam,\n\nWe enclose invoice no. SOS/26-27/9809 (PO PO-2026-0102). Bank details are as per our records with you.\n\nWarm regards,\nSharma Office Supplies Pvt Ltd\nMobile: (0241) 1875247"
+  },
+  "id": "C24"
+ },
+ {
+  "pdf": "dataset/clean/C25.pdf",
+  "vendor_id": "V002",
+  "invoice_no": "CL-26-1450",
+  "po_ref": "PO-2026-0202",
+  "amount_paise": 5040000,
+  "currency": "INR",
+  "layout": "sidebar",
+  "date": "2026-10-04",
+  "n_lines": 3,
+  "tax": {
+   "tax_mode": "split",
+   "rate": 5,
+   "round_amounts": true
+  },
+  "has_round_off": false,
+  "group": null,
+  "seq_index": 0,
+  "now": 1793000000,
+  "cover_email": {
+   "from": "ar@coastal-logistics.in",
+   "to": "ap@bhavaniprecision.in",
+   "subject": "Invoice CL-26-1450 - PO-2026-0202",
+   "body": "Dear Accounts Team,\n\nPlease find attached invoice CL-26-1450 against PO-2026-0202. Kindly process payment as per terms.\n\nRegards,\nCoastal Logistics\nPh: 9540995095"
+  },
+  "id": "C25"
+ },
+ {
+  "pdf": "dataset/clean/C26.pdf",
+  "vendor_id": "V010",
+  "invoice_no": "NIL/26/8273",
+  "po_ref": "PO-2026-1001",
+  "amount_paise": 991200,
+  "currency": "INR",
+  "layout": "classic",
+  "date": "Oct 22, 2026",
+  "n_lines": 2,
+  "tax": {
+   "tax_mode": "combined",
+   "rate": 18,
+   "round_amounts": true
+  },
+  "has_round_off": false,
+  "group": null,
+  "seq_index": 0,
+  "now": 1793000000,
+  "cover_email": {
+   "from": "billing@nimbusinfotech.co.in",
+   "to": "ap@bhavaniprecision.in",
+   "subject": "Invoice NIL/26/8273 - PO-2026-1001",
+   "body": "Hello,\n\nAttached is our invoice NIL/26/8273 dated Oct 22, 2026 for it hardware under PO PO-2026-1001.\n\nThanks,\nAccounts, Nimbus Infotech LLP"
+  },
+  "id": "C26"
+ },
+ {
+  "pdf": "dataset/clean/C27.pdf",
+  "vendor_id": "V004",
+  "invoice_no": "VSF373",
+  "po_ref": "PO-2026-0402",
+  "amount_paise": 4692800,
+  "currency": "INR",
+  "layout": "classic",
+  "date": "2026-10-10",
+  "n_lines": 4,
+  "tax": {
+   "tax_mode": "split",
+   "rate": 12,
+   "round_amounts": true
+  },
+  "has_round_off": false,
+  "group": null,
+  "seq_index": 0,
+  "now": 1793000000,
+  "cover_email": {
+   "from": "finance@visakhasteelfab.in",
+   "to": "ap@bhavaniprecision.in",
+   "subject": "Invoice VSF373 - PO-2026-0402",
+   "body": "Hello,\n\nAttached is our invoice VSF373 dated 2026-10-10 for machining under PO PO-2026-0402.\n\nThanks,\nAccounts, Visakha Steel Fabricators Pvt Ltd"
+  },
+  "id": "C27"
+ },
+ {
+  "pdf": "dataset/clean/C28.pdf",
+  "vendor_id": "V009",
+  "invoice_no": "SOL-1080",
+  "po_ref": "PO-2026-0901",
+  "amount_paise": 4891800,
+  "currency": "INR",
+  "layout": "sidebar",
+  "date": "2026-10-24",
+  "n_lines": 5,
+  "tax": {
+   "tax_mode": "split",
+   "rate": 18,
+   "round_amounts": false
+  },
+  "has_round_off": true,
+  "group": null,
+  "seq_index": 0,
+  "now": 1793000000,
+  "cover_email": {
+   "from": "accounts@sharmaofficesolutions.in",
+   "to": "ap@bhavaniprecision.in",
+   "subject": "Invoice SOL-1080 - PO-2026-0901",
+   "body": "Dear Sir/Madam,\n\nWe enclose invoice no. SOL-1080 (PO PO-2026-0901). Bank details are as per our records with you.\n\nWarm regards,\nSharma Office Solutions\nMobile: +91-95987-68075"
+  },
+  "id": "C28"
+ },
+ {
+  "pdf": "dataset/clean/C29.pdf",
+  "vendor_id": "V003",
+  "invoice_no": "BC-INV-14638",
+  "po_ref": "PO-2026-0301",
+  "amount_paise": 780000,
+  "currency": "USD",
+  "layout": "letter",
+  "date": "2026-10-21",
+  "n_lines": 2,
+  "tax": {
+   "tax_mode": "none",
+   "rate": 0,
+   "round_amounts": true
+  },
+  "has_round_off": false,
+  "group": null,
+  "seq_index": 0,
+  "now": 1793000000,
+  "cover_email": {
+   "from": "finance@brightcloudsoftware.com",
+   "to": "ap@bhavaniprecision.in",
+   "subject": "Invoice BC-INV-14638 - PO-2026-0301",
+   "body": "Dear Accounts Team,\n\nPlease find attached invoice BC-INV-14638 against PO-2026-0301. Kindly process payment as per terms.\n\nRegards,\nBrightCloud Software Inc.\nPh: 0800-1935194"
+  },
+  "id": "C29"
+ },
+ {
+  "pdf": "dataset/clean/C30.pdf",
+  "vendor_id": "V008",
+  "invoice_no": "DE/26/1940",
+  "po_ref": "PO-2026-0801",
+  "amount_paise": 4956339,
+  "currency": "INR",
+  "layout": "sidebar",
+  "date": "2026-10-22",
+  "n_lines": 3,
+  "tax": {
+   "tax_mode": "split",
+   "rate": 12,
+   "round_amounts": false
+  },
+  "has_round_off": false,
+  "group": null,
+  "seq_index": 0,
+  "now": 1793000000,
+  "cover_email": {
+   "from": "accounts@deccanelectricals.co.in",
+   "to": "ap@bhavaniprecision.in",
+   "subject": "Invoice DE/26/1940 - PO-2026-0801",
+   "body": "Dear Sir/Madam,\n\nWe enclose invoice no. DE/26/1940 (PO PO-2026-0801). Bank details are as per our records with you.\n\nWarm regards,\nDeccan Electricals Pvt Ltd\nMobile: +91 40 2354 6610"
+  },
+  "id": "C30"
+ },
+ {
+  "pdf": "dataset/clean/C31.pdf",
+  "vendor_id": "V005",
+  "invoice_no": "GL-3683",
+  "po_ref": "PO-2026-0501",
+  "amount_paise": 6421642,
+  "currency": "INR",
+  "layout": "classic",
+  "date": "2026-10-11",
+  "n_lines": 2,
+  "tax": {
+   "tax_mode": "combined",
+   "rate": 12,
+   "round_amounts": false
+  },
+  "has_round_off": false,
+  "group": null,
+  "seq_index": 0,
+  "now": 1793000000,
+  "cover_email": {
+   "from": "billing@greenleafcatering.in",
+   "to": "ap@bhavaniprecision.in",
+   "subject": "Invoice GL-3683 - PO-2026-0501",
+   "body": "Hello,\n\nAttached is our invoice GL-3683 dated 2026-10-11 for canteen catering under PO PO-2026-0501.\n\nThanks,\nAccounts, GreenLeaf Catering"
+  },
+  "id": "C31"
+ },
+ {
+  "pdf": "dataset/clean/C32.pdf",
+  "vendor_id": "V008",
+  "invoice_no": "DE/26/4899",
+  "po_ref": "PO-2026-0801",
+  "amount_paise": 2905781,
+  "currency": "INR",
+  "layout": "sidebar",
+  "date": "2026-10-22",
+  "n_lines": 2,
+  "tax": {
+   "tax_mode": "combined",
+   "rate": 5,
+   "round_amounts": false
+  },
+  "has_round_off": false,
+  "group": null,
+  "seq_index": 0,
+  "now": 1793000000,
+  "cover_email": {
+   "from": "billing@deccanelectricals.co.in",
+   "to": "ap@bhavaniprecision.in",
+   "subject": "Invoice DE/26/4899 - PO-2026-0801",
+   "body": "Dear Sir/Madam,\n\nWe enclose invoice no. DE/26/4899 (PO PO-2026-0801). Bank details are as per our records with you.\n\nWarm regards,\nDeccan Electricals Pvt Ltd\nMobile: (0310) 3631119"
+  },
+  "id": "C32"
+ },
+ {
+  "pdf": "dataset/clean/C33.pdf",
+  "vendor_id": "V010",
+  "invoice_no": "NIL/26/7107",
+  "po_ref": "PO-2026-1001",
+  "amount_paise": 2858959,
+  "currency": "INR",
+  "layout": "hsn",
+  "date": "20-Oct-2026",
+  "n_lines": 2,
+  "tax": {
+   "tax_mode": "split",
+   "rate": 18,
+   "round_amounts": false
+  },
+  "has_round_off": false,
+  "group": null,
+  "seq_index": 0,
+  "now": 1793000000,
+  "cover_email": {
+   "from": "ar@nimbusinfotech.co.in",
+   "to": "ap@bhavaniprecision.in",
+   "subject": "Invoice NIL/26/7107 - PO-2026-1001",
+   "body": "Dear Sir/Madam,\n\nWe enclose invoice no. NIL/26/7107 (PO PO-2026-1001). Bank details are as per our records with you.\n\nWarm regards,\nNimbus Infotech LLP\nMobile: +91 80 4153 2296"
+  },
+  "id": "C33"
+ },
+ {
+  "pdf": "dataset/clean/C34.pdf",
+  "vendor_id": "V002",
+  "invoice_no": "CL-26-6345",
+  "po_ref": "PO-2026-0201",
+  "amount_paise": 930000,
+  "currency": "INR",
+  "layout": "sidebar",
+  "date": "Oct 1, 2026",
+  "n_lines": 1,
+  "tax": {
+   "tax_mode": "rcm",
+   "rate": 0,
+   "round_amounts": true
+  },
+  "has_round_off": false,
+  "group": null,
+  "seq_index": 0,
+  "now": 1793000000,
+  "cover_email": {
+   "from": "accounts@coastallogistics.co.in",
+   "to": "ap@bhavaniprecision.in",
+   "subject": "Invoice CL-26-6345 - PO-2026-0201",
+   "body": "Hello,\n\nAttached is our invoice CL-26-6345 dated Oct 1, 2026 for freight under PO PO-2026-0201.\n\nThanks,\nAccounts, Coastal Logistics"
+  },
+  "id": "C34"
+ },
+ {
+  "pdf": "dataset/clean/C35.pdf",
+  "vendor_id": "V007",
+  "invoice_no": "PP522",
+  "po_ref": "PO-2026-0702",
+  "amount_paise": 346500,
+  "currency": "INR",
+  "layout": "hsn",
+  "date": "24/10/2026",
+  "n_lines": 6,
+  "tax": {
+   "tax_mode": "split",
+   "rate": 5,
+   "round_amounts": true
+  },
+  "has_round_off": false,
+  "group": null,
+  "seq_index": 0,
+  "now": 1793000000,
+  "cover_email": {
+   "from": "finance@patelpackaging.co.in",
+   "to": "ap@bhavaniprecision.in",
+   "subject": "Invoice PP522 - PO-2026-0702",
+   "body": "Hello,\n\nAttached is our invoice PP522 dated 24/10/2026 for packaging (shrink wrap) under PO PO-2026-0702.\n\nThanks,\nAccounts, Patel Packaging"
+  },
+  "id": "C35"
+ },
+ {
+  "pdf": "dataset/clean/C36.pdf",
+  "vendor_id": "V007",
+  "invoice_no": "PP267",
+  "po_ref": "PO-2026-0701",
+  "amount_paise": 6686400,
+  "currency": "INR",
+  "layout": "classic",
+  "date": "2026-10-22",
+  "n_lines": 3,
+  "tax": {
+   "tax_mode": "combined",
+   "rate": 12,
+   "round_amounts": true
+  },
+  "has_round_off": false,
+  "group": null,
+  "seq_index": 0,
+  "now": 1793000000,
+  "cover_email": {
+   "from": "ar@patelpackaging.co.in",
+   "to": "ap@bhavaniprecision.in",
+   "subject": "Invoice PP267 - PO-2026-0701",
+   "body": "Dear Accounts Team,\n\nPlease find attached invoice PP267 against PO-2026-0701. Kindly process payment as per terms.\n\nRegards,\nPatel Packaging\nPh: (0680) 8474904"
+  },
+  "id": "C36"
+ },
+ {
+  "pdf": "dataset/clean/C37.pdf",
+  "vendor_id": "V006",
+  "invoice_no": "NITS613",
+  "po_ref": "PO-2026-0601",
+  "amount_paise": 8342600,
+  "currency": "INR",
+  "layout": "hsn",
+  "date": "2026-10-13",
+  "n_lines": 3,
+  "tax": {
+   "tax_mode": "combined",
+   "rate": 18,
+   "round_amounts": true
+  },
+  "has_round_off": false,
+  "group": null,
+  "seq_index": 0,
+  "now": 1793000000,
+  "cover_email": {
+   "from": "billing@nimbusitservices.in",
+   "to": "ap@bhavaniprecision.in",
+   "subject": "Invoice NITS613 - PO-2026-0601",
+   "body": "Dear Sir/Madam,\n\nWe enclose invoice no. NITS613 (PO PO-2026-0601). Bank details are as per our records with you.\n\nWarm regards,\nNimbus IT Services Pvt Ltd\nMobile: +91-99013-32796"
+  },
+  "id": "C37"
+ },
+ {
+  "pdf": "dataset/clean/C38.pdf",
+  "vendor_id": "V004",
+  "invoice_no": "VSF321",
+  "po_ref": "PO-2026-0402",
+  "amount_paise": 4165130,
+  "currency": "INR",
+  "layout": "sidebar",
+  "date": "Oct 23, 2026",
+  "n_lines": 2,
+  "tax": {
+   "tax_mode": "split",
+   "rate": 18,
+   "round_amounts": false
+  },
+  "has_round_off": false,
+  "group": null,
+  "seq_index": 0,
+  "now": 1793000000,
+  "cover_email": {
+   "from": "accounts@visakhasteelfab.in",
+   "to": "ap@bhavaniprecision.in",
+   "subject": "Invoice VSF321 - PO-2026-0402",
+   "body": "Dear Accounts Team,\n\nPlease find attached invoice VSF321 against PO-2026-0402. Kindly process payment as per terms.\n\nRegards,\nVisakha Steel Fabricators Pvt Ltd\nPh: +91 9139135244"
+  },
+  "id": "C38"
+ },
+ {
+  "pdf": "dataset/clean/C39.pdf",
+  "vendor_id": "V002",
+  "invoice_no": "CL-26-1101",
+  "po_ref": "PO-2026-0201",
+  "amount_paise": 1512000,
+  "currency": "INR",
+  "layout": "classic",
+  "date": "2026-10-03",
+  "n_lines": 2,
+  "tax": {
+   "tax_mode": "split",
+   "rate": 12,
+   "round_amounts": true
+  },
+  "has_round_off": false,
+  "group": null,
+  "seq_index": 0,
+  "now": 1793000000,
+  "cover_email": {
+   "from": "finance@coastallogistics.co.in",
+   "to": "ap@bhavaniprecision.in",
+   "subject": "Invoice CL-26-1101 - PO-2026-0201",
+   "body": "Dear Accounts Team,\n\nPlease find attached invoice CL-26-1101 against PO-2026-0201. Kindly process payment as per terms.\n\nRegards,\nCoastal Logistics\nPh: 9315631426"
+  },
+  "id": "C39"
+ },
+ {
+  "pdf": "dataset/clean/C40.pdf",
+  "vendor_id": "V002",
+  "invoice_no": "CL-26-6060",
+  "po_ref": "PO-2026-0201",
+  "amount_paise": 3003876,
+  "currency": "INR",
+  "layout": "classic",
+  "date": "13/10/2026",
+  "n_lines": 3,
+  "tax": {
+   "tax_mode": "combined",
+   "rate": 5,
+   "round_amounts": false
+  },
+  "has_round_off": false,
+  "group": null,
+  "seq_index": 0,
+  "now": 1793000000,
+  "cover_email": {
+   "from": "finance@coastallogistics.co.in",
+   "to": "ap@bhavaniprecision.in",
+   "subject": "Invoice CL-26-6060 - PO-2026-0201",
+   "body": "Hello,\n\nAttached is our invoice CL-26-6060 dated 13/10/2026 for freight under PO PO-2026-0201.\n\nThanks,\nAccounts, Coastal Logistics"
+  },
+  "id": "C40"
+ },
+ {
+  "pdf": "dataset/clean/C41.pdf",
+  "vendor_id": "V006",
+  "invoice_no": "NITS754",
+  "po_ref": "PO-2026-0601",
+  "amount_paise": 679770,
+  "currency": "INR",
+  "layout": "classic",
+  "date": "11/10/2026",
+  "n_lines": 2,
+  "tax": {
+   "tax_mode": "combined",
+   "rate": 18,
+   "round_amounts": false
+  },
+  "has_round_off": false,
+  "group": null,
+  "seq_index": 0,
+  "now": 1793000000,
+  "cover_email": {
+   "from": "ar@nimbusitservices.in",
+   "to": "ap@bhavaniprecision.in",
+   "subject": "Invoice NITS754 - PO-2026-0601",
+   "body": "Dear Accounts Team,\n\nPlease find attached invoice NITS754 against PO-2026-0601. Kindly process payment as per terms.\n\nRegards,\nNimbus IT Services Pvt Ltd\nPh: +91-92818-87688"
+  },
+  "id": "C41"
+ },
+ {
+  "pdf": "dataset/clean/C42.pdf",
+  "vendor_id": "V005",
+  "invoice_no": "GL-7659",
+  "po_ref": "PO-2026-0501",
+  "amount_paise": 1176000,
+  "currency": "INR",
+  "layout": "classic",
+  "date": "2026-10-11",
+  "n_lines": 6,
+  "tax": {
+   "tax_mode": "split",
+   "rate": 5,
+   "round_amounts": true
+  },
+  "has_round_off": false,
+  "group": null,
+  "seq_index": 0,
+  "now": 1793000000,
+  "cover_email": {
+   "from": "ar@greenleafcatering.in",
+   "to": "ap@bhavaniprecision.in",
+   "subject": "Invoice GL-7659 - PO-2026-0501",
+   "body": "Dear Accounts Team,\n\nPlease find attached invoice GL-7659 against PO-2026-0501. Kindly process payment as per terms.\n\nRegards,\nGreenLeaf Catering\nPh: +91-92761-13228"
+  },
+  "id": "C42"
+ },
+ {
+  "pdf": "dataset/clean/C43.pdf",
+  "vendor_id": "V007",
+  "invoice_no": "PP612",
+  "po_ref": "PO-2026-0702",
+  "amount_paise": 1776500,
+  "currency": "INR",
+  "layout": "classic",
+  "date": "09/10/2026",
+  "n_lines": 5,
+  "tax": {
+   "tax_mode": "split",
+   "rate": 18,
+   "round_amounts": false
+  },
+  "has_round_off": true,
+  "group": null,
+  "seq_index": 0,
+  "now": 1793000000,
+  "cover_email": {
+   "from": "billing@patelpackaging.co.in",
+   "to": "ap@bhavaniprecision.in",
+   "subject": "Invoice PP612 - PO-2026-0702",
+   "body": "Dear Sir/Madam,\n\nWe enclose invoice no. PP612 (PO PO-2026-0702). Bank details are as per our records with you.\n\nWarm regards,\nPatel Packaging\nMobile: +91 79 2583 0914"
+  },
+  "id": "C43"
+ },
+ {
+  "pdf": "dataset/clean/C44.pdf",
+  "vendor_id": "V003",
+  "invoice_no": "BC-INV-12851",
+  "po_ref": "PO-2026-0301",
+  "amount_paise": 7410000,
+  "currency": "USD",
+  "layout": "letter",
+  "date": "13.10.2026",
+  "n_lines": 2,
+  "tax": {
+   "tax_mode": "none",
+   "rate": 0,
+   "round_amounts": true
+  },
+  "has_round_off": false,
+  "group": null,
+  "seq_index": 0,
+  "now": 1793000000,
+  "cover_email": {
+   "from": "billing@brightcloudsoftware.com",
+   "to": "ap@bhavaniprecision.in",
+   "subject": "Invoice BC-INV-12851 - PO-2026-0301",
+   "body": "Dear Sir/Madam,\n\nWe enclose invoice no. BC-INV-12851 (PO PO-2026-0301). Bank details are as per our records with you.\n\nWarm regards,\nBrightCloud Software Inc.\nMobile: 9264140001"
+  },
+  "id": "C44"
+ },
+ {
+  "pdf": "dataset/clean/C45.pdf",
+  "vendor_id": "V010",
+  "invoice_no": "NIL/26/4875",
+  "po_ref": "PO-2026-1001",
+  "amount_paise": 1372458,
+  "currency": "INR",
+  "layout": "sidebar",
+  "date": "29.10.2026",
+  "n_lines": 4,
+  "tax": {
+   "tax_mode": "split",
+   "rate": 18,
+   "round_amounts": false
+  },
+  "has_round_off": false,
+  "group": null,
+  "seq_index": 0,
+  "now": 1793000000,
+  "cover_email": {
+   "from": "accounts@nimbusinfotech.co.in",
+   "to": "ap@bhavaniprecision.in",
+   "subject": "Invoice NIL/26/4875 - PO-2026-1001",
+   "body": "Dear Sir/Madam,\n\nWe enclose invoice no. NIL/26/4875 (PO PO-2026-1001). Bank details are as per our records with you.\n\nWarm regards,\nNimbus Infotech LLP\nMobile: +91 9818787472"
+  },
+  "id": "C45"
+ },
+ {
+  "pdf": "dataset/clean/C46.pdf",
+  "vendor_id": "V001",
+  "invoice_no": "SOS/26-27/9883",
+  "po_ref": "PO-2026-0101",
+  "amount_paise": 6290427,
+  "currency": "INR",
+  "layout": "hsn",
+  "date": "06.10.2026",
+  "n_lines": 3,
+  "tax": {
+   "tax_mode": "combined",
+   "rate": 18,
+   "round_amounts": false
+  },
+  "has_round_off": false,
+  "group": null,
+  "seq_index": 0,
+  "now": 1793000000,
+  "cover_email": {
+   "from": "ar@sharmaofficesupplies.in",
+   "to": "ap@bhavaniprecision.in",
+   "subject": "Invoice SOS/26-27/9883 - PO-2026-0101",
+   "body": "Hello,\n\nAttached is our invoice SOS/26-27/9883 dated 06.10.2026 for stationery under PO PO-2026-0101.\n\nThanks,\nAccounts, Sharma Office Supplies Pvt Ltd"
+  },
+  "id": "C46"
+ },
+ {
+  "pdf": "dataset/clean/C47.pdf",
+  "vendor_id": "V001",
+  "invoice_no": "SOS/26-27/4040",
+  "po_ref": "PO-2026-0101",
+  "amount_paise": 7370061,
+  "currency": "INR",
+  "layout": "hsn",
+  "date": "2026-10-28",
+  "n_lines": 4,
+  "tax": {
+   "tax_mode": "split",
+   "rate": 18,
+   "round_amounts": false
+  },
+  "has_round_off": false,
+  "group": null,
+  "seq_index": 0,
+  "now": 1793000000,
+  "cover_email": {
+   "from": "finance@sharmaofficesupplies.in",
+   "to": "ap@bhavaniprecision.in",
+   "subject": "Invoice SOS/26-27/4040 - PO-2026-0101",
+   "body": "Dear Accounts Team,\n\nPlease find attached invoice SOS/26-27/4040 against PO-2026-0101. Kindly process payment as per terms.\n\nRegards,\nSharma Office Supplies Pvt Ltd\nPh: 0766-6601752"
+  },
+  "id": "C47"
+ },
+ {
+  "pdf": "dataset/clean/C48.pdf",
+  "vendor_id": "V007",
+  "invoice_no": "PP517",
+  "po_ref": "PO-2026-0701",
+  "amount_paise": 6560800,
+  "currency": "INR",
+  "layout": "letter",
+  "date": "19/10/2026",
+  "n_lines": 5,
+  "tax": {
+   "tax_mode": "split",
+   "rate": 18,
+   "round_amounts": true
+  },
+  "has_round_off": false,
+  "group": null,
+  "seq_index": 0,
+  "now": 1793000000,
+  "cover_email": {
+   "from": "accounts@patelpackaging.co.in",
+   "to": "ap@bhavaniprecision.in",
+   "subject": "Invoice PP517 - PO-2026-0701",
+   "body": "Dear Accounts Team,\n\nPlease find attached invoice PP517 against PO-2026-0701. Kindly process payment as per terms.\n\nRegards,\nPatel Packaging\nPh: 9821216426"
+  },
+  "id": "C48"
+ },
+ {
+  "pdf": "dataset/clean/C49.pdf",
+  "vendor_id": "V007",
+  "invoice_no": "PP617",
+  "po_ref": "PO-2026-0701",
+  "amount_paise": 7611000,
+  "currency": "INR",
+  "layout": "sidebar",
+  "date": "Oct 15, 2026",
+  "n_lines": 5,
+  "tax": {
+   "tax_mode": "split",
+   "rate": 18,
+   "round_amounts": true
+  },
+  "has_round_off": false,
+  "group": null,
+  "seq_index": 0,
+  "now": 1793000000,
+  "cover_email": {
+   "from": "accounts@patelpackaging.co.in",
+   "to": "ap@bhavaniprecision.in",
+   "subject": "Invoice PP617 - PO-2026-0701",
+   "body": "Hello,\n\nAttached is our invoice PP617 dated Oct 15, 2026 for packaging (corrugated) under PO PO-2026-0701.\n\nThanks,\nAccounts, Patel Packaging"
+  },
+  "id": "C49"
+ },
+ {
+  "pdf": "dataset/clean/C50.pdf",
+  "vendor_id": "V006",
+  "invoice_no": "NITS815",
+  "po_ref": "PO-2026-0601",
+  "amount_paise": 1911600,
+  "currency": "INR",
+  "layout": "hsn",
+  "date": "2026-10-17",
+  "n_lines": 5,
+  "tax": {
+   "tax_mode": "split",
+   "rate": 18,
+   "round_amounts": true
+  },
+  "has_round_off": false,
+  "group": null,
+  "seq_index": 0,
+  "now": 1793000000,
+  "cover_email": {
+   "from": "billing@nimbusitservices.in",
+   "to": "ap@bhavaniprecision.in",
+   "subject": "Invoice NITS815 - PO-2026-0601",
+   "body": "Dear Sir/Madam,\n\nWe enclose invoice no. NITS815 (PO PO-2026-0601). Bank details are as per our records with you.\n\nWarm regards,\nNimbus IT Services Pvt Ltd\nMobile: +91-93608-20569"
+  },
+  "id": "C50"
+ },
+ {
+  "pdf": "dataset/clean/C51.pdf",
+  "vendor_id": "V002",
+  "invoice_no": "CL-26-4386",
+  "po_ref": "PO-2026-0202",
+  "amount_paise": 6556482,
+  "currency": "INR",
+  "layout": "letter",
+  "date": "18.10.2026",
+  "n_lines": 5,
+  "tax": {
+   "tax_mode": "combined",
+   "rate": 18,
+   "round_amounts": false
+  },
+  "has_round_off": false,
+  "group": null,
+  "seq_index": 0,
+  "now": 1793000000,
+  "cover_email": {
+   "from": "accounts@coastal-logistics.in",
+   "to": "ap@bhavaniprecision.in",
+   "subject": "Invoice CL-26-4386 - PO-2026-0202",
+   "body": "Dear Accounts Team,\n\nPlease find attached invoice CL-26-4386 against PO-2026-0202. Kindly process payment as per terms.\n\nRegards,\nCoastal Logistics\nPh: +91-96237-93416"
+  },
+  "id": "C51"
+ },
+ {
+  "pdf": "dataset/clean/C52.pdf",
+  "vendor_id": "V012",
+  "invoice_no": "SGC/26-27/1919",
+  "po_ref": "PO-2026-1201",
+  "amount_paise": 5793800,
+  "currency": "INR",
+  "layout": "hsn",
+  "date": "17/10/2026",
+  "n_lines": 5,
+  "tax": {
+   "tax_mode": "split",
+   "rate": 18,
+   "round_amounts": true
+  },
+  "has_round_off": false,
+  "group": null,
+  "seq_index": 0,
+  "now": 1793000000,
+  "cover_email": {
+   "from": "ar@ganeshcartons.in",
+   "to": "ap@bhavaniprecision.in",
+   "subject": "Invoice SGC/26-27/1919 - PO-2026-1201",
+   "body": "Dear Accounts Team,\n\nPlease find attached invoice SGC/26-27/1919 against PO-2026-1201. Kindly process payment as per terms.\n\nRegards,\nShree Ganesh Cartons Pvt Ltd\nPh: +91-92484-47874"
+  },
+  "id": "C52"
+ },
+ {
+  "pdf": "dataset/clean/C53.pdf",
+  "vendor_id": "V004",
+  "invoice_no": "VSF621",
+  "po_ref": "PO-2026-0401",
+  "amount_paise": 2725803,
+  "currency": "INR",
+  "layout": "sidebar",
+  "date": "Oct 24, 2026",
+  "n_lines": 3,
+  "tax": {
+   "tax_mode": "split",
+   "rate": 18,
+   "round_amounts": false
+  },
+  "has_round_off": false,
+  "group": null,
+  "seq_index": 0,
+  "now": 1793000000,
+  "cover_email": {
+   "from": "finance@visakhasteelfab.in",
+   "to": "ap@bhavaniprecision.in",
+   "subject": "Invoice VSF621 - PO-2026-0401",
+   "body": "Dear Accounts Team,\n\nPlease find attached invoice VSF621 against PO-2026-0401. Kindly process payment as per terms.\n\nRegards,\nVisakha Steel Fabricators Pvt Ltd\nPh: 0112-5681177"
+  },
+  "id": "C53"
+ },
+ {
+  "pdf": "dataset/clean/C54.pdf",
+  "vendor_id": "V008",
+  "invoice_no": "DE/26/3272",
+  "po_ref": "PO-2026-0801",
+  "amount_paise": 3729932,
+  "currency": "INR",
+  "layout": "sidebar",
+  "date": "15/10/2026",
+  "n_lines": 2,
+  "tax": {
+   "tax_mode": "split",
+   "rate": 18,
+   "round_amounts": false
+  },
+  "has_round_off": false,
+  "group": null,
+  "seq_index": 0,
+  "now": 1793000000,
+  "cover_email": {
+   "from": "finance@deccanelectricals.co.in",
+   "to": "ap@bhavaniprecision.in",
+   "subject": "Invoice DE/26/3272 - PO-2026-0801",
+   "body": "Hello,\n\nAttached is our invoice DE/26/3272 dated 15/10/2026 for electrical works under PO PO-2026-0801.\n\nThanks,\nAccounts, Deccan Electricals Pvt Ltd"
+  },
+  "id": "C54"
+ },
+ {
+  "pdf": "dataset/clean/C55.pdf",
+  "vendor_id": "V012",
+  "invoice_no": "SGC/26-27/2837",
+  "po_ref": "PO-2026-1201",
+  "amount_paise": 6801181,
+  "currency": "INR",
+  "layout": "classic",
+  "date": "29.10.2026",
+  "n_lines": 3,
+  "tax": {
+   "tax_mode": "split",
+   "rate": 5,
+   "round_amounts": false
+  },
+  "has_round_off": false,
+  "group": null,
+  "seq_index": 0,
+  "now": 1793000000,
+  "cover_email": {
+   "from": "accounts@ganeshcartons.in",
+   "to": "ap@bhavaniprecision.in",
+   "subject": "Invoice SGC/26-27/2837 - PO-2026-1201",
+   "body": "Dear Accounts Team,\n\nPlease find attached invoice SGC/26-27/2837 against PO-2026-1201. Kindly process payment as per terms.\n\nRegards,\nShree Ganesh Cartons Pvt Ltd\nPh: 0765-7553287"
+  },
+  "id": "C55"
+ },
+ {
+  "pdf": "dataset/clean/C56.pdf",
+  "vendor_id": "V007",
+  "invoice_no": "PP946",
+  "po_ref": "PO-2026-0701",
+  "amount_paise": 3642713,
+  "currency": "INR",
+  "layout": "letter",
+  "date": "09.10.2026",
+  "n_lines": 5,
+  "tax": {
+   "tax_mode": "split",
+   "rate": 18,
+   "round_amounts": false
+  },
+  "has_round_off": false,
+  "group": null,
+  "seq_index": 0,
+  "now": 1793000000,
+  "cover_email": {
+   "from": "billing@patelpackaging.co.in",
+   "to": "ap@bhavaniprecision.in",
+   "subject": "Invoice PP946 - PO-2026-0701",
+   "body": "Dear Sir/Madam,\n\nWe enclose invoice no. PP946 (PO PO-2026-0701). Bank details are as per our records with you.\n\nWarm regards,\nPatel Packaging\nMobile: (0570) 2680377"
+  },
+  "id": "C56"
+ },
+ {
+  "pdf": "dataset/clean/C57.pdf",
+  "vendor_id": "V004",
+  "invoice_no": "VSF653",
+  "po_ref": "PO-2026-0401",
+  "amount_paise": 1617000,
+  "currency": "INR",
+  "layout": "sidebar",
+  "date": "02.10.2026",
+  "n_lines": 3,
+  "tax": {
+   "tax_mode": "split",
+   "rate": 5,
+   "round_amounts": true
+  },
+  "has_round_off": false,
+  "group": null,
+  "seq_index": 0,
+  "now": 1793000000,
+  "cover_email": {
+   "from": "ar@visakhasteelfab.in",
+   "to": "ap@bhavaniprecision.in",
+   "subject": "Invoice VSF653 - PO-2026-0401",
+   "body": "Dear Accounts Team,\n\nPlease find attached invoice VSF653 against PO-2026-0401. Kindly process payment as per terms.\n\nRegards,\nVisakha Steel Fabricators Pvt Ltd\nPh: (0607) 9590708"
+  },
+  "id": "C57"
+ },
+ {
+  "pdf": "dataset/clean/C58.pdf",
+  "vendor_id": "V011",
+  "invoice_no": "RCW713",
+  "po_ref": "PO-2026-1101",
+  "amount_paise": 3822000,
+  "currency": "INR",
+  "layout": "classic",
+  "date": "Oct 4, 2026",
+  "n_lines": 2,
+  "tax": {
+   "tax_mode": "split",
+   "rate": 5,
+   "round_amounts": true
+  },
+  "has_round_off": false,
+  "group": null,
+  "seq_index": 0,
+  "now": 1793000000,
+  "cover_email": {
+   "from": "billing@raocivilworks.in",
+   "to": "ap@bhavaniprecision.in",
+   "subject": "Invoice RCW713 - PO-2026-1101",
+   "body": "Dear Accounts Team,\n\nPlease find attached invoice RCW713 against PO-2026-1101. Kindly process payment as per terms.\n\nRegards,\nRao Civil Works\nPh: 9490528248"
+  },
+  "id": "C58"
+ },
+ {
+  "pdf": "dataset/clean/C59.pdf",
+  "vendor_id": "V002",
+  "invoice_no": "CL-26-9661",
+  "po_ref": "PO-2026-0202",
+  "amount_paise": 1888000,
+  "currency": "INR",
+  "layout": "sidebar",
+  "date": "03-Oct-2026",
+  "n_lines": 3,
+  "tax": {
+   "tax_mode": "split",
+   "rate": 18,
+   "round_amounts": true
+  },
+  "has_round_off": false,
+  "group": null,
+  "seq_index": 0,
+  "now": 1793000000,
+  "cover_email": {
+   "from": "ar@coastal-logistics.in",
+   "to": "ap@bhavaniprecision.in",
+   "subject": "Invoice CL-26-9661 - PO-2026-0202",
+   "body": "Hello,\n\nAttached is our invoice CL-26-9661 dated 03-Oct-2026 for freight (annual) under PO PO-2026-0202.\n\nThanks,\nAccounts, Coastal Logistics"
+  },
+  "id": "C59"
+ },
+ {
+  "pdf": "dataset/clean/C60.pdf",
+  "vendor_id": "V004",
+  "invoice_no": "VSF421",
+  "po_ref": "PO-2026-0401",
+  "amount_paise": 5355833,
+  "currency": "INR",
+  "layout": "hsn",
+  "date": "07/10/2026",
+  "n_lines": 4,
+  "tax": {
+   "tax_mode": "combined",
+   "rate": 12,
+   "round_amounts": false
+  },
+  "has_round_off": false,
+  "group": null,
+  "seq_index": 0,
+  "now": 1793000000,
+  "cover_email": {
+   "from": "finance@visakhasteelfab.in",
+   "to": "ap@bhavaniprecision.in",
+   "subject": "Invoice VSF421 - PO-2026-0401",
+   "body": "Dear Sir/Madam,\n\nWe enclose invoice no. VSF421 (PO PO-2026-0401). Bank details are as per our records with you.\n\nWarm regards,\nVisakha Steel Fabricators Pvt Ltd\nMobile: 9318151191"
+  },
+  "id": "C60"
+ }
+]
