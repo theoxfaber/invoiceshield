@@ -137,3 +137,7 @@ Planning documents (threat model, eval plan, demo script) were written before ki
 ### Thu Oct 29, 20:30 IST: checkpoint (build loop, chunk 21)
 - `playwright install chromium` fails in this sandbox (download error) a second time; no browser binary, so no re-record. No code change. Needs a browser-agent capture or an apt chromium route.
 - Next: try `apt-get install chromium` / browser agent to screen-record ui/demo.html; then I04 run, voice-over.
+
+### Thu Oct 29, 23:20 IST: checkpoint (build loop, chunk 22)
+- `apt-get install chromium` not available (package not found); third stall on a local browser, so logging and moving on. README already covers judge packaging. No code change.
+- Next: use the browser agent to screen-record ui/demo.html (or ship the replay UI plus captions), then I04 run, voice-over.
