@@ -133,3 +133,7 @@ Planning documents (threat model, eval plan, demo script) were written before ki
 ### Thu Oct 29, 17:30 IST: checkpoint (build loop, chunk 20)
 - Tried to re-record the capture: sandbox reset removed /usr/bin/chromium (and playwright). Reinstalled playwright + its ffmpeg; no Chromium binary available. No code change.
 - Next: `python3 -m playwright install chromium` (or apt chromium), point record_demo.py at it, re-record, then I04 run and voice-over.
+
+### Thu Oct 29, 20:30 IST: checkpoint (build loop, chunk 21)
+- `playwright install chromium` fails in this sandbox (download error) a second time; no browser binary, so no re-record. No code change. Needs a browser-agent capture or an apt chromium route.
+- Next: try `apt-get install chromium` / browser agent to screen-record ui/demo.html; then I04 run, voice-over.
