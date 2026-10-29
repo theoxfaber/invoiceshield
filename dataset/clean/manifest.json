@@ -574,7 +574,7 @@
   "amount_paise": 5251000,
   "currency": "INR",
   "layout": "classic",
-  "date": "28/10/2026",
+  "date": "26/10/2026",
   "n_lines": 5,
   "tax": {
    "tax_mode": "split",
@@ -1195,7 +1195,7 @@
   "amount_paise": 1372458,
   "currency": "INR",
   "layout": "sidebar",
-  "date": "29.10.2026",
+  "date": "27.10.2026",
   "n_lines": 4,
   "tax": {
    "tax_mode": "split",
@@ -1249,7 +1249,7 @@
   "amount_paise": 7370061,
   "currency": "INR",
   "layout": "hsn",
-  "date": "2026-10-28",
+  "date": "2026-10-26",
   "n_lines": 4,
   "tax": {
    "tax_mode": "split",
@@ -1465,7 +1465,7 @@
   "amount_paise": 6801181,
   "currency": "INR",
   "layout": "classic",
-  "date": "29.10.2026",
+  "date": "27.10.2026",
   "n_lines": 3,
   "tax": {
    "tax_mode": "split",

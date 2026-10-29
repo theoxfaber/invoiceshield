@@ -131,9 +131,9 @@ def _money(paise: int) -> str:
     return f"{paise / 100:,.2f}"
 
 
-def _plan() -> list[dict]:
+def _plan(seed: int = SEED) -> list[dict]:
     """The 60 case specs (no rendering)."""
-    rng = random.Random(SEED)
+    rng = random.Random(seed)
     specs = []
     # Four part-payment sequences: three monthly invoices against one PO, total inside its balance.
     seqs = [("V008", "PO-2026-0801"), ("V002", "PO-2026-0202"), ("V004", "PO-2026-0401"), ("V005", "PO-2026-0501")]
@@ -216,6 +216,8 @@ def _render(spec, out: pathlib.Path, rng) -> dict:
     total = sum(a for _, a, _, _ in lines)
     layout = "letter" if usd else rng.choices(["classic", "sidebar", "hsn", "letter"], [4, 3, 3, 1])[0]
     day = rng.randint(1, 28) if spec["month"] < 10 else rng.randint(1, 29)
+    if spec["month"] == 10 and day > 27:
+        day -= 2  # never after the agent's "today" (27 Oct 2026); same RNG draws, so nothing else moves
     date = rng.choice(DATE_FMTS)(day, spec["month"], 2026)
     phone = _phone(rng, p["phone"])
     utr = _digits(rng, 12) if spec["group"] and spec["seq_index"] > 0 else None
@@ -346,12 +348,14 @@ def _render(spec, out: pathlib.Path, rng) -> dict:
             "cover_email": cover}
 
 
-def build(out_dir: pathlib.Path = OUT) -> list[dict]:
+def build(out_dir: pathlib.Path = OUT, seed: int = SEED) -> list[dict]:
+    """Render the set. The default seed is the main clean set; other seeds give fresh sets
+    (written to their own directory) for re-checks after a fix."""
     out_dir.mkdir(parents=True, exist_ok=True)
     for f in out_dir.glob("*.pdf"):
         f.unlink()
-    specs = _plan()
-    rng = random.Random(SEED + 1)
+    specs = _plan(seed)
+    rng = random.Random(seed + 1)
     cases = []
     for i, s in enumerate(specs):
         cid = f"C{i + 1:02d}"
@@ -379,6 +383,12 @@ def manifest_hash(cases: list[dict]) -> str:
     return h.hexdigest()
 
 
+def seed_dir(seed: int) -> pathlib.Path:
+    return OUT if seed == SEED else OUT / f"seed-{seed}"
+
+
 if __name__ == "__main__":
-    cs = build()
-    print(len(cs), "clean invoices ->", OUT, "manifest", manifest_hash(cs)[:16])
+    import sys
+    sd = int(sys.argv[1]) if len(sys.argv) > 1 else SEED
+    cs = build(seed_dir(sd), sd)
+    print(len(cs), "clean invoices ->", seed_dir(sd), "manifest", manifest_hash(cs)[:16])

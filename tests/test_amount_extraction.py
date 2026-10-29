@@ -50,3 +50,24 @@ def test_usd_vendor_template_extracts_and_adds_up(tmp_path):
     assert sum(r["amount_paise"] for r in rows) == printed_total_paise(ev.text) == 1200000
     ge = governor_evidence(ev, BUYER_GSTIN)
     assert ge["text_layer_gstin"] is None and ge["printed_bank_account"] == "754155265497"
+
+
+# Multi-column item tables (Description | HSN | Qty x Rate | Amount) come out of the text layer
+# one cell per line. Found by the clean-invoice run (Oct 30): the old parser read "12 x 126.52"
+# as a row and dropped the real amount. The amount column closes a row.
+def test_multi_column_item_table():
+    text = ("Description\nHSN/SAC\nQty x Rate\nAmount (INR)\n"
+            "base frames welded and painted (Fabrication)\n7308\n12 x 126.52\n1,518.24\n"
+            "SS 304 guard covers (Fabrication)\n7308\n1 lot\n49,089.92\n"
+            "IGST @ 12%\n6,072.97\nRound off\n-0.13\nTotal Payable Rs.\n56,681.00\n")
+    rows = item_lines(text)
+    assert [r["amount_paise"] for r in rows] == [151824, 4908992, 607297, -13]
+    assert "Fabrication" in rows[0]["description"] and "Fabrication" in rows[1]["description"]
+    assert rows[2]["is_tax"] and not rows[3]["is_tax"]
+    assert sum(r["amount_paise"] for r in rows) == printed_total_paise(text)
+
+
+def test_wrapped_description_with_amount_on_second_line():
+    text = "Description\nAmount (INR)\nFreight for Vadodara to\nVizag FTL 12,000.00\nIGST @ 18%\n2,160.00\nTotal Payable\n14,160.00\n"
+    rows = item_lines(text)
+    assert [(r["description"], r["amount_paise"]) for r in rows] == [("Freight for Vadodara to Vizag FTL", 1200000), ("IGST @ 18%", 216000)]

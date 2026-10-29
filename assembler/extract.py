@@ -11,7 +11,8 @@ from assembler.evidence import Evidence
 
 GSTIN_RE = re.compile(r"(?<![A-Z0-9])\d{2}[A-Z]{5}\d{4}[A-Z][1-9A-Z]Z[0-9A-Z](?![A-Z0-9])")
 IFSC_RE = re.compile(r"(?<![A-Z0-9])[A-Z]{4}0[A-Z0-9]{6}(?![A-Z0-9])")
-BOX_ACCT_RE = re.compile(r"\bA/?c\.?\s*(?:No\.?|Number)?\s*[:\-]?\s*(\d[\d ]{7,22}\d)", re.I)
+# "A/c No", "Current A/c No", "Account No.", "Account Number"; digits may be printed in groups.
+BOX_ACCT_RE = re.compile(r"\b(?:A/?c|Account)\.?\s*(?:No\.?|Number)?\s*[:\-]?\s*(\d[\d ]{7,22}\d)", re.I)
 BOX_IFSC_RE = re.compile(r"IFSC(?:\s*Code)?\s*[:\-]?\s*([A-Z]{4}0[A-Z0-9]{6})", re.I)
 
 
@@ -52,6 +53,8 @@ _OTHER_LABEL = (r"\b(?:ph\b\.?|phone|tel\b\.?|telephone|mob\b\.?|mobile|cell\b|f
                 r"|pin\b|pin\s*code|pincode|zip\b|postal|routing|aba\b|micr\b|sort\s*code|branch\s*code|serial|s/?n\b|imei|licen[cs]e|ticket|case\b)")
 _LABEL_RE = re.compile(rf"(?P<bank>{_BANK_LABEL})|(?P<other>{_OTHER_LABEL})", re.I)
 _BANK_WORD_RE = re.compile(_BANK_LABEL, re.I)
+# "<label words> [No|ID|Code|Number|#]:" right before the number, on its own line or after a gap.
+_FIELD_RE = re.compile(r"(?:^|\s{2,}|[|;,]\s*)([A-Za-z][A-Za-z0-9 .&/()'#-]{0,40}?)\s*[:#]\s*$")
 _SWIFT_RE = re.compile(r"\b(?:SWIFT|BIC)\s*(?:code)?\s*[:\-]?\s*[A-Z]{6}[A-Z0-9]{2}(?:[A-Z0-9]{3})?\b", re.I)
 
 
@@ -68,10 +71,18 @@ def classify_number(text: str, start: int, end: int) -> str:
     ls = _line_start(text, start)
     if not text[ls:start].strip() and ls > 0:
         ls = _line_start(text, ls - 1)  # a number that opens its line takes the previous line's label
-    labels = list(_LABEL_RE.finditer(text[max(ls, start - 48):start]))
-    nearest = labels[-1] if labels else None
     le = text.find("\n", end)
     code_after = _bank_code_in(text[end:(le if le != -1 else len(text))][:40])
+    # A number printed as the value of its own field ("Batch No: ...", "Customer ID: ...") takes
+    # that field's label only, whatever words it uses; bank words inside the label still win.
+    field = _FIELD_RE.search(text[ls:start].replace("\n", " "))
+    if field is not None:
+        labels = list(_LABEL_RE.finditer(field.group(0)))
+        if labels and labels[-1].group("bank"):
+            return "account"
+        return "account" if code_after else "other"
+    labels = list(_LABEL_RE.finditer(text[max(ls, start - 48):start]))
+    nearest = labels[-1] if labels else None
     if nearest is not None and nearest.group("bank"):
         return "account"
     if nearest is not None:
@@ -84,7 +95,10 @@ def classify_number(text: str, start: int, end: int) -> str:
 def printed_accounts(text: str) -> list[str]:
     """Every account number the document prints in a bank context (bank box or anywhere else)."""
     text = text or ""
-    return _uniq(m.group() for m in ACCT_RE.finditer(text) if classify_number(text, m.start(), m.end()) == "account")
+    found = [m.group() for m in ACCT_RE.finditer(text) if classify_number(text, m.start(), m.end()) == "account"]
+    # grouped digits ("2327 6810 6955 53") after an explicit account label anywhere in the text
+    found += [re.sub(r"\s+", "", m.group(1)) for m in BOX_ACCT_RE.finditer(text) if " " in m.group(1).strip()]
+    return _uniq(found)
 
 
 def sender_domain(email_from: str) -> str | None:
@@ -127,39 +141,63 @@ def printed_total_paise(text: str) -> int | None:
     return int(rupees) * 100 + int((paise + "00")[:2]) if rupees.isdigit() else None
 
 
-AMOUNT_ONLY_RE = re.compile(r"^(?:INR|USD|US\$|\$|Rs\.?|₹)?\s*([\d,]+\.\d{2})$")
-AMOUNT_TAIL_RE = re.compile(r"^(.*\S)\s+(?:INR|USD|US\$|\$|Rs\.?|₹)?\s*([\d,]+\.\d{2})$")
+AMOUNT_ONLY_RE = re.compile(r"^(?:INR|USD|US\$|\$|Rs\.?|₹)?\s*(-?[\d,]+\.\d{2})$")
+AMOUNT_TAIL_RE = re.compile(r"^(.*\S)\s+(?:INR|USD|US\$|\$|Rs\.?|₹)?\s*(-?[\d,]+\.\d{2})$")
 TAX_RE = re.compile(r"\b(CGST|SGST|IGST|UTGST|GST|CESS)\b", re.I)
 
 
 def _paise(s: str) -> int:
-    rupees, _, paise = s.replace(",", "").partition(".")
-    return int(rupees) * 100 + int((paise + "00")[:2])
+    s = s.replace(",", "")
+    neg = s.startswith("-")
+    rupees, _, paise = s.lstrip("-").partition(".")
+    v = int(rupees) * 100 + int((paise + "00")[:2])
+    return -v if neg else v
 
 
 def item_lines(text: str) -> list[dict]:
-    """Rows of the item table: everything between the 'Description / Amount' header and 'Total Payable'.
+    """Rows of the item table: everything between the 'Description ... Amount' header and 'Total Payable'.
 
-    A row is a description followed by an amount, on one line or on two (the text layer of a PDF
-    may put them either way). Tax rows are flagged; every other row is a charge."""
+    The amount column closes a row. A row is a description followed by any other cells (HSN code,
+    qty x rate) and then an amount; the text layer may put the cells on one line or on several
+    (a multi-column table gives one line per cell). A line that ends in an amount while a
+    description is open is a middle cell or a wrapped description line; its amount is used only
+    when no amount-only line follows. Tax rows are flagged; every other row is a charge."""
     lines = [l.strip() for l in (text or "").splitlines() if l.strip()]
     start = next((i for i, l in enumerate(lines) if l.lower().startswith("description")), None)
     end = next((i for i, l in enumerate(lines) if l.lower().startswith("total payable")), None)
     if start is None or end is None or end <= start:
         return []
-    rows, pending = [], None
-    for l in lines[start + 1:end]:
+    body = lines[start + 1:end]
+    # skip the rest of the header row (e.g. "HSN/SAC", "Qty x Rate") up to the "Amount" header cell
+    hdr = next((i for i, l in enumerate(body[:6]) if l.lower().startswith("amount")), None)
+    if hdr is not None:
+        body = body[hdr + 1:]
+    rows, desc, tail = [], [], None
+
+    def close(amount):
+        nonlocal desc, tail
+        rows.append((" ".join(desc), amount))
+        desc, tail = [], None
+
+    for l in body:
         if l.lower().startswith("amount"):
             continue
         m = AMOUNT_ONLY_RE.match(l)
-        if m and pending is not None:
-            rows.append((pending, _paise(m.group(1))))
-            pending = None
+        if m:
+            if desc:
+                close(_paise(m.group(1)))
             continue
         m = AMOUNT_TAIL_RE.match(l)
         if m:
-            rows.append((m.group(1), _paise(m.group(2))))
-            pending = None
+            if desc:
+                desc.append(m.group(1))
+                tail = _paise(m.group(2))
+            else:
+                rows.append((m.group(1), _paise(m.group(2))))
             continue
-        pending = l
+        if desc and tail is not None:
+            close(tail)
+        desc.append(l)
+    if desc and tail is not None:
+        close(tail)
     return [{"description": d, "amount_paise": a, "is_tax": bool(TAX_RE.search(d))} for d, a in rows]

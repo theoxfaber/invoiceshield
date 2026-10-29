@@ -3,6 +3,7 @@
     python3 -m eval.run_clean                 # gate path only (no model calls)
     python3 -m eval.run_clean --model         # + full shield-ON model path (agent + checker), k=1
     python3 -m eval.run_clean --model --offline   # replay the model path from eval/cache/llm
+    python3 -m eval.run_clean --seed 20261101     # a fresh set with another seed (re-check after a fix)
 
 Two paths, same governor, same ledger handling:
 - gate: the agent proposes exactly the genuine payment (vendor, invoice no, printed total, PO)
@@ -26,7 +27,7 @@ from concurrent.futures import ThreadPoolExecutor
 
 from assembler.evidence import assemble
 from assembler.extract import governor_evidence
-from dataset.gen.make_clean import OUT as CLEAN_DIR, build, manifest_hash
+from dataset.gen.make_clean import SEED, build, manifest_hash, seed_dir
 from dataset.gen.make_invoice import resolve_repo_path
 from shield.client import GovernorProc
 from shield.pipeline import BUYER_GSTIN, load_master, model_phase
@@ -104,9 +105,10 @@ def main():
     ap.add_argument("--provider", default="spark")
     ap.add_argument("--workers", type=int, default=6)
     ap.add_argument("--out", default=None)
+    ap.add_argument("--seed", type=int, default=SEED, help="another seed renders a fresh 60-invoice set (dataset/clean/seed-<n>/)")
     a = ap.parse_args()
-    cases = build(CLEAN_DIR)
-    print("clean set", len(cases), "manifest", manifest_hash(cases))
+    cases = build(seed_dir(a.seed), a.seed)
+    print("clean set", len(cases), "seed", a.seed, "manifest", manifest_hash(cases))
     rows = []
     with GovernorProc() as gov:
         rows += run_gate(cases, gov)
@@ -115,7 +117,8 @@ def main():
             provider = get_provider(a.provider, offline=a.offline, timeout_s=200.0)
             rows += run_model(cases, gov, provider, a.workers)
     date = dt.datetime.now(dt.timezone(dt.timedelta(hours=5, minutes=30))).date().isoformat()
-    out = ROOT / "results" / (a.out or f"clean_fp_{date}.jsonl")
+    suffix = "" if a.seed == SEED else f"_seed{a.seed}"
+    out = ROOT / "results" / (a.out or f"clean_fp_{date}{suffix}.jsonl")
     out.write_text("\n".join(json.dumps(r, ensure_ascii=False) for r in rows) + "\n")
     print("wrote", out.relative_to(ROOT.parent))
     for path in ("gate", "model"):
