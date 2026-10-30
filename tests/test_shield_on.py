@@ -158,3 +158,18 @@ def test_ocr_source_is_passed_to_governor():
     from assembler.evidence import Evidence
     ev = Evidence("h", 1, "GSTIN: 24ZZACS4821A1ZX", metadata={"text_source": "ocr"})
     assert governor_evidence(ev, BUYER_GSTIN)["text_source"] == "ocr"
+
+
+def test_on_agent_currency_argument():
+    """The ON tool carries a currency (ISO 4217, default INR); the agent's value reaches the proposal."""
+    from agent.on_agent import TOOLS, system_prompt
+    from assembler.evidence import Evidence
+    master = load_master()
+    vendors = {v["vendor_id"]: v for v in master["vendors"]}
+    props = TOOLS[0]["function"]["parameters"]["properties"]
+    assert "currency" in props and "currency" not in TOOLS[0]["function"]["parameters"]["required"]
+    assert "ISO 4217" in system_prompt(vendors)
+    ev = Evidence("h", 1, "Invoice USD 600.00", email_from="a@x.com")
+    base = {"vendor_id": "V003", "invoice_no": "INV-1", "amount_paise": 60000, "po_ref": "PO-X"}
+    assert run_on_agent(Stub(("propose_payment", base)), ev, vendors).args["currency"] == "INR"
+    assert run_on_agent(Stub(("propose_payment", {**base, "currency": "USD"})), ev, vendors).args["currency"] == "USD"
