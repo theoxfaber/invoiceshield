@@ -23,9 +23,9 @@ Coordination: each workstream works in its own git worktree on its own branch, r
 | 5 | Blind adaptive cases written without repo access | blind writer | TODO |
 | 5 | Real/public anonymized invoices eval + FP rate with confidence intervals | hardening/real-eval | IN PROGRESS (Phase 5 agent, 2026-10-30 18:10 IST) |
 | 5 | Internal red-team report; shadow-mode harness (external review + live pilot need real users: documented as next steps) | hardening/real-eval | IN PROGRESS (Phase 5 agent, 2026-10-30 18:10 IST) |
-| 6 | GitHub Actions CI, Dockerfile, make demo, pyproject.toml | hardening/ops | IN PROGRESS |
-| 6 | Structured logs, /metrics, /healthz, config validation, versioned OpenAPI schema, backup/restore test, runbooks, load test + SLO | hardening/ops | IN PROGRESS |
-| 6 | Repo prune (dedupe demos; keep the one the video uses) | hardening/ops | IN PROGRESS |
+| 6 | GitHub Actions CI, Dockerfile, make demo, pyproject.toml | hardening/ops | DONE (hardening/ops, merged to main 2026-10-30 ~21:00 IST as 8071168; CI green; BUILD_LOG "Phase 6 ops merged onto main") |
+| 6 | Structured logs, /metrics, /healthz, config validation, versioned OpenAPI schema, backup/restore test, runbooks, load test + SLO | hardening/ops | DONE (hardening/ops, merged to main 2026-10-30 ~21:00 IST as 8071168; CI green; BUILD_LOG "Phase 6 ops merged onto main") |
+| 6 | Repo prune (dedupe demos; keep the one the video uses) | hardening/ops | DONE (hardening/ops, merged to main 2026-10-30 ~21:00 IST as 8071168; CI green; BUILD_LOG "Phase 6 ops merged onto main") |
 | 7 | Accounting adapters (Tally XML / Zoho Books API shape) with mock tests; review UI for REVIEW cases; payment-rail adapter (sandbox only with user OK) | hardening/product | TODO |
 | 7 | docs/COMPLIANCE.md: DPDP Act notes, retention policy (not legal advice) | hardening/product | TODO |
 
