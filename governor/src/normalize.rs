@@ -62,7 +62,7 @@ pub fn near_dup_base(raw: &str) -> Option<String> {
     } else if letters == 0 {
         let nd = s.iter().rev().take_while(|c| c.is_ascii_digit()).count();
         let i = n - nd;
-        ((1..=2).contains(&nd) && i >= 2 && is_sep(s[i - 1]) && s[i - 2].is_numeric()).then_some(i - 1)
+        ((1..=2).contains(&nd) && i >= 2 && is_sep(s[i - 1]) && s[i - 2].is_numeric()).then(|| i - 1)
     } else {
         None
     }?;

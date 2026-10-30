@@ -170,3 +170,16 @@ fn ledger_overflow_fails_closed() {
     assert_ne!(d2.verdict, Verdict::Allow, "{:?}", d2.reasons);
     assert!(rules(&d2).contains(&"arithmetic_overflow".into()), "{:?}", d2.reasons);
 }
+
+#[test]
+fn pure_numeric_invoice_numbers_do_not_panic() {
+    // 2026-10-31: `bool::then_some(i - 1)` evaluated i - 1 eagerly; with overflow-checks on, a pure
+    // numeric invoice number ("1187") made the server fail closed with 503 on every request.
+    use invoiceshield_governor::normalize::near_dup_base;
+    for n in ["1187", "642", "7", "", "-", "12-3"] {
+        let _ = near_dup_base(n);
+    }
+    let mut g = Governor::new(master(Some(BUYER)));
+    let d = eval(&mut g, "V1", "1187", 10_000_00, "PO-1", ev(GJ, &[]), 1_000);
+    assert_eq!(d.verdict, Verdict::Allow, "{:?}", d.reasons);
+}
