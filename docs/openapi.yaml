@@ -1,7 +1,7 @@
 openapi: 3.0.3
 info:
   title: InvoiceShield governor API
-  version: "1.0.0"
+  version: "1.1.0"
   description: |
     Fail-closed pre-payment gate for AI accounts-payable agents. The agent can only say
     which vendor, which invoice and how much; the payee always comes from the vendor master.
@@ -15,7 +15,7 @@ info:
     200 with a REVIEW decision (`request_unparseable`), so an agent that ignores status codes still
     cannot pay. Only authentication failures are HTTP errors (401).
 
-    Scope note: this file describes the server on main as of 2026-10-30 (Phases 1, 2, 3, 4 and 6):
+    Scope note: this file describes the server on main as of 2026-10-30 (Phases 1, 2, 3, 4, 6 and 7):
     signed extractor evidence (`signed_evidence` + `proposal.document_sha256`, see governor/src/trust.rs),
     SQLite state with `Idempotency-Key`, per-identity keys with roles (Phase 4).
 
@@ -139,6 +139,66 @@ paths:
         "429": { $ref: "#/components/responses/RateLimited" }
         "409": { description: "Decision is not a pending REVIEW (unknown, already resolved, ALLOW or BLOCK)" }
         "422": { description: "Body does not match the schema" }
+  /v1/reviews:
+    get:
+      tags: [operator]
+      summary: Pending REVIEW queue (approver or operator role; read-only)
+      description: |
+        REVIEW decisions whose ledger entry is still pending, oldest first. Each item carries the
+        stored decision (reason codes with their evidence detail, signals, payee from the vendor
+        master), the ledger row (vendor, invoice key, amount, currency, PO) and the identity that
+        proposed it. Resolving still goes through POST /v1/decisions/{id}/resolve (approver role,
+        maker-checker). Phase 7; used by the approver page at /v1/ui/review.
+      security:
+        - approverKey: []
+        - operatorKey: []
+      parameters:
+        - in: query
+          name: limit
+          required: false
+          schema: { type: integer, minimum: 1, maximum: 200, default: 200 }
+          description: Clamped to 1..200. Unknown query parameters are refused (400).
+      responses:
+        "200":
+          description: The queue
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [identity, count, reviews]
+                properties:
+                  identity: { type: string }
+                  count: { type: integer }
+                  reviews:
+                    type: array
+                    items: { $ref: "#/components/schemas/PendingReview" }
+        "400": { description: "Unknown or invalid query parameter" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { description: "Identity holds neither approver nor operator" }
+        "429": { $ref: "#/components/responses/RateLimited" }
+        "503": { description: "state_unavailable" }
+  /v1/ui/review:
+    get:
+      tags: [operator]
+      summary: Approver page for REVIEW cases (static HTML; asks for the approver key, calls /v1/reviews and /resolve)
+      description: No authentication to load (it contains no data or secrets). Served with a strict CSP (default-src 'none'; same-origin script/style/connect only; frame-ancestors 'none'), nosniff, no-referrer, no-store.
+      security: []
+      responses:
+        "200": { description: "text/html page" }
+  /v1/ui/review.js:
+    get:
+      tags: [operator]
+      summary: Script for the approver page (renders untrusted text with textContent only; key kept in memory)
+      security: []
+      responses:
+        "200": { description: "text/javascript" }
+  /v1/ui/review.css:
+    get:
+      tags: [operator]
+      summary: Stylesheet for the approver page
+      security: []
+      responses:
+        "200": { description: "text/css" }
   /v1/audit/verify:
     get:
       tags: [operator]
@@ -458,6 +518,20 @@ components:
         beneficiary_id: { type: string }
         bank_name: { type: string }
         account_last4: { type: string }
+    PendingReview:
+      type: object
+      required: [decision_id, ts, vendor_id, invoice_key, amount_minor, currency, po_ref, decision]
+      properties:
+        decision_id: { type: string }
+        proposed_by: { type: string, nullable: true, description: "Identity that proposed the payment; it can never resolve it" }
+        ts: { type: integer, description: "Decision time, unix seconds (ledger clock)" }
+        vendor_id: { type: string }
+        invoice_key: { type: string, description: "Normalised invoice number" }
+        amount_minor: { type: integer, description: "Minor units of currency" }
+        currency: { type: string }
+        po_ref: { type: string }
+        irn: { type: string, nullable: true }
+        decision: { $ref: "#/components/schemas/Decision" }
     Decision:
       type: object
       required: [decision_id, verdict, deterministic_verdict, reasons, signals, payee, tamper_alert, audit_hash]
