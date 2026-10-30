@@ -24,7 +24,7 @@ test = ["pytest==9.2.0", "hypothesis==6.170.14"]
 dev = ["pytest==9.2.0", "hypothesis==6.170.14", "ruff==0.17.3", "pip-audit==2.10.1"]
 
 [tool.setuptools.packages.find]
-include = ["agent*", "assembler*", "extractor*", "checker*", "providers*", "shield*", "structural*", "dataset*", "eval*", "ui*"]
+include = ["agent*", "integrations*", "assembler*", "extractor*", "checker*", "providers*", "shield*", "structural*", "dataset*", "eval*", "ui*"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
