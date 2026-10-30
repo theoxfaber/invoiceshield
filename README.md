@@ -141,6 +141,7 @@ Who it is for: Indian SMEs and the CA firms that run their payables, starting wi
 - `integrations/`: Tally XML and Zoho Books exporters/importers (importers never write the vendor master; a bank difference becomes a proposed `/v1/master-changes` body), books-vs-gate reconciliation, payment-rail interface with a sandbox stub. Mock-tested only.
 - `Dockerfile`, `docker-compose.yml`: container image and a local stack.
 - `ui/demo-v3.html`: replay UI over the recorded dev runs (`make demo-pages` regenerates it byte for byte). `governor/ui/`: the approver review page served by the governor.
+- `ui/console.html`: evidence console (static, offline): fail-closed cases (phone photo, empty checker reply), the recorded Muse Spark Open request/response log with latency, agent and checker side by side for Spark and Glimmer, what reaches the approver queue, and a results view read from `eval/results` (`make console` rebuilds it; a test checks it against the files). `make review-demo` serves the real approver page with recorded REVIEW cases held. Screenshots: `docs/screenshots/`.
 - `tools/shadow.py` (shadow mode against human decisions), `tools/redteam.py` (internal red team), `eval/run_real.py` (public real-invoice extraction accuracy, `docs/FINDINGS_REAL_INVOICES.md`).
 
 ## Repository map

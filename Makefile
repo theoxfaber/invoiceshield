@@ -4,6 +4,9 @@
 #   make eval         re-run the no-model evals (hijacked-agent gate, sequences, benign, clean set)
 #   make load         load test of POST /v1/actions -> eval/results/load-*.json
 #   make demo-pages   regenerate ui/demo-v3.html from ui/build/ (must be byte-identical)
+#   make console      regenerate ui/console.html (evidence console) from eval/results + eval/cache
+#   make review-demo  serve the real approver page with recorded cases held (prints URL + key)
+#   make screenshots  docs/screenshots/*.png (needs playwright + chromium)
 #   make audit        cargo audit + pip-audit
 #   make docker       build the container image
 PY      ?= python3
@@ -15,7 +18,7 @@ BIN     := $(TARGET)/release/governor-server
 export GOVERNOR_BIN := $(abspath $(BIN))
 OPS_RS  := $(GOV)/src/config.rs $(GOV)/src/observability.rs
 
-.PHONY: all build test test-rust test-py lint fmt-check demo demo-check eval load demo-pages audit docker clean
+.PHONY: all build test test-rust test-py lint fmt-check demo demo-check eval load demo-pages console review-demo screenshots audit docker clean
 
 all: test
 
@@ -59,6 +62,15 @@ demo-pages:
 	$(PY) -m ui.build.build_demo_v2
 	$(PY) -m ui.build.build_v3
 	git diff --stat --exit-code ui/demo-v3.html
+
+console:
+	$(PY) -m ui.build.build_console
+
+review-demo: build
+	$(PY) -m ui.review_demo
+
+screenshots: build
+	$(PY) -m ui.build.screenshots
 
 audit:
 	cd $(GOV) && cargo audit

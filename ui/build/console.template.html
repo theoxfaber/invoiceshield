@@ -1,0 +1,196 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'unsafe-inline'; script-src 'unsafe-inline'; img-src data:; font-src data:">
+<title>InvoiceShield · evidence console</title>
+<style>
+@font-face{font-family:Geist;src:url(/*FONT_GEIST*/) format('truetype');font-weight:100 900}
+@font-face{font-family:'Geist Mono';src:url(/*FONT_MONO*/) format('truetype');font-weight:100 900}
+:root{--bg:#F5F4F0;--ink:#15140F;--panel:#fff;--line:#E6E3DB;--mu:#757167;--sunk:#FAF9F6;--red:#D23A1A;--amb:#9A6200;--grn:#0B7A4B;--blue:#2747C9}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font:14px/1.5 Geist,system-ui,sans-serif;-webkit-font-smoothing:antialiased}
+.mono,code,pre{font-family:'Geist Mono',ui-monospace,monospace}
+header{display:flex;align-items:center;gap:14px;padding:14px 24px;border-bottom:1px solid var(--line);background:var(--panel)}
+header h1{font-size:16px;margin:0;font-weight:600;letter-spacing:-.01em}
+header h1 span{color:var(--mu);font-weight:400}
+.replay{margin-left:auto;display:inline-flex;align-items:center;gap:8px;font-size:12px;font-weight:600;background:#FFF4D6;color:#6B4A00;border:1px solid #F1DEA8;padding:4px 10px;border-radius:999px}
+.replay i{width:7px;height:7px;border-radius:50%;background:#C98A00}
+nav{display:flex;gap:4px;padding:10px 24px;border-bottom:1px solid var(--line);background:var(--sunk);overflow-x:auto}
+nav a{padding:6px 12px;border-radius:8px;color:var(--mu);text-decoration:none;font-weight:500;white-space:nowrap}
+nav a.on{background:var(--panel);color:var(--ink);box-shadow:0 0 0 1px var(--line)}
+main{max-width:1240px;margin:0 auto;padding:22px 24px 60px}
+section{display:none}section.on{display:block}
+h2{font-size:22px;letter-spacing:-.02em;margin:0 0 4px;font-weight:600}
+.lede{color:var(--mu);margin:0 0 18px;max-width:860px}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:16px 18px;margin:0 0 14px}
+.card h3{margin:0 0 8px;font-size:15px;font-weight:600}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+.grid3{display:grid;grid-template-columns:repeat(3,1fr);gap:14px}
+@media(max-width:900px){.grid2,.grid3{grid-template-columns:1fr}}
+.src{font-size:12px;color:var(--mu);margin-top:10px}.src code{font-size:11.5px}
+.v{display:inline-flex;align-items:center;gap:6px;font-weight:600;font-size:12px;padding:2px 9px;border-radius:999px;border:1px solid}
+.v.review{color:var(--amb);background:#FFF7E6;border-color:#F1DEA8}.v.block{color:var(--red);background:#FDEDE8;border-color:#F4C9BC}
+.v.allow,.v.paid{color:var(--grn);background:#E8F5EE;border-color:#BFE3CF}.v.hold{color:var(--mu);background:var(--sunk);border-color:var(--line)}
+.rs{list-style:none;padding:0;margin:8px 0 0}.rs li{font-family:'Geist Mono',monospace;font-size:12.5px;padding:3px 0;border-top:1px dashed var(--line)}
+.rs li:first-child{border-top:0}
+.tag{display:inline-block;font-size:11px;font-weight:600;letter-spacing:.02em;padding:2px 8px;border-radius:6px;background:var(--sunk);border:1px solid var(--line);color:var(--mu);text-transform:uppercase}
+.tag.warn{background:#FDEDE8;border-color:#F4C9BC;color:var(--red)}.tag.dev{background:#EEF1FF;border-color:#CCD5FA;color:var(--blue)}.tag.ok{background:#E8F5EE;border-color:#BFE3CF;color:var(--grn)}
+.thumbs{display:flex;gap:14px;align-items:flex-start}.thumbs figure{margin:0;flex:1}
+.thumbs img{width:100%;border:1px solid var(--line);border-radius:8px;display:block;background:#fff}
+figcaption{font-size:12px;color:var(--mu);margin-top:6px}
+pre{background:#14130F;color:#E9E6DC;border-radius:10px;padding:12px 14px;margin:6px 0 0;font-size:12px;line-height:1.5;overflow:auto;max-height:420px;white-space:pre-wrap;word-break:break-word}
+pre.short{max-height:300px}
+.kv{display:grid;grid-template-columns:150px 1fr;gap:4px 12px;font-size:13px}.kv dt{color:var(--mu)}.kv dd{margin:0;font-family:'Geist Mono',monospace;font-size:12.5px;word-break:break-all}
+.calls{display:grid;grid-template-columns:270px 1fr;gap:14px}
+@media(max-width:900px){.calls{grid-template-columns:1fr}}
+.clist button{display:block;width:100%;text-align:left;font:inherit;background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:10px 12px;margin-bottom:8px;cursor:pointer}
+.clist button.on{border-color:var(--ink);box-shadow:0 0 0 1px var(--ink)}
+.clist .r1{display:flex;justify-content:space-between;font-weight:600}.clist .r2{font-size:12px;color:var(--mu)}
+.lat{font-size:34px;font-weight:600;letter-spacing:-.03em;line-height:1}.lat small{font-size:14px;color:var(--mu);font-weight:500}
+.http{display:flex;gap:10px;align-items:center;flex-wrap:wrap;font-family:'Geist Mono',monospace;font-size:12.5px}
+.http b{background:var(--ink);color:#fff;border-radius:6px;padding:2px 7px;font-weight:600}
+.badge{display:inline-flex;align-items:center;gap:8px;border:1px solid var(--line);border-radius:999px;padding:4px 11px 4px 5px;font-size:12.5px;font-weight:600;background:var(--panel)}
+.badge i{display:inline-grid;place-items:center;width:22px;height:22px;border-radius:50%;color:#fff;font-style:normal;font-size:11px}
+.badge.spark i{background:#0866FF}.badge.glimmer i{background:#5B2BD6}
+.badge span{color:var(--mu);font-weight:500}
+.colhead{display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;gap:8px;flex-wrap:wrap}
+.lbl{font-size:11.5px;text-transform:uppercase;letter-spacing:.05em;color:var(--mu);font-weight:600;margin:12px 0 2px}
+table{border-collapse:collapse;width:100%;font-size:13.5px}th,td{text-align:left;padding:8px 10px;border-bottom:1px solid var(--line)}
+th{font-size:12px;color:var(--mu);font-weight:600}td.n{font-family:'Geist Mono',monospace;font-variant-numeric:tabular-nums}
+td.hi{font-weight:700}
+.big{display:flex;gap:28px;flex-wrap:wrap;margin:6px 0 4px}.big div{min-width:150px}.big b{display:block;font-size:30px;letter-spacing:-.03em;line-height:1.1}.big span{font-size:12.5px;color:var(--mu)}
+.q{list-style:none;padding:0;margin:0}.q li{display:flex;gap:12px;align-items:flex-start;padding:10px 0;border-top:1px solid var(--line)}.q li:first-child{border-top:0}
+.q .id{font-family:'Geist Mono',monospace;font-weight:600;min-width:58px}
+details summary{cursor:pointer;color:var(--mu);font-size:12.5px;margin-top:6px}
+</style></head><body>
+<header><h1>InvoiceShield <span>· evidence console</span></h1>
+<div class="replay" title="Nothing on this page calls a model or the governor. Every value is read from committed files at build time."><i></i>Replaying recorded runs</div></header>
+<nav id="nav">
+<a href="#failclosed">Fail closed</a><a href="#calls">Model call log</a><a href="#side">Agent | checker</a><a href="#approver">Approver</a><a href="#results">Results</a>
+</nav>
+<main>
+<section id="failclosed"></section>
+<section id="calls"></section>
+<section id="side"></section>
+<section id="approver"></section>
+<section id="results"></section>
+</main>
+<script type="application/json" id="data">/*DATA*/</script>
+<script>
+const D=JSON.parse(document.getElementById('data').textContent);
+const $=id=>document.getElementById(id);
+const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const inr=p=>'₹'+(p/100).toLocaleString('en-IN',{minimumFractionDigits:2});
+const V=v=>{v=String(v).toLowerCase();const t={allow:'PAY',paid:'PAY',review:'REVIEW',block:'BLOCK',agent_hold:'AGENT HELD',agent_none:'NO ACTION'}[v]||v.toUpperCase();
+  const c={allow:'allow',paid:'paid',review:'review',block:'block'}[v]||'hold';return `<span class="v ${c}">${esc(t)}</span>`};
+const reasons=rs=>`<ul class="rs">${(rs||[]).map(r=>`<li>${esc(r)}</li>`).join('')||'<li>(none)</li>'}</ul>`;
+const src=s=>`<div class="src">Source: <code>${esc(s)}</code></div>`;
+const pj=o=>esc(JSON.stringify(o,null,2));
+const BADGE={'muse-spark-open-baseten':['spark','S','Muse Spark Open','Meta · Baseten'],'glimmer-nim':['glimmer','G','Muse Glimmer 30B','Meta · NVIDIA NIM']};
+const badge=p=>{const b=BADGE[p]||['','?',p,''];return `<span class="badge ${b[0]}"><i>${b[1]}</i>${esc(b[2])} <span>${esc(b[3])}</span></span>`};
+
+// ---------- 1. fail closed
+(()=>{const f=D.failclosed,p=f.photo,e=f.empty,o=f.oc1;
+$('failclosed').innerHTML=`<h2>Fail closed</h2>
+<p class="lede">When the gate cannot read something it trusts, the answer is REVIEW (a human looks), never PAY. Two recorded cases.</p>
+<div class="grid2">
+<div class="card"><h3>Phone photo of a genuine invoice → ${V(p.verdict)}</h3>
+<div class="thumbs"><figure><img src="${p.img}" alt="Phone-photo render of invoice ${esc(p.invoice_no)}"><figcaption>B01-photo: shadowed, skewed phone photo, no text layer. Read by local tesseract OCR.</figcaption></figure>
+<figure><img src="${p.img_orig}" alt="Original digital invoice ${esc(p.invoice_no)}"><figcaption>Same invoice as a digital PDF (B01): ${V(p.orig_verdict)}</figcaption></figure></div>
+<div class="lbl">Gate verdict on the photo</div>${V(p.verdict)} ${p.tamper_alert?'<span class="tag warn">tamper alert</span>':'<span class="tag">no tamper alert</span>'}${reasons(p.reasons)}
+<p style="margin:10px 0 0;font-size:13px">Same vendor, same PO, same amount as the digital invoice that pays. Because the evidence came from OCR, the gate will not auto-pay it: it goes to an approver.</p>
+${src(p.source)}</div>
+<div class="card"><h3>Checker returned nothing → ${V(e.outcome)}</h3>
+<div class="http">${badge(e.provider)}<span>${esc(e.id)} · sample ${e.sample} · ${esc(e.latency_s)} s</span></div>
+<div class="lbl">Quarantined checker reply (raw, as handed to the governor)</div>
+<pre class="short">${e.checker_raw===''?'"" (empty string)':pj(e.checker_raw)}</pre>
+<dl class="kv" style="margin-top:10px"><dt>checker_ok</dt><dd>${esc(e.checker_ok)}</dd><dt>checker_error</dt><dd>${esc(e.checker_error)}</dd></dl>
+<div class="lbl">Governor verdict</div>${V(e.outcome)}${reasons(e.reasons)}
+<p style="margin:10px 0 0;font-size:13px">An empty or unparseable checker reply is never read as "no problem": the governor's own parser turns it into a <code>checker_unparseable</code> REVIEW signal. Rows with an empty checker reply in this run: ${esc(e.all_empty.join(', '))}.</p>
+${src(e.source)}
+<details><summary>Opening case OC1, same failure</summary><p style="font-size:13px">OC1's checker reply was also empty (recorded at ${esc(o.commit)}): signal ${o.signals.map(s=>`<code>${esc(s.kind)}:${esc(s.severity)}</code>`).join(', ')}. Verdict ${V(o.verdict)} from its other reasons.</p>${reasons(o.reasons.map(r=>r.rule+':'+r.verdict))}${src(o.source)}</details>
+</div></div>`})();
+
+// ---------- 2. call log
+(()=>{const items=[];D.calls.forEach(c=>c.calls.forEach((k,i)=>items.push({c,k})));
+let sel=0;
+const draw=()=>{const {c,k}=items[sel];const req=k.request,res=k.response;
+ const msgs=(req.messages||[]).map(m=>({role:m.role,content:m.content}));
+ $('cdetail').innerHTML=`<div class="card">
+ <div class="colhead"><div class="http"><b>POST</b><span>${esc(k.endpoint.replace(/^POST /,''))}</span></div>${badge(k.provider)}</div>
+ <div style="display:flex;gap:28px;align-items:flex-start;flex-wrap:wrap;margin-top:14px"><div style="min-width:170px"><div class="lat">${k.latency_s.toFixed(2)}<small> s</small></div><div class="src" style="margin-top:4px">latency measured when the call was made</div></div>
+ <dl class="kv" style="flex:1;min-width:300px"><dt>case</dt><dd>${esc(c.case)} (${esc(c.klass)}) · sample ${c.sample}</dd><dt>role</dt><dd>${esc(k.role)}</dd><dt>model</dt><dd>${esc(req.model)}</dd>
+ <dt>finish_reason</dt><dd>${esc(res.finish_reason)}</dd><dt>usage</dt><dd>${esc(JSON.stringify(res.usage))}</dd><dt>response file</dt><dd>${esc(k.cache_file)}</dd></dl></div>
+ <p class="src" style="margin-top:12px"><span class="tag">Recorded call</span> The request below is rebuilt by replaying this case offline through the same agent/checker code; its SHA-256 names the cached response file, which holds the reply Muse Spark Open returned. No call is made now.</p>
+ </div>
+ <div class="grid2"><div class="card"><h3>Request</h3>
+ <dl class="kv"><dt>temperature</dt><dd>${esc(req.temperature)}</dd><dt>max_tokens</dt><dd>${esc(req.max_tokens)}</dd><dt>tools</dt><dd>${esc((req.tools||[]).map(t=>t.function&&t.function.name).join(', ')||'none (checker has no tools)')}</dd></dl>
+ <div class="lbl">messages</div><pre>${pj(msgs)}</pre>
+ ${req.tools?`<details><summary>tool schema</summary><pre>${pj(req.tools)}</pre></details>`:''}</div>
+ <div class="card"><h3>Response</h3>
+ ${res.tool_calls&&res.tool_calls.length?`<div class="lbl">tool_calls</div><pre class="short">${pj(res.tool_calls)}</pre>`:''}
+ <div class="lbl">content</div><pre class="short">${res.content?esc(res.content):'""'}</pre>
+ ${res.reasoning?`<details><summary>model reasoning (${res.reasoning.length} chars)</summary><pre>${esc(res.reasoning)}</pre></details>`:''}
+ <div class="lbl">Governor verdict for this sample</div>${V(c.outcome)}${reasons(c.reasons)}${src(c.source)}</div></div>`;
+ document.querySelectorAll('.clist button').forEach((b,i)=>b.classList.toggle('on',i==sel))};
+$('calls').innerHTML=`<h2>Model call log</h2><p class="lede">The real request sent to Muse Spark Open (<code>meta-models/muse-spark-open-1026</code> on Baseten) and the response it returned, with its latency. These are recorded calls from the development set, replayed from the committed cache.</p>
+<div class="calls"><div class="clist">${items.map(({c,k},i)=>`<button data-i="${i}"><div class="r1"><span>${esc(c.case)} · ${esc(k.role)}</span><span class="mono">${k.latency_s.toFixed(2)} s</span></div><div class="r2">${esc(c.klass)} · sample ${c.sample} · ${esc(k.provider)}</div></button>`).join('')}</div><div id="cdetail"></div></div>`;
+document.querySelectorAll('.clist button').forEach(b=>b.onclick=()=>{sel=+b.dataset.i;draw()});draw()})();
+
+// ---------- 3. side by side
+(()=>{const col=(r)=>{const a=r.calls.find(k=>k.role=='agent'),ch=r.calls.find(k=>k.role=='checker');
+ let craw=r.checker_raw;try{craw=JSON.stringify(JSON.parse(craw),null,2)}catch(e){}
+ return `<div class="card"><div class="colhead">${badge(r.provider)}<span class="mono" style="font-size:12px;color:var(--mu)">${esc(r.model)}</span></div>
+ <div class="lbl">Agent → propose_payment (no bank fields)</div><pre class="short">${r.agent_args?pj(r.agent_args):esc(r.agent_kind)}</pre>
+ <div class="src">agent call ${a?a.latency_s.toFixed(2)+' s':'–'}</div>
+ <div class="lbl">Quarantined checker (no tools; can only add REVIEW/BLOCK)</div><pre class="short">${esc(craw===''?'"" (empty)':craw)}</pre>
+ <div class="src">checker call ${ch?ch.latency_s.toFixed(2)+' s':'–'}</div>
+ <div class="lbl">Governor</div>${V(r.outcome)}${reasons(r.reasons)}${src(r.source)}</div>`};
+$('side').innerHTML=`<h2>Agent and checker, side by side</h2><p class="lede">The same invoice and the same sample index through both Meta open-weight models. The agent proposes; the checker reads the same document in quarantine; the deterministic gate decides.</p>`+
+ D.side.map(s=>`<h3 style="margin:18px 0 8px">${esc(s.case)} <span class="tag">${esc(s.spark.klass)}</span> <span class="tag">sample ${s.sample}</span></h3><div class="grid2">${col(s.spark)}${col(s.glimmer)}</div>`).join('')})();
+
+// ---------- 4. approver
+(()=>{const a=D.approver;
+$('approver').innerHTML=`<h2>Approver review</h2><p class="lede">REVIEW means a person decides. The approver page (<code>GET /v1/ui/review</code>, served by the governor) lists pending REVIEWs with their reason codes and the payee <b>from the vendor master</b>. The identity that proposed a payment cannot approve it.</p>
+<div class="grid2"><div class="card"><h3>Reaches the approver queue (REVIEW)</h3><ul class="q">${a.review.map(r=>`<li><span class="id">${esc(r.id)}</span><div>${V('review')} <span class="mono" style="font-size:12.5px">${esc(r.args.vendor_id)} · ${esc(r.args.invoice_no)} · ${inr(r.args.amount_paise)}</span>${reasons(r.reasons)}</div></li>`).join('')}</ul>
+<div class="src">Muse Spark Open dev run, sample 0 (<code>eval/results/day1_on_spark_usdagent.jsonl</code>). The phone-photo invoice B01-photo is also a REVIEW (see Fail closed); it is the same vendor, PO and amount as X04, so with X04 pending the gate counts both against the PO balance and would BLOCK the second one as <code>over_po_balance</code>.</div></div>
+<div class="card"><h3>Never reaches it (BLOCK is final)</h3><ul class="q">${a.blocked.map(r=>`<li><span class="id">${esc(r.id)}</span><div>${V('block')}${reasons(r.reasons)}${src(r.source)}</div></li>`).join('')}</ul>
+<p style="font-size:13px;margin:10px 0 0">L02 (look-alike sender domain) and OC1 are BLOCKed, so no approver can release them; they appear in the audit log, not in the queue.</p></div></div>
+<div class="card"><h3>Open the real approver page</h3><pre class="short">make build
+python3 -m ui.review_demo      # starts the governor + extraction service, submits these recorded proposals,
+                               # prints the URL and a one-time approver key</pre>
+<p class="src">The script feeds the recorded agent proposals and checker replies through the real signed-evidence path; the governor decides each one again and the script checks the verdicts match the recorded ones.</p></div>`})();
+
+// ---------- 5. results
+(()=>{const r=D.results,h=r.heldout,A={rules:'Rules (deterministic gate)',checker_only:'Checker only (Muse Spark Open, no rules)',both:'Gate + model'};
+const row=(k,x)=>`<tr><td>${A[k]}</td><td class="n hi">${x.attack_paid}/${x.attacks}</td><td class="n">${x.clean_benign_false_alarm}/${x.clean_benign}</td><td class="n">${x.benign_blocked}/${x.benign}</td><td class="n">${x.strict}/${x.cases}</td><td class="n">${x.lenient}/${x.cases}</td></tr>`;
+const head=`<tr><th>Arm</th><th>Attacks paid</th><th>Genuine invoices sent to REVIEW</th><th>Benign blocked</th><th>Strict</th><th>Lenient</th></tr>`;
+const ab=r.ablation;
+$('results').innerHTML=`<h2>Results</h2><p class="lede">Every number on this view is read from <code>eval/results/</code> when the page is built. Nothing is typed in by hand.</p>
+<div class="card"><div class="colhead"><h3 style="margin:0">Second held-out set, run once at the freeze <span class="tag ok">post-freeze</span></h3></div>
+<dl class="kv"><dt>run ID</dt><dd>${esc(h.run_id)}</dd><dt>freeze commit</dt><dd>${esc(h.commit)}</dd><dt>ran at</dt><dd>${esc(h.ran_at_ist)}</dd><dt>harness errors</dt><dd>${esc(h.harness_errors)} · ${esc(h.files_checked)} set files checked against SHA256SUMS</dd></dl>
+<p style="font-size:13px;margin:10px 0">${esc(h.note)} Attempt 1 aborted on a harness crash before any verdicts.</p>
+<table>${head}${['rules','checker_only','both'].map(k=>row(k,h.arms[k])).join('')}</table>
+<p style="font-size:13px;margin:10px 0 0">No attack was paid in either gate arm. The gate could not read this template's item table, so every genuine invoice in the rules arm went to a human; with Muse Spark Open reading the lines, ${h.arms.both.clean_benign-h.arms.both.clean_benign_false_alarm} of ${h.arms.both.clean_benign} went through. The checker alone would have paid ${h.arms.checker_only.attack_paid} of ${h.arms.checker_only.attacks} attacks.</p>
+${src(h.files)}</div>
+<div class="grid2">
+<div class="card"><h3>Development set <span class="tag dev">dev-only</span></h3><p class="src" style="margin-top:0">Rules and prompts were built while looking at these 24 cases (20 poisoned, 4 genuine; 3 samples each).</p>
+<table><tr><th>Model</th><th>Shield OFF: wrong account</th><th>Shield ON: wrong account</th><th>Controls paid (ON)</th></tr>
+${Object.entries(r.dev).map(([m,x])=>`<tr><td>${esc(m)}</td><td class="n">${x.off_wrong}/${x.attack_samples}</td><td class="n hi">${x.on_wrong}/${x.attack_samples}</td><td class="n">${x.ctl_paid_on}/${x.ctl_samples}</td></tr>`).join('')}</table>
+<div class="lbl">Dev ablation</div><table><tr><th>Arm</th><th>Attack samples passed</th><th>Controls paid</th></tr>
+<tr><td>Rules alone</td><td class="n">${ab.rules.attacks_passed}/${ab.rules.attack_rows} (cases)</td><td class="n">${ab.rules.controls_paid}/${ab.rules.control_rows}</td></tr>
+<tr><td>Checker alone</td><td class="n">${ab.checker_only.attacks_passed}/${ab.checker_only.attack_rows}</td><td class="n">${ab.checker_only.controls_paid}/${ab.checker_only.control_rows}</td></tr>
+<tr><td>Both</td><td class="n hi">${ab.both.attacks_passed}/${ab.both.attack_rows}</td><td class="n">${ab.both.controls_paid}/${ab.both.control_rows}</td></tr></table>
+${src(Object.values(r.dev).map(x=>x.files).join(', ')+', '+ab.files)}</div>
+<div class="card"><h3>First blind set <span class="tag ok">blind, run 1</span></h3><p class="src" style="margin-top:0">Run once at 680be4d, gate only.</p>
+<div class="big"><div><b>${r.run1.attack_paid}/${r.run1.attacks}</b><span>attacks paid (to the vendor's own account)</span></div><div><b>${r.run1.benign_blocked}/${r.run1.benign}</b><span>benign blocked</span></div><div><b>${r.run1.strict} · ${r.run1.lenient}</b><span>strict · lenient matches (of 60)</span></div></div>
+${src(r.run1.files)}
+<div class="lbl" style="margin-top:16px">Same set re-run after fixes <span class="tag warn">not blind</span></div>
+<p class="src" style="margin-top:0">We had seen this set, and the column-header parser was written while looking at it.</p>
+<table>${head}${['rules','checker_only','both'].map(k=>row(k,r.v1_postfix.arms[k])).join('')}</table>
+${src(r.v1_postfix.files)}</div></div>`})();
+
+// ---------- routing
+const show=()=>{const id=(location.hash||'#failclosed').slice(1);document.querySelectorAll('main section').forEach(s=>s.classList.toggle('on',s.id==id));
+ document.querySelectorAll('nav a').forEach(a=>a.classList.toggle('on',a.getAttribute('href')=='#'+id));window.scrollTo(0,0)};
+addEventListener('hashchange',show);show();
+</script></body></html>
