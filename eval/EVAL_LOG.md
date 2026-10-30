@@ -309,4 +309,9 @@ Also new: the shadow-mode harness `tools/shadow.py`, tested on the synthetic `to
 
 It is synthetic and was never run on real AP decisions. The internal red team is in `docs/RED_TEAM_INTERNAL.md`, raw in `eval/results/redteam-internal-*.json`:
 - post-Phase-3: 35 held, 6 findings, 4 info;
-- the open findings are forged caller-supplied evidence (3), the near-duplicate suffix, the homoglyph IFSC, and no PDF size cap.
+- post-Phase-2: **47 held, 2 findings, 10 info** of 59 probes, run ~21:10 IST. Raw: `eval/results/redteam-internal-post-phase2.json`. Governor rebuilt from `main` at `30a3678` (Phases 1, 2, 3 and 6) plus this branch, which does not touch `governor/` or `extractor/`, with signed evidence and the sandboxed extraction service. Forged caller evidence is now REVIEW `evidence_unsigned`. Edited, foreign or zeroed signatures, envelope replay and document-hash swaps BLOCK. The sandbox refuses 1,500 pages (`too_many_pages`) and 11 MB (`file_too_large`). Internal only, not an external review;
+- still open: the near-duplicate suffix re-submit (R4) and the Cyrillic-homoglyph IFSC (R6).
+
+Re-check on the Phase 2 governor (~21:15 IST):
+- `eval.run_real` now uses the DEV/TEST unsigned path explicitly, because its counterfactual evidence is hand-built from labelled OCR text. The rerun matched the earlier "after" run in every number, and `eval/results/real-after.json` was replaced with it.
+- `tools/shadow.py` now sends each PDF through the signed extraction service when the buyer GSTIN matches the service's. The synthetic sample gives the same 20/21 and kappa 0.90 on that path.
