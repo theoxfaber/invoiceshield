@@ -9,8 +9,10 @@ pub mod master;
 pub mod master_change;
 pub mod normalize;
 pub mod persist;
+pub mod trust;
 pub mod verdict;
 
 pub use engine::{Decision, Evidence, Governor, Proposal, Request};
 pub use master::Master;
+pub use trust::{TrustConfig, TrustVerifier};
 pub use verdict::{merge, parse_checker_signals, Severity, Signal, Verdict};

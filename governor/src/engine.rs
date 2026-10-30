@@ -403,6 +403,13 @@ impl Governor {
         Decision { decision_id, verdict, deterministic_verdict: deterministic, reasons: ctx.reasons, signals, payee, tamper_alert: ctx.tamper, audit_hash }
     }
 
+    /// A decision that never reached the rules (e.g. evidence failed provenance checks in
+    /// `trust.rs`). Audited like any other; with no proposal it can never be ALLOW.
+    pub fn reject(&mut self, rule: &str, verdict: Verdict, detail: String, now: i64) -> Decision {
+        let ctx = Ctx { reasons: vec![reason(rule, verdict, Control::Structural, detail)], tamper: false };
+        self.finish(None, ctx, vec![], now)
+    }
+
     /// Eval only (the server exposes it solely under GOVERNOR_EVAL_CLOCK=1): forget all state
     /// so independent samples of the same invoice do not trip the duplicate rules.
     pub fn reset_state(&mut self) {

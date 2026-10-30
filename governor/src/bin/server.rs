@@ -11,6 +11,14 @@
 //!   GOVERNOR_ANCHOR_FILE       append-only anchor file (default `<db>.anchors.jsonl`).
 //!   GOVERNOR_ANCHOR_INTERVAL_SECS  default 60.
 //!   GOVERNOR_ANCHOR_URL        optional http:// URL each anchor is POSTed to.
+//!
+//! Evidence provenance (Phase 2, see trust.rs and docs/DECISIONS.md):
+//!   GOVERNOR_EXTRACTOR_PUBKEY  (required) the extraction service's Ed25519 public key(s),
+//!                              64 hex chars or base64, comma-separated for rotation. Evidence is
+//!                              read only from a `signed_evidence` envelope that verifies.
+//!   GOVERNOR_EVIDENCE_MAX_AGE_SECS (default 300), GOVERNOR_EVIDENCE_MAX_SKEW_SECS (default 30).
+//!   GOVERNOR_DEV_UNSIGNED_EVIDENCE=1  DEV/TEST ONLY: also accept the old caller-supplied
+//!                              `evidence` field. Refused unless GOVERNOR_EVAL_CLOCK=1; off by default.
 use axum::{
     extract::{Path, State},
     http::{HeaderMap, StatusCode},
@@ -20,7 +28,7 @@ use axum::{
 };
 use invoiceshield_governor::anchor;
 use invoiceshield_governor::persist::{ActionOutcome, Fault, Store};
-use invoiceshield_governor::Master;
+use invoiceshield_governor::{Master, TrustConfig, TrustVerifier};
 use serde::Deserialize;
 use std::{
     path::PathBuf,
@@ -214,6 +222,30 @@ async fn main() {
         std::process::exit(2);
     }
     let eval_clock = std::env::var("GOVERNOR_EVAL_CLOCK").as_deref() == Ok("1");
+    let dev_unsigned = std::env::var("GOVERNOR_DEV_UNSIGNED_EVIDENCE").as_deref() == Ok("1");
+    if dev_unsigned && !eval_clock {
+        eprintln!("GOVERNOR_DEV_UNSIGNED_EVIDENCE=1 is for tests only and requires GOVERNOR_EVAL_CLOCK=1");
+        std::process::exit(2);
+    }
+    let extractor_keys = match TrustConfig::parse_keys(&std::env::var("GOVERNOR_EXTRACTOR_PUBKEY").unwrap_or_default()) {
+        Ok(k) => k,
+        Err(e) => {
+            eprintln!("GOVERNOR_EXTRACTOR_PUBKEY invalid: {e}");
+            std::process::exit(2);
+        }
+    };
+    if extractor_keys.is_empty() && !dev_unsigned {
+        eprintln!("GOVERNOR_EXTRACTOR_PUBKEY must be set (the extraction service's Ed25519 public key)");
+        std::process::exit(2);
+    }
+    let mut tcfg = TrustConfig::new(extractor_keys);
+    tcfg.dev_unsigned = dev_unsigned;
+    let env_i64 = |k: &str, d: i64| std::env::var(k).ok().and_then(|v| v.parse().ok()).unwrap_or(d);
+    tcfg.max_age_secs = env_i64("GOVERNOR_EVIDENCE_MAX_AGE_SECS", 300);
+    tcfg.max_skew_secs = env_i64("GOVERNOR_EVIDENCE_MAX_SKEW_SECS", 30);
+    if dev_unsigned {
+        eprintln!("WARNING: DEV MODE: unsigned caller-supplied evidence is accepted. Never run this in production.");
+    }
     let path = std::env::var("GOVERNOR_MASTER").unwrap_or_else(|_| "../dataset/fixtures/master.json".into());
     let master = Master::from_json(&std::fs::read_to_string(&path).expect("read master")).expect("parse master");
     let db = std::env::var("GOVERNOR_DB").unwrap_or_else(|_| if eval_clock { ":memory:".into() } else { "governor.db".into() });
@@ -224,6 +256,7 @@ async fn main() {
             std::process::exit(2);
         }
     };
+    store.trust = Some(TrustVerifier::new(tcfg));
     if db == ":memory:" {
         eprintln!("WARNING: GOVERNOR_DB=:memory: — ledger and audit are lost on exit (eval mode only)");
     }

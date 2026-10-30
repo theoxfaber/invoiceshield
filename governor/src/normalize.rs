@@ -4,7 +4,23 @@ use unicode_normalization::UnicodeNormalization;
 /// NFKC, drop zero-width/format characters, map every dash-like character to
 /// '-', drop whitespace, uppercase. "inv 2231", "INV–2231" and "INV\u{200B}2231"
 /// all normalise to "INV2231"-style keys that compare equal.
+///
+/// Iterated to a fixpoint: uppercasing after NFKC can leave a decomposed sequence
+/// ("ΐ" → "Ι\u{308}\u{301}") whose composed twin ("Ϊ́") would otherwise get a different
+/// key and slip past the duplicate check. Found by tests/fuzz_inputs.rs (Phase 2).
 pub fn invoice_no(raw: &str) -> String {
+    let mut s = invoice_no_pass(raw);
+    for _ in 0..4 {
+        let n = invoice_no_pass(&s);
+        if n == s {
+            break;
+        }
+        s = n;
+    }
+    s
+}
+
+fn invoice_no_pass(raw: &str) -> String {
     raw.nfkc()
         .filter(|c| !is_invisible(*c))
         .map(|c| if is_dash(c) { '-' } else { c })

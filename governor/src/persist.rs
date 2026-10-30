@@ -134,6 +134,9 @@ pub enum ActionOutcome {
 pub struct Store {
     conn: Connection,
     pub gov: Governor,
+    /// Phase 2 provenance check (trust.rs). The server always sets it; `None` keeps the old
+    /// caller-supplied-evidence path for library tests only.
+    pub trust: Option<crate::trust::TrustVerifier>,
     /// `meta.generation` the in-memory `gov` reflects; -1 forces a reload.
     generation: i64,
     fault: Option<Fault>,
@@ -274,7 +277,7 @@ impl Store {
     /// Open (creating and migrating if needed) the DB at `path`; ":memory:" for tests.
     pub fn open(path: &str, master: Master) -> Result<Self> {
         let conn = connect(path)?;
-        let mut s = Store { conn, gov: Governor::new(master), generation: -1, fault: None };
+        let mut s = Store { conn, gov: Governor::new(master), trust: None, generation: -1, fault: None };
         s.refresh()?;
         Ok(s)
     }
@@ -341,7 +344,14 @@ impl Store {
         // Any failure from here on: the in-memory governor must be reloaded.
         self.generation = -1;
         let (led0, aud0) = (self.gov.ledger.entries.len(), self.gov.audit.records.len());
-        let d = self.gov.evaluate_json(raw, now);
+        let d = match self.trust.as_mut() {
+            // Freshness of signed evidence uses the real clock, never the (eval) ledger clock.
+            Some(t) => {
+                let wall = std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).map(|d| d.as_secs() as i64).unwrap_or(0);
+                self.gov.evaluate_signed_json(raw, now, wall, t)
+            }
+            None => self.gov.evaluate_json(raw, now),
+        };
 
         let write = || -> std::result::Result<(), rusqlite::Error> {
             tx.execute(
