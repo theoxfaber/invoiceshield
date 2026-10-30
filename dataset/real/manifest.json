@@ -1,0 +1,41 @@
+{
+ "generated_by": "python3 -m dataset.real.sources --manifest",
+ "raw_dir": "data/third_party/raw/ (gitignored)",
+ "sources": {
+  "midd": {
+   "title": "Multi-layout Invoice Document Dataset (MIDD)",
+   "landing": "https://zenodo.org/records/5113009",
+   "licence": "CC-BY-4.0",
+   "attribution": "Baviskar, D., Ahirrao, S., Kotecha, K. (2021). Multi-layout Invoice Document Dataset (MIDD). Zenodo. doi:10.5281/zenodo.5113009",
+   "files": [
+    {
+     "path": "midd/IOB.rar",
+     "url": "https://zenodo.org/api/records/5113009/files/IOB.rar/content",
+     "sha256": "d06421afbf734fc4ba7a75b46b9c786cdd20baba42bb7011e423f50a57dd4609"
+    }
+   ],
+   "count": 708,
+   "labels": "dataset/real/labels_midd.json (identifiers salted-sha256, 16 hex)"
+  },
+  "sparrow": {
+   "title": "Sparrow invoice dataset (Katana ML), test + validation splits",
+   "landing": "https://huggingface.co/datasets/katanaml-org/invoices-donut-data-v1",
+   "licence": "MIT (dataset card); underlying Mendeley Data doi:10.17632/tnj49gpmtz.2",
+   "attribution": "Katana ML, Sparrow invoices-donut-data-v1; Kozlowski M., Weichbroth P. (2021) Samples of electronic invoices, Mendeley Data V2",
+   "files": [
+    {
+     "path": "sparrow/test.parquet",
+     "url": "https://huggingface.co/datasets/katanaml-org/invoices-donut-data-v1/resolve/main/data/test-00000-of-00001-56af6bd5ff7eb34d.parquet",
+     "sha256": "712a9a65000d6a2cf04d41bc794843ca30452bb87473951b1adafd3610eab08b"
+    },
+    {
+     "path": "sparrow/validation.parquet",
+     "url": "https://huggingface.co/datasets/katanaml-org/invoices-donut-data-v1/resolve/main/data/validation-00000-of-00001-b8a5c4a6237baf25.parquet",
+     "sha256": "dcc1d76abc7a779c0a6724359ccabd4e384162a7d6ef3d73ed473b4eb4ee76b4"
+    }
+   ],
+   "count": 76,
+   "labels": "dataset/real/labels_sparrow.json (identifiers salted-sha256, 16 hex)"
+  }
+ }
+}

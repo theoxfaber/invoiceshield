@@ -47,7 +47,7 @@ _BANK_LABEL = (r"\b(?:a\s?[/\\l1|]\s?c\b\.?|acct\b|accnt\b|account(?:[_\s]?(?:no
                r"|ifsc|swift|bic\b|iban|remit\w*|pay(?:\s+to)?\b|payment\s+to|transfer\b|credit\s+(?:to|the)\b"
                r"|deposit|neft|rtgs|imps|wire\b)")
 _OTHER_LABEL = (r"\b(?:ph\b\.?|phone|tel\b\.?|telephone|mob\b\.?|mobile|cell\b|fax|whats\s?app|contact|call\b|toll[\s-]?free|helpline"
-                r"|gstin|gst\s*no|pan\b|cin\b|tan\b|udyam|msme|irn\b|ack\w*|e-?way|ewb\b|lut\b|hsn\b|sac\b"
+                r"|gstin|gst\s*no|pan\b|cin\b|tan\b|tin\b|vat\b|cst\b|udyam|msme|irn\b|ack\w*|e-?way|ewb\b|lut\b|hsn\b|sac\b"
                 r"|p\.?\s?o\b\.?|purchase\s+order|order\b|invoice|inv\b\.?|bill\s*no|challan|dc\s*no"
                 r"|ref\w*|utr\b|txn\b|transaction|cheque|chq\b|dd\s*no|receipt|voucher|grn\b|docket|awb\b|lr\s*no|tracking|consignment"
                 r"|pin\b|pin\s*code|pincode|zip\b|postal|routing|aba\b|micr\b|sort\s*code|branch\s*code|serial|s/?n\b|imei|licen[cs]e|ticket|case\b)")
@@ -56,6 +56,9 @@ _BANK_WORD_RE = re.compile(_BANK_LABEL, re.I)
 # "<label words> [No|ID|Code|Number|#]:" right before the number, on its own line or after a gap.
 _FIELD_RE = re.compile(r"(?:^|\s{2,}|[|;,]\s*)([A-Za-z][A-Za-z0-9 .&/()'#-]{0,40}?)\s*[:#]\s*$")
 _SWIFT_RE = re.compile(r"\b(?:SWIFT|BIC)\s*(?:code)?\s*[:\-]?\s*[A-Z]{6}[A-Z0-9]{2}(?:[A-Z0-9]{3})?\b", re.I)
+
+
+_MOBILE_RE = re.compile(r"[6-9]\d{9}")
 
 
 def _line_start(text: str, i: int) -> int:
@@ -84,10 +87,18 @@ def classify_number(text: str, start: int, end: int) -> str:
     labels = list(_LABEL_RE.finditer(text[max(ls, start - 48):start]))
     nearest = labels[-1] if labels else None
     if nearest is not None and nearest.group("bank"):
+        # "Near Bank of Maharashtra ... Pune.98xxxxxxxx": a bare "bank" word (an address, a bank
+        # name) does not make a mobile-shaped number an account; A/c, Account, IFSC... still do.
+        if re.fullmatch(r"bank", nearest.group(0).strip(), re.I) and _MOBILE_RE.fullmatch(text[start:end]) and not code_after:
+            return "other"
         return "account"
     if nearest is not None:
         return "account" if code_after else "other"
-    if _BANK_WORD_RE.search(text[max(0, start - 80):start]) or _bank_code_in(text[max(0, start - 40):end + 40]):
+    if _bank_code_in(text[max(0, start - 40):end + 40]):
+        return "account"
+    # A bank word nearby is weak evidence: addresses say "Near Bank of Maharashtra". An unlabelled
+    # number shaped like an Indian mobile (10 digits, 6-9 first) needs a real label or an IFSC.
+    if _BANK_WORD_RE.search(text[max(0, start - 80):start]) and not _MOBILE_RE.fullmatch(text[start:end]):
         return "account"
     return "other"
 
@@ -103,6 +114,37 @@ def printed_accounts(text: str) -> list[str]:
     return _uniq(found)
 
 
+# OCR-tolerant GSTIN candidates: 15 characters starting with two digits, possibly split once
+# after the state code ("27 AARFA8194J1ZP"), with OCR slips in class-impossible slots.
+_GSTIN_LOOSE_RE = re.compile(r"(?<![A-Z0-9$|])(\d{2}) ?([A-Z0-9$|]{13})(?![A-Z0-9$|])")
+
+
+def issuer_gstins(upper: str, buyer_gstin: str) -> list[str]:
+    """GSTINs printed in the text, in order, minus the buyer's own.
+
+    A strict-format match is kept as printed unless it fails the mod-36 check and an OCR repair
+    (structural.gstin.repair_ocr: slot-class confusions, checksum-gated) turns it into a valid one;
+    a loose 15-character token is kept only when such a repair succeeds. The buyer is recognised
+    after repair too, so an OCR'd copy of the buyer's GSTIN ('...C1ZY' read as '...CIZY') is not
+    taken for the issuer. Found on real invoices (docs/FINDINGS_REAL_INVOICES.md)."""
+    from structural.gstin import repair_ocr, validate
+    buyer = (buyer_gstin or "").upper()
+    found = []
+    for m in _GSTIN_LOOSE_RE.finditer(upper):
+        tok = m.group(1) + m.group(2)
+        strict = bool(GSTIN_RE.fullmatch(tok))
+        if strict and not validate(tok):
+            g = tok
+        else:
+            g = repair_ocr(tok) or (tok if strict else None)
+        if g is None:
+            continue
+        if g == buyer or (repair_ocr(tok) or tok) == buyer:
+            continue
+        found.append((m.start(), g))
+    return _uniq(g for _, g in sorted(found))
+
+
 def sender_domain(email_from: str) -> str | None:
     m = re.search(r"@([A-Za-z0-9.\-]+)\s*>?\s*$", email_from.strip())
     return m.group(1).lower() if m else None
@@ -112,7 +154,7 @@ def governor_evidence(ev: Evidence, buyer_gstin: str) -> dict:
     """Build the `evidence` object of a governor request (field names fixed by the Rust schema)."""
     text = ev.text or ""
     upper = text.upper()
-    gstins = [g for g in _uniq(GSTIN_RE.findall(upper)) if g != buyer_gstin.upper()]
+    gstins = issuer_gstins(upper, buyer_gstin)
     box_acct = BOX_ACCT_RE.search(text)
     box_ifsc = BOX_IFSC_RE.search(text)
     accts = printed_accounts(text)
@@ -187,12 +229,62 @@ TOTAL_RE = re.compile(r"Total\s+Payable\s*[:\-]?\s*(?:INR|USD|US\$|\$|Rs\.?|₹)
 
 
 def printed_total_paise(text: str) -> int | None:
-    """The 'Total Payable' figure the document prints (what a naive agent would pay). None if absent."""
+    """The 'Total Payable' figure the document prints (what a naive agent would pay).
+
+    Real invoices rarely say "Total Payable" ("Grand Total", "Bill Amount", "Total Invoice Amount",
+    Tally's "Amount Chargeable"). Fallback: the largest amount the document writes out in WORDS
+    ("Two Lakh Thirty Three Thousand Four Hundred Four Only") that it also prints in figures. Both
+    must agree, so a stray number never becomes the total. None if neither is found."""
     m = TOTAL_RE.findall(text or "")
-    if not m:
-        return None
-    rupees, _, paise = m[-1].replace(",", "").partition(".")
-    return int(rupees) * 100 + int((paise + "00")[:2]) if rupees.isdigit() else None
+    if m:
+        rupees, _, paise = m[-1].replace(",", "").partition(".")
+        return int(rupees) * 100 + int((paise + "00")[:2]) if rupees.isdigit() else None
+    return words_confirmed_total_paise(text or "")
+
+
+_NUM_WORDS = {
+    "zero": 0, "one": 1, "two": 2, "three": 3, "four": 4, "five": 5, "six": 6, "seven": 7, "eight": 8, "nine": 9,
+    "ten": 10, "eleven": 11, "twelve": 12, "thirteen": 13, "fourteen": 14, "fifteen": 15, "sixteen": 16,
+    "seventeen": 17, "eighteen": 18, "nineteen": 19, "twenty": 20, "thirty": 30, "forty": 40, "fourty": 40,
+    "fifty": 50, "sixty": 60, "seventy": 70, "eighty": 80, "ninety": 90, "ninty": 90,
+}
+_SCALES = {"hundred": 100, "thousand": 1_000, "lakh": 1_00_000, "lakhs": 1_00_000, "lac": 1_00_000, "lacs": 1_00_000,
+           "crore": 1_00_00_000, "crores": 1_00_00_000, "million": 1_000_000}
+_WORD_RUN_RE = re.compile(r"(?:\b(?:%s|and)\b[\s-]*){2,}" % "|".join(sorted(set(_NUM_WORDS) | set(_SCALES), key=len, reverse=True)), re.I)
+_FIGURE_RE = re.compile(r"(?<![\d.,])\d{1,3}(?:,\d{2,3})+(?:\.\d{1,2})?(?![\d,])|(?<![\d.,])\d+(?:\.\d{1,2})?(?![\d,])")
+
+
+def words_to_int(words: str) -> int | None:
+    total, cur, seen = 0, 0, False
+    for w in re.findall(r"[a-z]+", words.lower()):
+        if w == "and":
+            continue
+        if w in _NUM_WORDS:
+            cur += _NUM_WORDS[w]
+            seen = True
+        elif w == "hundred":
+            cur = max(cur, 1) * 100
+        elif w in _SCALES:
+            total += max(cur, 1) * _SCALES[w]
+            cur = 0
+            seen = True
+    return total + cur if seen else None
+
+
+def words_confirmed_total_paise(text: str) -> int | None:
+    figures = set()
+    for f in _FIGURE_RE.findall(text):
+        r, _, p = f.replace(",", "").partition(".")
+        figures.add(int(r) * 100 + int((p + "00")[:2]))
+    best = None
+    for m in _WORD_RUN_RE.finditer(text):
+        tail = text[m.end():m.end() + 30].lower()
+        if re.match(r"\s*(?:and\s+[a-z\s-]+?\s+)?paise", tail):
+            continue  # "... and Eight paise" belongs to a tax-amount line; skip fractional words
+        v = words_to_int(m.group(0))
+        if v and v * 100 in figures and (best is None or v * 100 > best):
+            best = v * 100
+    return best
 
 
 AMOUNT_ONLY_RE = re.compile(r"^(?:INR|USD|US\$|\$|Rs\.?|₹)?\s*(-?[\d,]+\.\d{2})$")
