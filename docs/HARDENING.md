@@ -16,9 +16,9 @@ Coordination: each workstream works in its own git worktree on its own branch, r
 | 3 | Idempotency keys on /v1/actions; restart/crash-recovery test; concurrent identical requests → one payment | hardening/state | DONE (hardening/state, merged to main 2026-10-30 ~19:10 IST; BUILD_LOG "Phase 3 hardening") |
 | 3 | External anchoring: periodic signed head hash | hardening/state | DONE (hardening/state, merged to main 2026-10-30 ~19:10 IST; BUILD_LOG "Phase 3 hardening") |
 | 3 | DB uniqueness constraint instead of in-process mutex (documented choice) | hardening/state | DONE (hardening/state, merged to main 2026-10-30 ~19:10 IST; BUILD_LOG "Phase 3 hardening") |
-| 4 | Per-identity auth (operator/agent/approver keys), maker-checker on identities, master_change wired with callback, 2 approvers, cooling-off | hardening/security | TODO |
-| 4 | TLS option, rate limiting, secrets via env/file, cargo audit / pip-audit / Dependabot | hardening/security | TODO |
-| 4 | docs/THREAT_MODEL.md: attacker-controls-X scenarios and what the gate still guarantees | hardening/security | TODO |
+| 4 | Per-identity auth (operator/agent/approver keys), maker-checker on identities, master_change wired with callback, 2 approvers, cooling-off | hardening/security | DONE (hardening/security, merged 2026-10-30 ~21:40 IST; DECISIONS 'Per-identity keys and roles', BUILD_LOG 'Phase 4 security') |
+| 4 | TLS option, rate limiting, secrets via env/file, cargo audit / pip-audit / Dependabot | hardening/security | DONE (hardening/security, merged 2026-10-30 ~21:40 IST; TLS/429/*_FILE in Phase 4; cargo audit, pip-audit and Dependabot are Phase 6's CI, Phase 4 deps pass cargo audit; DECISIONS 'Rate limits on by default…') |
+| 4 | docs/THREAT_MODEL.md: attacker-controls-X scenarios and what the gate still guarantees | hardening/security | DONE (hardening/security, merged 2026-10-30 ~21:40 IST; DECISIONS 'Per-identity keys and roles', BUILD_LOG 'Phase 4 security') |
 | 5 | Frozen held-out set run once (after Phase 1 merge), raw result | build loop | TODO |
 | 5 | Blind adaptive cases written without repo access | blind writer | TODO |
 | 5 | Real/public anonymized invoices eval + FP rate with confidence intervals | hardening/real-eval | IN PROGRESS (Phase 5 agent, 2026-10-30 18:10 IST) |
