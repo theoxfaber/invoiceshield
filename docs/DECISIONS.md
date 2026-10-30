@@ -167,3 +167,6 @@ Once the column-header parser read v1, the rules arm paid ATK-10 (an already-pai
 
 ## Sat Oct 31, 2026, ~03:00 IST: FREEZE for held-out v2 run 2 at 55fb679
 main `55fb679` is the frozen commit for the one v2 run (all arms). No gate, extractor or prompt change after it; v2 misses are findings (EVAL_LOG, 03:03 IST). Later commits touch docs, demo assets and UI only.
+
+## Sat Oct 31, 2026: SAM 3.1 never ran; claims removed
+SAM 3.1 was in the Oct 26 plan for document region masks. It was never run (no GPU access; see the Oct 27 go/no-go), so the Oct 26 "Models" entry above is superseded on that point: the shipped stack uses tesseract OCR for scans and Muse Spark Open (default) / Muse Glimmer 30B for every model call. README and docs no longer mention SAM as part of the system.

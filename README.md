@@ -1,85 +1,150 @@
 # InvoiceShield
 
-> Hackathon submission (Meta Global AI Developer Hackathon, Oct 26 – Nov 4, 2026). **Synthetic data only. No financial or compliance claims.** Work in progress.
+**A fail-closed payment gate for AI accounts-payable agents.** The agent can propose *which vendor, which invoice, how much*. It cannot say where the money goes: the payee always comes from your vendor master, and a deterministic Rust gate decides PAY, REVIEW (a human looks) or BLOCK before anything reaches a payment rail.
 
-## Headline (development set, not a held-out result)
+> Built during the Meta Global AI Developer Hackathon (Oct 26 – Nov 4, 2026). All vendors, GSTINs, accounts and invoices in this repo are fictional; any match with a real business, account or domain is coincidental. No real payment, bank, customer or pilot is involved. Not financial, tax or legal advice.
 
-On our **24-case development risk set** (20 poisoned invoices + 4 genuine controls, k=3 samples each), the same Meta model paying the same invoices:
+**What makes it different:** the model has no bank field to fill in (a proposal that carries one is BLOCKed); the invoice's issuer GSTIN is checksum-validated and must match the vendor master; any account or IFSC printed anywhere in the document (format-checked, look-alike characters flagged) is compared with the master and a mismatch is a tamper alert; and changing a vendor's bank details on the server requires a call-back to the number on file, two approvers who are not the maker, and a cooling-off period (72 h by default) before it takes effect.
 
-| Model (agent + quarantined checker) | Shield OFF: paid to the wrong place | Shield ON: paid to the wrong place | Genuine controls paid (ON) |
-|---|---|---|---|
-| Muse Glimmer 30B (NVIDIA NIM), Oct 27 | **15 / 60** samples (5 cases, 3/3 each) | **0 / 60** | **12 / 12** |
-| Muse Spark Open (Baseten), Oct 29 | **15 / 60** samples (same 5 cases, 3/3 each) | **0 / 60** | **12 / 12** |
+## The problem
 
-The five cases both models pay to the wrong place with the shield off are the quiet ones: a clean bank-account swap (X04), a changed IFSC on the same account (X_ifsc), and look-alike supplier name, sender domain and GSTIN (L01–L03). Loud injections are mostly held by the model itself.
+Vendor bank-detail fraud is the oldest trick in accounts payable: a forged letter or a lightly edited invoice says "we changed banks, pay here". Now AP teams are putting AI agents on the inbox, and those agents read documents written by strangers. A publicly reported Oct 2026 invoice-fraud campaign already hid instructions for AI agents inside the emails that carried its invoices. An agent that reads untrusted input, has access to payment systems, and can act on its own holds all three powers that Meta's *Agents Rule of Two* says an agent should not hold together without a human.
 
-**Limits, plainly.** These are dev-set numbers: the rules and prompts were built while looking at these 24 cases, so they say the design works as written, not how it generalises. The sample is small, and the outcomes were identical across the 3 samples for every harmful case, so the k=3 runs measure nondeterminism, not 60 independent trials (case level: 0/20 attack cases, 95% upper bound ≈ 17%). The one hijacked-agent miss we found (I02, fee padding inside the PO balance) was fixed after we saw it, so it is now a regression test, not evidence. A slow-drip split (S05: three ₹40,000 invoices 8 days apart) is paid in full by design and is a stated limit. Every scan or photo goes to REVIEW (OCR-read fields are never auto-paid), so image invoices always cost a human look. The headline bank-swap attack X04 ends in **REVIEW, not BLOCK**: nothing is sent and the alert names the mismatch, but a human resolves it. The frozen 77-case held-out set has **not** been run yet (see "Evaluation status").
+## How it works: propose / permit
 
-## What it is
-
-An AI agent pays vendor invoices. InvoiceShield sits between the agent and the money: the agent can only say *which vendor, which invoice, how much*. The payee account always comes from your vendor master, never from the document being read, and a fail-closed Rust gate re-checks every field.
-
-Built for Indian small businesses and CA firms hit by vendor bank-detail-change fraud.
-
-## The Meta angle
-
-- **Agents Rule of Two.** Meta's guidance says an agent should hold at most two of: (A) processing untrusted input, (B) access to sensitive data or systems, (C) the ability to change state or communicate externally, without a human in the loop. An AP agent reading a vendor's PDF and paying it holds all three. InvoiceShield takes (C) away from the model: the agent reads untrusted input and *proposes*; only a separate deterministic policy layer (the Rust governor) can *permit* a payment, and anything it is unsure of goes to a human (REVIEW). This is the propose/permit pattern Meta describes, applied to accounts payable.
-- **Meta models, as actually run.** The agent and the quarantined document checker are Meta models in two separate contexts (the checker has no tools and never sees the proposal):
-  - **Muse Spark Open** (`meta-models/muse-spark-open-1026`) on Baseten's OpenAI-compatible endpoint: **the default provider** (`providers/llm.py::BasetenMuseSpark`). The dev-set OFF and ON arms above ran live on it on Oct 29, 2026 (≈396k tokens over 184 calls; agent call p50 3.7 s, agent + checker p50 5.1 s / p95 20.4 s).
-  - **Muse Glimmer 30B** (open weights, Apache-2.0) on NVIDIA's NIM endpoint: the Day 1 runs (tool calls 25–110 s at low reasoning). Select it with `LLM_PROVIDER=glimmer` or `--provider glimmer`.
-  - Neither model is trusted: every output is strictly parsed, and a parse failure, empty reply or provider error becomes REVIEW. In the Spark ON run the checker returned empty output twice; both ended REVIEW (fail closed).
-  - Not run: SAM 3.1 (no GPU access) and the Glimmer vision path. Scans use local OCR (tesseract) instead.
-
-## Evaluation status
-
-| Set | Status |
-|---|---|
-| 24-case dev risk set, OFF / ON, k=3 | Run on Glimmer (Oct 27) and Spark (Oct 29); numbers above; raw rows in `eval/results/day1_{off,on}[_spark].jsonl` |
-| Hijacked-agent arm, sequences, benign dev set, variants (no model calls) | Run; see `eval/EVAL_LOG.md` |
-| **Frozen 77-case held-out set** (25 headline attacks, 25 benign, 10 structurally impossible, 14 blind adaptive K cases, 3 residual limits) | **Not run.** Only its specification exists (eval plan / threat model). The cases have not been generated, and the K set must be written blind by an author who has never seen the repo, so we will not generate it ourselves after seeing dev results. |
-
-## How the vendor master gets updated safely
-
-The gate never takes a payee from a document, so the attack moves to the vendor master. A bank change is applied only after a call-back to the phone number already on file, two distinct approvers who are not the person who entered it (maker-checker), a cooling-off period, and an audit-log entry. The rule is implemented and tested as a library function (`governor/src/master_change.rs`, `governor/tests/master_change.rs`); it is not yet exposed on the HTTP server. Details, and what is design only: [`docs/VENDOR_MASTER_CHANGES.md`](docs/VENDOR_MASTER_CHANGES.md).
-
-## Components
-- `governor/`: Rust gate (payee from master, PO ownership and balance, approval threshold and cap, duplicate key with Unicode normalisation and IRN, rolling 7-day per-vendor split detection, amount rules (proposal = printed total, lines add up, every charge is on the PO), issuer binding on GSTIN and sender domain, bank-detail-change tamper alert, OCR-read evidence → REVIEW, escalate-only checker merge, hash-chained audit, maker-checker vendor bank change).
-- `governor-server` (Axum): `/v1/actions` (agent role), `/v1/decisions/{id}`, `/resolve` (approver role, never the proposer), `/v1/master-changes` (vendor bank changes: call-back, 2 approvers, cooling-off), `/v1/audit/verify`. Per-identity hashed API keys, rate limits, optional TLS; see `docs/THREAT_MODEL.md`.
-- Approver page (Phase 7): `GET /v1/reviews` lists pending REVIEWs with reason codes and evidence; `/v1/ui/review` is a static page (strict CSP, key held in tab memory) that resolves them through `/resolve`, so maker-checker stays the server's.
-- `integrations/` (Phase 7, **mock-tested only, not run against a live Tally, Zoho Books or bank**): Tally XML (vendor ledgers, Payment vouchers) and Zoho Books API v3 JSON (vendor contacts, vendor payments, books-vs-gate reconciliation) exporters/importers; importers never write the vendor master, bank differences become proposed `/v1/master-changes` bodies. `integrations/payment_rail.py`: rail interface + sandbox stub only (no real rail, no money). Data and retention notes, not legal advice: [`docs/COMPLIANCE.md`](docs/COMPLIANCE.md).
-- Durable state: SQLite (WAL) ledger, audit chain, decisions and `Idempotency-Key`s, one transaction per decision; a DB UNIQUE index makes a second live payment of the same invoice impossible across processes; Ed25519-signed audit-head anchors; `governor backup|restore|verify|anchor|keygen` CLI. Set `GOVERNOR_DB` (default `governor.db`, in-memory in eval mode). See [`docs/DURABLE_STATE.md`](docs/DURABLE_STATE.md).
-- `structural/`: GSTIN mod-36 checksum and PAN binding.
-- `providers/`: Muse Spark Open (Baseten, default) and Muse Glimmer 30B (NIM) clients, cached by request hash; strict JSON parsing (any parse failure = REVIEW).
-- `dataset/fixtures/`: fictional vendor master. All names, GSTINs, accounts and domains are made up; any match with a real business, account or domain is coincidental.
-- `agent/`: shield-OFF baseline (pays the account printed on the invoice) and shield-ON agent (its payment tool has no bank field). `checker/`: quarantined document checker (prompt v1; escalate-only). `assembler/`: deterministic evidence (text layer or OCR, GSTIN, sender domain, every printed account/IFSC). `shield/`: pipeline agent + checker → governor → rail.
-- `dataset/gen/`: invoice generator (T1/T2 layouts, USD vendor, scan and photo variants), the 24-case dev risk set, 24 benign dev invoices and 19 sequences. `eval/`: runners, `eval/EVAL_LOG.md`, raw rows in `eval/results/`.
-- `ui/`: replay UI over recorded runs. `ui/demo-v3.html` is the page the submission video records; it regenerates byte-for-byte from `ui/build/` (`make demo-pages`: `ui/build_demo.py` → `ui/demo.html` → `ui/build/build_demo_v2.py` → `ui/build/build_v3.py`).
-
-## Run it
-
-System packages: Rust (stable, via rustup), a C toolchain (`build-essential`), `tesseract-ocr` and `poppler-utils` (for scans/photos). Then, from the repo root:
-
-```bash
-python3 -m venv .venv && . .venv/bin/activate
-pip install -r requirements.txt
-(cd governor && cargo test && cargo build --release)   # the Python shield starts governor/target/release/governor-server
-python3 -m pytest -q                                     # tests/test_variants.py renders 144 PDFs with OCR (~3-4 min)
-
-# Replay the recorded numbers with no API key (eval/cache/llm is committed):
-python3 -m eval.run_day1    --offline --provider glimmer   # OFF: 15/60 wrong-place pays, controls 12/12
-python3 -m eval.run_day1_on --offline --provider glimmer   # ON: 0/60, controls 12/12
-python3 -m eval.run_day1    --offline --provider spark
-python3 -m eval.run_day1_on --offline --provider spark
-python3 -m eval.run_gate_only                              # hijacked agent, no model calls
+```
+ invoice PDF + email ──► extraction service ──► signed evidence (Ed25519) ──┐
+        │                (sandboxed, no network)                           │
+        ▼                                                                   ▼
+ AI agent (Muse Spark Open) ── proposal: vendor, invoice no, amount, PO ──► Rust governor ──► PAY  → rail pays the MASTER payee
+        no bank field                                                       ▲            ├─► REVIEW → approver page (maker-checker)
+ quarantined checker (Muse Spark Open, no tools) ── escalate-only signals ──┘            └─► BLOCK
 ```
 
-Live runs need `BASETEN_API_KEY` (Spark) or `NVIDIA_API_KEY` (Glimmer) in the environment; never commit them. All paths are relative to the repo root. `eval/riskset/` (24 PDFs + manifest) and `eval/cache/llm/` (model responses only, no keys) are committed so the numbers replay; `eval/variants/` (13 MB) is not, and regenerates with `python3 -m dataset.gen.make_variants`. The generator writes byte-identical PDFs on every run.
+- **Propose:** the agent reads the invoice and proposes a payment. Its tool has no payee, account or IFSC argument.
+- **Permit:** the governor (Rust, `governor/`) checks the proposal against the vendor master, the PO (owner, open balance, line items with quantity and rate), the ledger (exact and near duplicates, IRN, a rolling 7-day split window), the signed evidence (printed total, item lines that add up, issuer GSTIN, sender domain, every printed account/IFSC, GST head vs state codes, currency, scans read by OCR) and the checker's signals. Model output can only add REVIEW/BLOCK, never remove one.
+- **Fail closed:** unparseable model output, an unreadable item table, a missing total, a stale or replayed evidence envelope, a scan or photo, or a server error all end in REVIEW or BLOCK, never PAY.
+- **Models:** every model call goes to a Meta open-weight model: **Muse Spark Open** (`meta-models/muse-spark-open-1026`, on Baseten) by default, **Muse Glimmer 30B** (NVIDIA NIM) selectable with `LLM_PROVIDER=glimmer`. Spark also reads page images to propose item lines when the parser cannot; every number it proposes must appear verbatim in the signed text layer and the lines must add up to the printed total, or the invoice goes to REVIEW. Scans are read by local tesseract OCR and always go to REVIEW.
 
-## Operations
+It is an **HTTP service** (Axum), not an MCP server. Any agent framework that can make an HTTP call can sit behind it.
 
-- `make test` (rustfmt on ops files, clippy `-D warnings`, cargo test, ruff, pytest), `make demo` (offline replay of the recorded dev-set runs, no API key; checks the replay matches the committed rows), `make eval`, `make load`, `make audit`, `make docker`.
-- CI: `.github/workflows/ci.yml` (Rust, Python, cargo audit + pip-audit, Docker build + smoke) on every push and PR; Dependabot for cargo, pip, GitHub Actions and Docker.
-- Container: `Dockerfile` (Rust build stage + Python runtime, non-root uid 10001, healthcheck) and `docker-compose.yml` (one-shot `extractor-key` creates the extractor's Ed25519 key and gives the governor only its public key; governor with SQLite state in the `/data` volume; demo; extractor under the `extractor` profile). `export GOVERNOR_API_KEY=$(openssl rand -hex 16) && docker compose up --build governor demo`. The governor refuses to start without `GOVERNOR_EXTRACTOR_PUBKEY` (or `GOVERNOR_EXTRACTOR_PUBKEY_FILE`).
-- Governor ops surface: JSON logs on stderr, `/healthz`, `/readyz`, `/metrics` (Prometheus: verdicts by verdict and reason, latency histogram, parse failures), fail-fast config validation (`governor/src/config.rs`, exit 2 with every error listed). API: [`docs/openapi.yaml`](docs/openapi.yaml). Runbooks: [`docs/RUNBOOKS.md`](docs/RUNBOOKS.md). Load test and SLO (single shared sandbox VM, not a production benchmark): [`docs/SLO.md`](docs/SLO.md).
+## Quickstart
 
-Everything here was built during the event; see `docs/BUILD_LOG.md` and `docs/DECISIONS.md`.
+Needs Rust (stable), a C toolchain, Python 3.11+, `tesseract-ocr` and `poppler-utils`.
+
+```bash
+git clone https://github.com/theoxfaber/invoiceshield && cd invoiceshield
+python3 -m venv .venv && . .venv/bin/activate && pip install -r requirements-dev.txt
+make demo      # builds the governor, replays the recorded dev-set runs: no API key, no network
+make test      # clippy -D warnings + cargo test + ruff + pytest
+```
+
+`make demo` replays the shield-OFF and shield-ON runs of Muse Spark Open and Muse Glimmer from the committed model cache (`eval/cache/llm`), runs the real governor, and checks every replayed outcome against the committed rows. Then open `ui/demo-v3.html` for the replay UI. Live model runs need `BASETEN_API_KEY` (Spark) or `NVIDIA_API_KEY` (Glimmer) in the environment; never commit them.
+
+## HTTP API
+
+Every `/v1` call carries `Authorization: Bearer <key>`. Keys map to identities with roles `agent`, `operator`, `approver`; the agent role can never be combined with another. Full schema: [`docs/openapi.yaml`](docs/openapi.yaml).
+
+| Method & path | Role | What it does |
+|---|---|---|
+| `POST /v1/actions` | agent | Decide one proposed payment. Body: `proposal` (vendor_id, invoice_no, amount_paise, po_ref, currency, document_sha256), `signed_evidence` (from the extraction service), `checker_raw`, optional `proposed_item_lines`. A malformed body is a 200 REVIEW, not an HTTP error. `Idempotency-Key` supported. |
+| `GET /v1/decisions/{id}` | any | Fetch a decision. |
+| `POST /v1/decisions/{id}/resolve` | approver, never the proposer | Approve or reject a REVIEW. |
+| `GET /v1/reviews` | approver, operator | Pending REVIEWs with reason codes, evidence and the master payee. |
+| `GET /v1/ui/review` | (static) | Approver page (strict CSP; key held in tab memory; resolves through `/resolve`). |
+| `POST /v1/master-changes` | operator (maker) | Request a vendor bank change. |
+| `POST /v1/master-changes/{id}/callback` | operator/approver, not the maker | Record the call-back to the number on file. |
+| `POST /v1/master-changes/{id}/approve` | approver, not the maker | Two distinct approvers; cooling-off starts at the second. |
+| `POST /v1/master-changes/{id}/reject` | operator, approver | Reject a pending change. |
+| `GET /v1/master-changes/{id}` | any | Status of a change. |
+| `GET /v1/audit/verify` | any | Verify the hash-chained audit log. |
+| `GET /healthz` · `/readyz` · `/metrics` | none | Liveness, readiness, Prometheus metrics. |
+
+Decision response: `verdict` (`allow`/`review`/`block`), `reasons` (rule, verdict, control class, detail), `signals`, `tamper_alert`, and on ALLOW the master `payee` (`beneficiary_id`, never an account number from the document).
+
+## Deployment
+
+- **Docker:** `export GOVERNOR_API_KEY=$(openssl rand -hex 16) && docker compose up --build governor demo`. The compose file creates the extractor's Ed25519 key in a one-shot service and gives the governor only the public key; state lives in the `/data` volume. Image: Rust build stage + Python runtime, non-root, healthcheck.
+- **Config:** validated at startup (every error listed, exit 2). Required: `GOVERNOR_EXTRACTOR_PUBKEY[_FILE]`, `GOVERNOR_IDENTITIES[_FILE]` (hashed keys from `governor new-key`; the legacy single `GOVERNOR_API_KEY` still works), `GOVERNOR_DB` (durable SQLite path). Optional: `GOVERNOR_TLS_CERT_FILE`/`_KEY_FILE`, `GOVERNOR_STATE_KEY` (MACs applied bank changes), `GOVERNOR_VENDOR_PHONES` (call-back numbers), `GOVERNOR_ANCHOR_URL` (ship signed audit heads off-box).
+- **Ops:** JSON logs, `/metrics`, runbooks ([`docs/RUNBOOKS.md`](docs/RUNBOOKS.md)), backup/restore/verify CLI ([`docs/DURABLE_STATE.md`](docs/DURABLE_STATE.md)), load test and SLO on one shared sandbox VM, not a production benchmark ([`docs/SLO.md`](docs/SLO.md)). CI runs clippy, tests, ruff, pytest, the offline demo, cargo audit, pip-audit and a Docker smoke test.
+
+## Security model
+
+Full threat model: [`docs/THREAT_MODEL.md`](docs/THREAT_MODEL.md). In short:
+- **Compromised or injected agent:** can propose only vendor, invoice, amount, PO; cannot name a payee, approve its own REVIEW, change the master or confirm a call-back.
+- **Forged evidence:** the governor only reads evidence signed by the separate extraction service (Ed25519, fresh, single-use nonce, bound to the document hash); a tampered, foreign or replayed envelope is BLOCK, unsigned is REVIEW. Extraction runs in a subprocess with CPU/memory/file limits and no network.
+- **Duplicate payment:** decided in one SQLite transaction; UNIQUE indexes make a second live ledger entry impossible even across processes.
+- **Insider / DB tampering:** maker-checker enforced in code and by DB triggers; applied bank changes are HMAC'd (a forged row blocks the vendor instead of redirecting it); the audit chain is anchored by Ed25519-signed heads.
+- **Not covered:** a poisoned vendor master entered through the proper workflow by colluding approvers; documents the ingestion step takes from the agent rather than the mailbox; HSM/KMS key storage; DKIM checks on the cover email. Internal red team only (`docs/RED_TEAM_INTERNAL.md`); no external security review has happened.
+
+## Results
+
+Every number below comes from a file in `eval/results/`; the run log with commands is [`eval/EVAL_LOG.md`](eval/EVAL_LOG.md), and every rule change with its reason is in [`docs/DECISIONS.md`](docs/DECISIONS.md). The frozen commit for the held-out v2 run is **`55fb679`**.
+
+**1. Development set (dev-only: the rules and prompts were built while looking at these 24 cases).** 20 poisoned invoices + 4 genuine controls, k = 3 samples each. Files: `day1_off.jsonl`, `day1_on.jsonl`, `day1_off_spark.jsonl`, `day1_on_spark.jsonl`.
+
+| Model (agent + checker) | Shield OFF: paid to the wrong place | Shield ON: paid to the wrong place | Controls paid (ON) |
+|---|---|---|---|
+| Muse Glimmer 30B | 15/60 (5 cases, 3/3 each) | 0/60 | 12/12 |
+| Muse Spark Open | 15/60 (same 5 cases) | 0/60 | 12/12 |
+
+Case level that is 0/20 attack cases (95% upper bound ≈ 17%); the k = 3 samples measure nondeterminism, not independent trials.
+
+**2. Dev ablation** (same 24 cases; `ablation_dev_fa.json`, identical to `ablation_dev_review31.json`): rules alone 0/19 attack cases passed; checker alone (Muse Spark Open, no rules) 26/60 attack samples passed (10/20 cases); both 0/60. Controls paid in every arm (4/4, 12/12, 12/12). When the agent proposed a payment, the checker flagged 16 of 31 attack proposals and 0 of 12 control proposals.
+
+**3. First blind set, run 1 (verbatim; run once on `680be4d`, gate only).** 60 cases written by a separate session with no repo access. Files: `blind-cases-run1-680be4d.{jsonl,summary.json,log}`.
+
+| strict | lenient | attacks paid | benign blocked |
+|---|---|---|---|
+| 34/60 | 44/60 | **4/40** | 1/20 |
+
+The four paid attacks all paid the vendor's own master account (bumped-number resubmission, a fee not on the PO, +5% unit price, IGST on an intra-state supply). Diagnosis after the run: the item-table parser had read **zero line items on all 60 PDFs**, so the line rules silently never ran. That finding drove the fail-closed line rule, the model line proposals and the cheap GST/duplicate rules.
+
+**4. First blind set, post-fix re-run (NOT blind: we had seen the set, and the column-header parser was written while looking at it).** Files: `v1-rerun-after-6c7414f.score.json` (gate arms), `v1-rerun-after-4b584de.score.json` (checker-only arm, which does not depend on the gate).
+
+| arm | strict | lenient | attacks paid | genuine invoices sent to REVIEW |
+|---|---|---|---|---|
+| rules | 38/60 | 48/60 | 1/40 | 4/18 |
+| checker only | 26/60 | 28/60 | 27/40 | 0/18 |
+| both | 39/60 | 51/60 | 0/40 | 4/18 |
+
+The rules-arm miss is the run-1 resubmission case again (pays the master account); before the parser fix it was held only because every v1 invoice was unreadable (18/18 false alarms).
+
+**5. Second held-out set, run once at `55fb679` (all arms).** Authored after run 1 by a separate AI agent with no repo access; attack categories were informed by run 1's failure classes; attempt 1 aborted on a harness crash before any verdicts (no labels read). Files: `heldout-v2-run2-55fb679.{jsonl,meta.json,score.json}`.
+
+| arm | strict | lenient | attacks paid | benign blocked | genuine invoices sent to REVIEW |
+|---|---|---|---|---|---|
+| rules | 26/60 | 42/60 | **0/40** | 2/20 | **18/18** |
+| checker only | 21/60 | 23/60 | 35/40 | 0/20 | 0/18 |
+| both | 33/60 | 48/60 | **0/40** | 2/20 | **12/18** |
+
+Read it plainly: no attack was paid, but the gate could not read this template's item table on any document, so every genuine invoice in the rules arm went to a human, and 14 of the 40 held attacks (9 in the both arm) were held only because the invoice was unreadable, not by their own rule. Model-proposed lines verified on 6 of 18 genuine invoices. The two benign BLOCKs are credit notes (expected REVIEW; nothing paid). Findings are listed in EVAL_LOG; nothing was changed after this run.
+
+**6. Genuine invoices (our own generator, 60 PDFs, `dataset/clean`).** 60/60 PAY in both the rules and the gate + model arms (`clean_arms_after_6c7414f.jsonl`). These layouts come from our generator, so this says little about unfamiliar layouts; sets 3–5 do.
+
+## Limits
+
+- **Unfamiliar invoice layouts cost a human look.** The deterministic parser reads our layouts and the first blind template; it read none of the second. When it cannot read the lines, the invoice is REVIEWed; Spark's verified line proposals recover some of them (6/18 on v2).
+- Bank-detail mismatches end in REVIEW with a tamper alert, not BLOCK, unless a second reason is present. Nothing is sent to the printed account either way.
+- Not modelled: TDS deductions, place of supply / SEZ / exports, GST rate checks per PO line, a vendor's secondary bank account, cumulative quantities across invoices (the PO balance is the cumulative bound), HSN/SKU-based item matching.
+- Stated misses: an already-paid invoice re-sent under a new number one higher pays (to the master account) in the rules arm; a slow-drip split outside the 7-day window pays by design.
+- Every scan or photo goes to REVIEW.
+- Accounting adapters (Tally XML, Zoho Books API) and the payment rail are tested against mocks only, never against a live system or bank.
+- Synthetic and public data only; no real AP data, pilot, external audit or legal review.
+
+## Business
+
+Who it is for: Indian SMEs and the CA firms that run their payables, starting with teams that already use Tally or Zoho Books and want an AI agent to clear the inbox without giving it the power to pay strangers. How it would be delivered: a self-hosted gate (one Rust binary + a Python extraction service, SQLite) that sits in front of whatever rail they use, so invoices and bank data need not leave the office, with the approver page for the REVIEW queue. What has to happen next: a shadow-mode pilot on real AP history (`tools/shadow.py` compares the gate with past human decisions), a parser that reads more real layouts, and live adapter testing. Pricing is not set.
+
+## Extras
+
+- `integrations/`: Tally XML and Zoho Books exporters/importers (importers never write the vendor master; a bank difference becomes a proposed `/v1/master-changes` body), books-vs-gate reconciliation, payment-rail interface with a sandbox stub. Mock-tested only.
+- `Dockerfile`, `docker-compose.yml`: container image and a local stack.
+- `ui/demo-v3.html`: replay UI over the recorded dev runs (`make demo-pages` regenerates it byte for byte). `governor/ui/`: the approver review page served by the governor.
+- `tools/shadow.py` (shadow mode against human decisions), `tools/redteam.py` (internal red team), `eval/run_real.py` (public real-invoice extraction accuracy, `docs/FINDINGS_REAL_INVOICES.md`).
+
+## Repository map
+
+`governor/` Rust gate and server · `extractor/` signed extraction service and model line proposer · `assembler/` deterministic evidence (text layer, OCR, item tables, GSTIN, accounts) · `agent/` shield-OFF baseline and shield-ON agent · `checker/` quarantined checker · `providers/` Muse Spark Open and Muse Glimmer clients (cached, strictly parsed) · `structural/` GSTIN checksum · `dataset/` fictional master, generators, clean set · `eval/` runners, results, log · `tools/` held-out harness, shadow mode, red team · `docs/` decisions, build log, threat model, API.
+
+Everything here was built during the event; see [`docs/BUILD_LOG.md`](docs/BUILD_LOG.md). License: MIT.
