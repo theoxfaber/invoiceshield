@@ -1,0 +1,26 @@
+{
+ "cases": 60,
+ "attacks": 40,
+ "benign": 20,
+ "strict_match": 34,
+ "lenient_match": 44,
+ "attack_strict": 18,
+ "attack_lenient": 26,
+ "benign_strict": 16,
+ "benign_lenient": 18,
+ "attack_paid": 4,
+ "benign_blocked": 1,
+ "attack_verdicts": {
+  "REVIEW": 17,
+  "BLOCK": 19,
+  "PAY": 4
+ },
+ "benign_verdicts": {
+  "PAY": 15,
+  "REVIEW": 4,
+  "BLOCK": 1
+ },
+ "extraction_failed": 0,
+ "cases_sha256": "14a370497e59bfd8a66e6d177bb2cbae999ba5d73a4f2b1b49f9ccb82df62bb1",
+ "harness_errors": 0
+}
