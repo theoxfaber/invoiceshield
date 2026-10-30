@@ -161,19 +161,44 @@ def main():
 
     # ---------------- currency
     with GovernorProc() as gov:
-        gov.reset()
         po = next(p for p in master["pos"] if p["owner_vendor_id"] == "V003")
-        u = make_t1("V003", "BC-INV-7001", po["po_ref"], 120000, tmp / "u.pdf")
+        po_cur = po.get("currency", "INR (no currency field)")
+        u = make_t1("V003", "BC-INV-7001", po["po_ref"], 50000, tmp / "u.pdf")
         uev = ev_for(u["pdf"], u["cover_email"]["from"])
-        d = gov.evaluate({"vendor_id": "V003", "invoice_no": "BC-INV-7001", "amount_paise": 120000, "po_ref": po["po_ref"]},
-                         uev, CLEAR, now=NOW)
+        base = {"vendor_id": "V003", "invoice_no": "BC-INV-7001", "amount_paise": 50000, "po_ref": po["po_ref"]}
+        has_cur = "currency" in uev
         txt = assemble(u["pdf"], {}).text
-        cur = "USD" if ("$" in txt or "USD" in txt) else "INR?"
-        rec("currency", f"USD 1,200.00 invoice (printed {cur}) proposed as amount_paise=120000",
-            "REVIEW unless the PO and proposal are in USD (no cents-as-paise)", verdict(d),
-            "finding" if (d["verdict"] == "allow" and "currency" not in json.dumps(uev)) else "held",
-            "At this commit the gate has no currency: USD cents are compared with INR-paise balances and thresholds "
-            "(backlog #6). Phase 1 adds currency to proposal/PO/evidence; re-run after it merges.")
+        printed = "USD" if ("$" in txt or "USD" in txt) else "INR?"
+        gov.reset()
+        d = gov.evaluate(base, uev, CLEAR, now=NOW)
+        rec("currency", f"USD 500.00 invoice (prints {printed}; PO currency {po_cur}) proposed with no currency (= INR)",
+            "REVIEW: cents must never be read as paise", verdict(d), "finding" if d["verdict"] == "allow" else "held",
+            None if has_cur else "No currency anywhere in the gate at this commit (backlog #6); Phase 1 adds it.")
+        if has_cur:
+            gov.reset()
+            d = gov.evaluate({**base, "currency": "USD"}, uev, CLEAR, now=NOW)
+            rec("currency", "same invoice proposed as USD on its USD PO", "ALLOW (correct currency everywhere)", verdict(d),
+                "held" if d["verdict"] == "allow" else "finding")
+            gov.reset()
+            inr_po = next(p for p in master["pos"] if p["owner_vendor_id"] == "V001")
+            d = gov.evaluate({**gprop, "currency": "USD", "amount_paise": 23600}, gev, CLEAR, now=NOW)
+            rec("currency", "INR invoice proposed as USD 236.00 on an INR PO", "REVIEW", verdict(d),
+                "held" if d["verdict"] != "allow" else "finding")
+            gov.reset()
+            d = gov.evaluate({**base, "currency": "usd"}, dict(uev, currency="INR", all_currencies=["INR", "USD"]), CLEAR, now=NOW)
+            rec("currency", "evidence naming two currencies (INR + USD)", "REVIEW", verdict(d),
+                "held" if d["verdict"] != "allow" else "finding")
+            gov.reset()
+            d = gov.evaluate({**base, "currency": "EUR"}, dict(uev, currency="EUR", all_currencies=["EUR"]), CLEAR, now=NOW)
+            rec("currency", "a currency with no configured limits (EUR)", "REVIEW", verdict(d),
+                "held" if d["verdict"] != "allow" else "finding")
+            gov.reset()
+            fe = dict(uev, currency=None, all_currencies=[])
+            d = gov.evaluate(base, fe, CLEAR, now=NOW)
+            rec("currency", "USD invoice with the currency stripped from forged evidence, proposed as INR",
+                "REVIEW", verdict(d), "finding" if d["verdict"] == "allow" else "held",
+                "Evidence with no currency is read as INR; with caller-supplied evidence the PO currency is the only "
+                "remaining check. Governor-owned evidence (Phase 2) closes this.")
 
     # ---------------- unicode confusables (extractor + governor)
     sup = V["V001"]

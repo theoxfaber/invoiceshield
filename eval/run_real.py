@@ -51,6 +51,13 @@ CLEAR = json.dumps({"signals": []})
 DEFAULT_THRESHOLD_PAISE = 1_00_000_00
 NOW = 1_793_000_000
 
+# Phase 1 (f5f4e66) added currency to proposal/PO/evidence and structured PO lines.
+try:
+    from assembler.extract import doc_currency
+    HAS_CURRENCY = True
+except ImportError:  # pragma: no cover - pre-Phase-1 commits
+    doc_currency, HAS_CURRENCY = None, False
+
 try:  # candidate readers; absent on old commits
     from assembler.fields import printed_currency, printed_invoice_no
 except ImportError:  # pragma: no cover
@@ -133,11 +140,16 @@ def score_case(case, gev, text) -> dict:
     field("bank_account", g.get("bank_account"), acct_got, g.get("bank_account_printed"),
           lambda a, b: norm_id(a) == norm_id(b))
     field("total", g.get("total_paise"), gev["printed_total_paise"])
-    if printed_currency is not None:
-        field("currency", g.get("currency"), printed_currency(text))
+    # "currency" = what the governor sees (Phase 1's doc_currency, None -> governor assumes INR);
+    # "currency_candidate" = assembler/fields.printed_currency (needs >= 2 markers)
+    if doc_currency is not None:
+        field("currency", g.get("currency"), gev.get("currency"))
+        field("currency_as_governor_reads", g.get("currency"), gev.get("currency") or "INR")
     else:
         out["currency"] = {"gold": g.get("currency"), "got": None, "correct": False, "missing": True, "wrong": False,
-                           "note": "no currency reader in this commit"}
+                           "note": "no currency in the evidence at this commit"}
+    if printed_currency is not None:
+        field("currency_candidate", g.get("currency"), printed_currency(text))
     if g.get("invoice_no"):
         got = printed_invoice_no(text) if printed_invoice_no else None
         field("invoice_no", g.get("invoice_no"), got, None, lambda a, b: norm_inv(a) == norm_inv(b))
@@ -197,11 +209,18 @@ def build_master(cases) -> tuple[dict, dict]:
                 vendors[vid]["bank_account"] = g["bank_account"]
             if g.get("ifsc") and vendors[vid]["ifsc"] == "NONE0000000":
                 vendors[vid]["ifsc"] = g["ifsc"]
-        pos.append({"po_ref": f"PO-{c['id'].replace('/', '-')}", "owner_vendor_id": vid, "category": "third-party eval",
-                    "open_balance_paise": g["total_paise"], "contracted_items": []})
-    master = {"vendors": list(vendors.values()), "pos": pos,
-              "policy": {"approval_threshold_paise": 10**12, "payout_cap_paise": 10**13, "po_tolerance_bp": 200,
-                         "window_secs": 7 * 24 * 3600}}
+        po = {"po_ref": f"PO-{c['id'].replace('/', '-')}", "owner_vendor_id": vid, "category": "third-party eval",
+              "open_balance_paise": g["total_paise"]}
+        if HAS_CURRENCY:
+            po.update(currency=g.get("currency") or "INR", lines=[])
+        else:
+            po["contracted_items"] = []
+        pos.append(po)
+    policy = {"approval_threshold_paise": 10**12, "payout_cap_paise": 10**13, "po_tolerance_bp": 200,
+              "window_secs": 7 * 24 * 3600}
+    if HAS_CURRENCY:
+        policy["currency_limits"] = {"USD": {"approval_threshold_minor": 10**12, "payout_cap_minor": 10**13}}
+    master = {"vendors": list(vendors.values()), "pos": pos, "policy": policy}
     return master, vid_of
 
 
@@ -222,6 +241,8 @@ def run_gate(cases, setting: str) -> list[dict]:
                 gev, _ = evidence_for(c, buyer, ts, vendors[vid]["email_domains"][0])
                 prop = {"vendor_id": vid, "invoice_no": g.get("invoice_no") or c["id"], "amount_paise": g["total_paise"],
                         "po_ref": f"PO-{c['id'].replace('/', '-')}"}
+                if HAS_CURRENCY:
+                    prop["currency"] = g.get("currency") or "INR"
                 dcs = gov.evaluate(prop, gev, CLEAR, now=NOW)
                 rows.append({"id": c["id"], "source": c["source"], "group": c["group"], "supplier": c.get("supplier_key"),
                              "setting": setting, "outcome": dcs["verdict"],
@@ -239,7 +260,12 @@ def summarise_gate(rows) -> dict:
     for s in sorted({r["supplier"] or "-" for r in rows}):
         rs = [r for r in rows if (r["supplier"] or "-") == s]
         by_sup[s] = {"n": len(rs), "fp": sum(r["outcome"] != "allow" for r in rs), "block": sum(r["outcome"] == "block" for r in rs)}
+    cur_only = [r for r in rows if r["outcome"] != "allow"
+                and all(x.split(":")[0].startswith("currency_") for x in r["reasons"])]
     return {"n": n, "outcomes": dict(out), "fp_any_non_allow": rate(sum(r["outcome"] != "allow" for r in rows), n),
+            # stray '$'/'€' that OCR makes of stamps and '%' signs: REVIEWs whose only reasons are currency ones
+            "fp_currency_only": rate(len(cur_only), n),
+            "fp_excluding_currency_only": rate(sum(r["outcome"] != "allow" for r in rows) - len(cur_only), n),
             "fp_block": rate(out.get("block", 0), n), "reasons": dict(reasons.most_common()),
             "by_supplier": by_sup, "would_review_at_default_threshold": sum(r["over_default_threshold"] for r in rows)}
 
@@ -294,7 +320,8 @@ def main():
             else:
                 print(f"  {f:15s} {d['k']}/{d['n']} docs ({d['rate']}, CI {d['wilson95']})")
         for s, gs in r["gate"].items():
-            print(f"  gate[{s}] n={gs['n']} {gs['outcomes']} FP={gs['fp_any_non_allow']['k']}/{gs['n']} ({gs['fp_any_non_allow']['rate']}, CI {gs['fp_any_non_allow']['wilson95']}) BLOCK={gs['fp_block']['k']} reasons={gs['reasons']}")
+            print(f"  gate[{s}] n={gs['n']} {gs['outcomes']} FP={gs['fp_any_non_allow']['k']}/{gs['n']} ({gs['fp_any_non_allow']['rate']}, CI {gs['fp_any_non_allow']['wilson95']}) BLOCK={gs['fp_block']['k']} "
+                  f"currency-only={gs['fp_currency_only']['k']} excl-currency-only={gs['fp_excluding_currency_only']['k']} ({gs['fp_excluding_currency_only']['rate']}, CI {gs['fp_excluding_currency_only']['wilson95']}) reasons={gs['reasons']}")
 
 
 if __name__ == "__main__":

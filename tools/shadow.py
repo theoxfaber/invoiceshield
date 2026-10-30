@@ -15,6 +15,7 @@ CSV columns (header row required; extra columns are carried through):
   invoice_no       invoice number as booked
   amount           amount as booked, rupees ("59000.00") - or amount_paise
   po_ref           PO it was booked against
+  currency         ISO 4217 code of the booked payment (optional; governor default INR)
   sender_email     From: address of the email that carried the invoice   (optional)
   decided_at       ISO date/time of the human decision (optional; orders the shared ledger and
                    drives the duplicate / split-payment windows; default: CSV order, one day apart)
@@ -121,6 +122,8 @@ def run(csv_path: pathlib.Path, master: pathlib.Path, buyer_gstin: str, base_ts:
                 gev = governor_evidence(ev, buyer_gstin)
                 prop = {"vendor_id": row["vendor_id"], "invoice_no": row["invoice_no"], "amount_paise": _paise(row),
                         "po_ref": row["po_ref"]}
+                if (row.get("currency") or "").strip():
+                    prop["currency"] = row["currency"].strip().upper()
                 d = gov.evaluate(prop, gev, row.get("checker_raw") or CLEAR, now=_ts(row, i, base_ts))
                 shield = d["verdict"]
                 rec.update(shield=shield, reasons=[f"{r['rule']}:{r['verdict']}" for r in d["reasons"]],
