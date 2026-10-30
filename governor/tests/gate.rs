@@ -155,8 +155,13 @@ fn window_edge_day7_vs_day8() {
     assert_eq!(g.evaluate(&req(prop("V008", "X2", 90_000, "PO-2026-0801"), e.clone(), CLEAN), 7 * DAY - 1).verdict, Verdict::Review);
     let mut g = Governor::new(master());
     assert_eq!(g.evaluate(&req(prop("V008", "X1", 90_000, "PO-2026-0801"), e.clone(), CLEAN), 0).verdict, Verdict::Allow);
-    // R3 residual limit: just outside the window is allowed (stated openly).
-    assert_eq!(g.evaluate(&req(prop("V008", "X2", 90_000, "PO-2026-0801"), e, CLEAN), 8 * DAY).verdict, Verdict::Allow);
+    // R3 residual limit: just outside the window is allowed (stated openly). Non-consecutive numbers:
+    // since 2026-10-31 a consecutive number for the same amount and PO within 14 days is REVIEW
+    // `sequential_resubmission` (tests/cheap_rules.rs), which is a different rule from the window.
+    assert_eq!(g.evaluate(&req(prop("V008", "X7", 90_000, "PO-2026-0801"), e.clone(), CLEAN), 8 * DAY).verdict, Verdict::Allow);
+    let mut g = Governor::new(master());
+    assert_eq!(g.evaluate(&req(prop("V008", "X1", 90_000, "PO-2026-0801"), e.clone(), CLEAN), 0).verdict, Verdict::Allow);
+    assert_eq!(g.evaluate(&req(prop("V008", "X2", 90_000, "PO-2026-0801"), e, CLEAN), 8 * DAY).verdict, Verdict::Review);
 }
 
 #[test]
