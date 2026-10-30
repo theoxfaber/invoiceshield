@@ -275,6 +275,11 @@ impl Governor {
         } else if let Some(e) = self.ledger.same_invoice_other_amount(&p.vendor_id, &key, p.amount_paise) {
             ctx.add("same_invoice_other_amount", Verdict::Review, Control::Structural,
                 format!("invoice {} already has an entry of {}", p.invoice_no, money(e.amount_paise, &e.currency)));
+        } else if let Some(e) = self.ledger.near_duplicate(&p.vendor_id, &cur, p.amount_paise, &key,
+            normalize::near_dup_base(&p.invoice_no).as_deref(), now, pol.near_duplicate_window_secs) {
+            ctx.add("near_duplicate_invoice", Verdict::Review, Control::Structural,
+                format!("invoice {} looks like a re-submission of decision {} (same vendor and amount {}, number differs only by a suffix, within {} days)",
+                    p.invoice_no, e.decision_id, money(p.amount_paise, &cur), pol.near_duplicate_window_secs / 86_400));
         }
         if let Some(irn) = p.irn.as_deref() {
             if let Some(e) = self.ledger.irn_seen(irn) {
@@ -319,10 +324,18 @@ impl Governor {
             .any(|a| digits(a) != master_acct);
         let ifsc_mismatch = req.evidence.printed_ifsc.iter().chain(req.evidence.all_printed_ifscs.iter())
             .any(|i| !normalize::same_bank_code(i, &vendor.ifsc));
-        if acct_mismatch || ifsc_mismatch {
+        // R6: a bank field with non-ASCII characters (Cyrillic/Greek look-alikes, fullwidth digits,
+        // invisible marks) is tampering even when its ASCII digits happen to match the master.
+        let ev_bank = &req.evidence;
+        let non_ascii = ev_bank.printed_bank_account.iter().chain(ev_bank.all_printed_accounts.iter())
+            .chain(ev_bank.printed_ifsc.iter()).chain(ev_bank.all_printed_ifscs.iter())
+            .any(|v| normalize::has_non_ascii(v));
+        if acct_mismatch || ifsc_mismatch || non_ascii {
             ctx.tamper = true;
-            ctx.add("bank_details_differ_from_master", Verdict::Review, Control::Extraction,
-                format!("invoice asks for different bank details than {} has on file ({}). Payment can only go to the account on file; confirm with the vendor by phone.", vendor.vendor_id, vendor.bank_name));
+            let note = if non_ascii { " The printed bank details contain non-ASCII look-alike characters." } else { "" };
+            let rule = if acct_mismatch || ifsc_mismatch { "bank_details_differ_from_master" } else { "bank_details_non_ascii" };
+            ctx.add(rule, Verdict::Review, Control::Extraction,
+                format!("invoice asks for different bank details than {} has on file ({}).{note} Payment can only go to the account on file; confirm with the vendor by phone.", vendor.vendor_id, vendor.bank_name));
         }
 
         // 10. Amount rules (EXTRACTION). The proposal must equal what the document asks for, the
@@ -393,6 +406,7 @@ impl Governor {
                     po_ref: p.po_ref.clone(),
                     status,
                     ts: now,
+                    near_key: normalize::near_dup_base(&p.invoice_no),
                 });
             }
         }

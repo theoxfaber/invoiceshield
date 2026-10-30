@@ -105,6 +105,13 @@ pub struct Policy {
     /// Allowed excess of an invoice line's unit price over the PO line's, in basis points (0 = none).
     #[serde(default)]
     pub line_price_tolerance_bp: i64,
+    /// Look-back for the near-duplicate rule (R4: same vendor + amount, suffixed number). 90 days.
+    #[serde(default = "default_near_dup_window")]
+    pub near_duplicate_window_secs: i64,
+}
+
+fn default_near_dup_window() -> i64 {
+    90 * 24 * 3600
 }
 
 /// USD limits are the INR ones at the eval rate 84.00, rounded down to whole dollars
@@ -132,6 +139,7 @@ impl Default for Policy {
             window_secs: 7 * 24 * 3600,
             currency_limits: default_currency_limits(),
             line_price_tolerance_bp: 0,
+            near_duplicate_window_secs: default_near_dup_window(),
         }
     }
 }

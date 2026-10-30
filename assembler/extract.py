@@ -145,6 +145,47 @@ def issuer_gstins(upper: str, buyer_gstin: str) -> list[str]:
     return _uniq(g for _, g in sorted(found))
 
 
+# --- Look-alike bank fields (red-team R6) -------------------------------------------------------
+# IFSC_RE and ACCT_RE are ASCII-only, so an IFSC printed with a Cyrillic "В" or an account number
+# in fullwidth digits used to be invisible: no value, no tamper alert. A token that is not plain
+# ASCII but folds (NFKC + Cyrillic/Greek look-alike map) into an IFSC or account shape is reported
+# AS PRINTED, so the governor sees the non-ASCII value and raises its tamper alert. Nothing is
+# ever "repaired" into a payable value; the payee still comes only from the vendor master.
+_CONFUSABLE = str.maketrans({
+    # Cyrillic
+    "А": "A", "В": "B", "Е": "E", "К": "K", "М": "M", "Н": "H", "О": "O", "Р": "P", "С": "C",
+    "Т": "T", "Х": "X", "У": "Y", "І": "I", "Ј": "J", "Ѕ": "S", "Ԁ": "D", "Ԛ": "Q", "Ԝ": "W",
+    "а": "a", "е": "e", "о": "o", "р": "p", "с": "c", "у": "y", "х": "x", "і": "i", "ј": "j", "ѕ": "s",
+    # Greek
+    "Α": "A", "Β": "B", "Ε": "E", "Ζ": "Z", "Η": "H", "Ι": "I", "Κ": "K", "Μ": "M", "Ν": "N",
+    "Ο": "O", "Ρ": "P", "Τ": "T", "Υ": "Y", "Χ": "X", "ο": "o",
+})
+_TOKEN_RE = re.compile(r"[^\s:;,|()\[\]{}<>\"']+")
+_INVISIBLE_RE = re.compile("[\u200b-\u200f\u2060-\u2064\ufeff\u00ad\u202a-\u202e]")
+
+
+def fold_confusables(tok: str) -> str:
+    import unicodedata
+    return _INVISIBLE_RE.sub("", unicodedata.normalize("NFKC", tok)).translate(_CONFUSABLE)
+
+
+def confusable_bank_tokens(text: str) -> tuple[list[str], list[str]]:
+    """(ifscs, accounts) printed with non-ASCII characters that fold into a bank-field shape."""
+    text = text or ""
+    ifscs, accts = [], []
+    for m in _TOKEN_RE.finditer(text):
+        tok = m.group().rstrip(".")
+        if tok.isascii():
+            continue
+        f = fold_confusables(tok).upper()
+        f0 = f[:4] + "0" + f[5:] if len(f) == 11 and f[4] == "O" else f  # Cyrillic О where the 0 goes
+        if IFSC_RE.fullmatch(f) or IFSC_RE.fullmatch(f0):
+            ifscs.append(tok)
+        elif re.fullmatch(r"\d{9,18}", f) and classify_number(text, m.start(), m.start() + len(tok)) == "account":
+            accts.append(tok)
+    return _uniq(ifscs), _uniq(accts)
+
+
 def sender_domain(email_from: str) -> str | None:
     m = re.search(r"@([A-Za-z0-9.\-]+)\s*>?\s*$", email_from.strip())
     return m.group(1).lower() if m else None
@@ -158,6 +199,7 @@ def governor_evidence(ev: Evidence, buyer_gstin: str) -> dict:
     box_acct = BOX_ACCT_RE.search(text)
     box_ifsc = BOX_IFSC_RE.search(text)
     accts = printed_accounts(text)
+    odd_ifscs, odd_accts = confusable_bank_tokens(text)
     out = {
         "has_text_layer": bool(text.strip()),
         "text_source": (ev.metadata or {}).get("text_source"),
@@ -165,8 +207,8 @@ def governor_evidence(ev: Evidence, buyer_gstin: str) -> dict:
         "sender_domain": sender_domain(ev.email_from),
         "printed_bank_account": re.sub(r"\s+", "", box_acct.group(1)) if box_acct else None,
         "printed_ifsc": box_ifsc.group(1).upper() if box_ifsc else None,
-        "all_printed_accounts": accts,
-        "all_printed_ifscs": _uniq(IFSC_RE.findall(upper)),
+        "all_printed_accounts": _uniq(accts + odd_accts),
+        "all_printed_ifscs": _uniq(IFSC_RE.findall(upper) + odd_ifscs),
         "printed_total_paise": printed_total_paise(text),
         "item_lines": item_lines(text),
         "currency": doc_currency(text),

@@ -24,6 +24,11 @@ pub struct Entry {
     pub po_ref: String,
     pub status: EntryStatus,
     pub ts: i64,
+    /// `normalize::near_dup_base` of the invoice number, when it has a re-submission suffix
+    /// (R4). Stored inside the entry JSON, so the SQLite store persists it with no schema change;
+    /// entries written before it existed read as None.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub near_key: Option<String>,
 }
 
 fn inr() -> String {
@@ -48,6 +53,22 @@ impl Ledger {
     pub fn same_invoice_other_amount(&self, vendor_id: &str, invoice_key: &str, amount: i64) -> Option<&Entry> {
         self.live()
             .find(|e| e.vendor_id == vendor_id && e.invoice_key == invoice_key && e.amount_paise != amount)
+    }
+
+    /// Near-duplicate (R4): same vendor, same amount and currency, inside (now - window, now], and
+    /// one invoice number is the other plus a re-submission suffix ("INV-101" / "INV-101A").
+    /// Exact matches are `exact_duplicate`'s job and are skipped here.
+    #[allow(clippy::too_many_arguments)]
+    pub fn near_duplicate(&self, vendor_id: &str, currency: &str, amount: i64, key: &str, base: Option<&str>, now: i64, window_secs: i64) -> Option<&Entry> {
+        self.live().find(|e| {
+            e.vendor_id == vendor_id
+                && e.currency == currency
+                && e.amount_paise == amount
+                && e.invoice_key != key
+                && e.ts > now - window_secs
+                && e.ts <= now
+                && (base == Some(e.invoice_key.as_str()) || e.near_key.as_deref() == Some(key))
+        })
     }
 
     pub fn irn_seen(&self, irn: &str) -> Option<&Entry> {

@@ -30,6 +30,52 @@ fn invoice_no_pass(raw: &str) -> String {
         .collect()
 }
 
+/// Near-duplicate base (red-team R4): the duplicate key of `raw` with one trailing re-submission
+/// suffix removed, or None when the number has no such suffix. A suffix is, right after a digit,
+/// either 1-3 letters with an optional separator ("INV-101A", "INV-101-A", "0900/REV") or a
+/// separator and 1-2 digits ("INV-101-1", "INV-101/02"). Digits without a separator are never
+/// stripped ("INV-1011" is a different invoice from "INV-101"). The base goes through
+/// `invoice_no()`, so it compares with the ledger's keys.
+pub fn near_dup_base(raw: &str) -> Option<String> {
+    // Same pass as invoice_no() but separators kept, so "-1" can be told from "1".
+    let s: Vec<char> = raw
+        .nfkc()
+        .filter(|c| !is_invisible(*c))
+        .map(|c| if is_dash(c) { '-' } else { c })
+        .filter(|c| !c.is_whitespace())
+        .flat_map(|c| c.to_uppercase())
+        .collect();
+    let is_sep = |c: char| matches!(c, '-' | '/' | '_' | '.');
+    let mut end = s.len();
+    while end > 0 && is_sep(s[end - 1]) {
+        end -= 1; // trailing separators carry nothing
+    }
+    let s = &s[..end];
+    let n = s.len();
+    let letters = s.iter().rev().take_while(|c| c.is_alphabetic()).count();
+    let base_end = if (1..=3).contains(&letters) {
+        let mut i = n - letters;
+        if i > 0 && is_sep(s[i - 1]) {
+            i -= 1;
+        }
+        (i > 0 && s[i - 1].is_numeric()).then_some(i)
+    } else if letters == 0 {
+        let nd = s.iter().rev().take_while(|c| c.is_ascii_digit()).count();
+        let i = n - nd;
+        ((1..=2).contains(&nd) && i >= 2 && is_sep(s[i - 1]) && s[i - 2].is_numeric()).then_some(i - 1)
+    } else {
+        None
+    }?;
+    let base = invoice_no(&s[..base_end].iter().collect::<String>());
+    (!base.is_empty() && base != invoice_no(raw)).then_some(base)
+}
+
+/// True when a bank field (account number, IFSC) carries anything outside printable ASCII:
+/// Cyrillic/Greek look-alikes, fullwidth digits, invisible characters (red-team R6).
+pub fn has_non_ascii(raw: &str) -> bool {
+    raw.chars().any(|c| !c.is_ascii() || c.is_ascii_control())
+}
+
 fn is_invisible(c: char) -> bool {
     matches!(c, '\u{200B}'..='\u{200F}' | '\u{2060}'..='\u{2064}' | '\u{FEFF}' | '\u{00AD}' | '\u{202A}'..='\u{202E}')
 }
