@@ -1,0 +1,11 @@
+{
+ "sha256sums_sha256": "ac99090a76d0f4748660dc21696419e64d302792644b1b2cd88d403003988534",
+ "files_checked": 125,
+ "mismatched": [],
+ "set": "v2",
+ "commit": "355783b8c7841d115d52a2e952990d8988b75ad4",
+ "cases": 60,
+ "harness_errors": 60,
+ "ran_at_ist": "2026-10-31T01:53:32+05:30",
+ "note": "second held-out set, authored after run 1 by a separate AI agent with no repo access; attack categories were informed by run 1's failure classes. Run once."
+}

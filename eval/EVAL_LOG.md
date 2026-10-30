@@ -459,3 +459,23 @@ Fri Oct 30 23:03:33 IST 2026
 - ATK-29 (`0398-R`) is REVIEW `near_duplicate_invoice` where the set expects BLOCK. This is the R4 rule working as decided (REVIEW, because vendors reissue corrected invoices).
 - BEN-19 (a registered secondary account) is REVIEW, because the governor holds one account per vendor (stated in the adapter decision).
 - BEN-02 (multi-page) is REVIEW `within_po_tolerance`; BEN-11 (TDS net) is REVIEW `amount_differs_from_printed_total`.
+
+## Sat Oct 31, 2026, 01:49 IST: v1 post-fix re-run on 355783b (NOT blind: set already seen)
+
+`python3 -m tools.heldout_eval --set v1 --run --out blind-cases-v1-postfix-rerun-355783b --commit 355783b…` then `--score`. Files: `eval/results/blind-cases-v1-postfix-rerun-355783b.{jsonl,meta.json,score.json}`. Harness errors 0.
+
+| arm | strict | lenient | attacks paid | benign blocked | clean-benign false alarms |
+|---|---|---|---|---|---|
+| rules (parser only, checker clear) | 33/60 | 48/60 | 0/40 | 1/20 | **18/18** |
+| both (gate + Spark line proposals + Spark checker) | 38/60 | 50/60 | 0/40 | 0/20 | 5/18 |
+
+The rules arm's 18/18 false alarms are almost all `line_items_unreadable`: the fail-closed line rule (review item 1) now catches what run1 silently skipped, but the item-table parser still reads no rows on this unseen template, so every genuine invoice goes to a human. That is a serious product problem, recorded here before any fix.
+
+## Sat Oct 31, 2026, 01:53 IST: held-out v2 attempt 1 at 355783b ABORTED (no verdicts, labels unread)
+
+v2 attempt 1 at 355783b aborted: **60/60 harness errors** from a server panic on numeric invoice numbers; **no verdicts, labels unread.**
+- Command: `python3 -m tools.heldout_eval --set v2 --run --out heldout-v2-run1-355783b --commit 355783b…` after `--prefetch` (Spark model calls only, cached: 60/60). Integrity: 125 files checked against SHA256SUMS (sha256 of SHA256SUMS `ac99090a…3988534`), 0 mismatched.
+- Every case returned HTTP 503 from `/v1/actions`. Cause: `normalize::near_dup_base` used `bool::then_some(i - 1)`, which evaluates `i - 1` eagerly; for an all-digit invoice number `i == 0`, and with `overflow-checks = true` in release (review item 3) the subtraction panicked inside the request handler, which fails closed as 503. Every v2 request reached the near-duplicate key, so all 60 failed. Fixed in b82cd42 (`then(|| i - 1)`) with the regression test `pure_numeric_invoice_numbers_do_not_panic`; merged to main as e41a835.
+- Files kept as recorded: `eval/results/heldout-v2-run1-355783b.{jsonl,meta.json}` (per case: proposal, evidence summary, error; no verdicts). No `.score.json` exists for this attempt and `--score` was never run on v2.
+- Labels unread, evidence: `tools/heldout_eval.py` opens `labels/labels.jsonl` only inside `score()` (`--score`), and `v2_integrity` skips `labels/`; `/workspace/work/run_v2.log` shows only the run; on the workspace filesystem (JuiceFS, `relatime`) `labels/labels.jsonl` has atime 2026-10-30 19:17:59 UTC, earlier than its mtime 19:22:34 UTC (its author's last write), so it has not been read since it was written (a relatime read would have moved atime past mtime). Caveat: a tarball of the whole set, labels included, sits at `/workspace/work/blind-cases-v2.tar` (created 19:23:30 UTC, before the v2 run, by the set's packaging step); it was not opened by the eval pipeline.
+- Because no verdict and no label was seen, the freeze at 355783b is lifted (DECISIONS.md, Oct 31); v2 will be run once on a new frozen commit.
