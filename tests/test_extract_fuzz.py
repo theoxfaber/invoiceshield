@@ -33,7 +33,8 @@ def test_printed_accounts_total_and_sound(text):
     assert isinstance(accts, list) and len(accts) == len(set(accts))
     for a in accts:
         assert re.fullmatch(r"\d{9,18}", a), a
-        assert a in text
+        # printed as one run, or digit-grouped after an account label ("2327 6810 6955 53")
+        assert a in text or re.search(r"\s*".join(a), text), a
 
 
 @given(TEXT)

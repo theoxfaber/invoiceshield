@@ -1,0 +1,334 @@
+openapi: 3.0.3
+info:
+  title: InvoiceShield governor API
+  version: "1.0.0"
+  description: |
+    Fail-closed pre-payment gate for AI accounts-payable agents. The agent can only say
+    which vendor, which invoice and how much; the payee always comes from the vendor master.
+
+    Versioning: every decision endpoint lives under `/v1`. A breaking change to a request or
+    response body ships as `/v2` alongside `/v1`; additive fields may appear in `/v1` responses
+    (clients must ignore unknown response fields). Request bodies are strict: unknown fields are
+    rejected (proposal unknown fields → REVIEW/BLOCK decision, see below).
+
+    Fail-closed contract: a malformed body on `POST /v1/actions` is NOT an HTTP error. It returns
+    200 with a REVIEW decision (`request_unparseable`), so an agent that ignores status codes still
+    cannot pay. Only authentication failures are HTTP errors (401).
+
+    Scope note: this file describes the server on main as of 2026-10-30 (Phases 1, 2, 3 and 6):
+    signed extractor evidence (`signed_evidence` + `proposal.document_sha256`, see governor/src/trust.rs),
+    SQLite state with `Idempotency-Key`. Phase 4 (per-identity auth) will extend it.
+    Synthetic data only. No financial or compliance claims.
+  license:
+    name: MIT
+servers:
+  - url: http://127.0.0.1:8080
+    description: Local governor (GOVERNOR_BIND / GOVERNOR_PORT)
+tags:
+  - name: decisions
+  - name: operator
+  - name: ops
+  - name: eval
+security:
+  - agentKey: []
+paths:
+  /v1/actions:
+    post:
+      tags: [decisions]
+      summary: Ask the governor to decide one proposed payment
+      description: |
+        Evaluates the proposal against the vendor master, PO, ledger, evidence and checker output,
+        appends a hash-chained audit record and returns the decision. ALLOW means the rail may pay
+        the master payee in `payee`; REVIEW means a human must resolve it; BLOCK means never pay.
+        Any key in `proposal` that looks like a payment instruction (account, IFSC, IBAN, UPI, payee…)
+        is a BLOCK.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/Request" }
+            examples:
+              clean:
+                value:
+                  proposal: { vendor_id: V001, invoice_no: SOS/26-27/0231, amount_paise: 4500000, po_ref: PO-2026-0101, document_sha256: 3f0c...e9 }
+                  signed_evidence: { payload: '{"doc_sha256":"3f0c...e9","email_sha256":"...","evidence":{...},"extractor_version":"...","issued_at":1793000000,"key_id":"...","nonce":"...","sandbox":{...},"status":"ok","v":1}', sig: "<base64 Ed25519 signature>" }
+                  checker_raw: '{"signals":[]}'
+      parameters:
+        - in: header
+          name: Idempotency-Key
+          required: false
+          description: 1-200 printable ASCII characters. Re-sending the same key with the same body returns the recorded decision; the same key with a different body is 409.
+          schema: { type: string, maxLength: 200 }
+        - in: header
+          name: x-eval-now
+          required: false
+          schema: { type: integer, format: int64 }
+          description: Unix seconds used as "now". Honoured only when the server runs with GOVERNOR_EVAL_CLOCK=1; ignored otherwise.
+      responses:
+        "200":
+          description: A decision (including REVIEW for an unparseable request)
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Decision" }
+        "400":
+          description: Malformed Idempotency-Key header
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "409":
+          description: Idempotency-Key already used with a different body (error idempotency_key_reused_with_different_body, with the original decision_id), or the database's UNIQUE index refused a second live ledger entry (duplicate_rejected_by_database, paid false)
+        "500":
+          description: Response could not be produced (fail closed; treat as not paid)
+        "503":
+          description: State store error; nothing was decided or paid (fail closed; retry with the same Idempotency-Key)
+  /v1/decisions/{id}:
+    get:
+      tags: [decisions]
+      summary: Fetch a past decision by id
+      parameters:
+        - $ref: "#/components/parameters/DecisionId"
+      responses:
+        "200":
+          description: The decision
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Decision" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "404": { description: "Unknown decision id" }
+  /v1/decisions/{id}/resolve:
+    post:
+      tags: [operator]
+      summary: Human resolution of a REVIEW decision (operator key only)
+      description: Reachable only with GOVERNOR_OPERATOR_KEY, never with the agent key. The agent's tool has no route to it.
+      security:
+        - operatorKey: []
+      parameters:
+        - $ref: "#/components/parameters/DecisionId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              required: [approve, approver]
+              properties:
+                approve: { type: boolean }
+                approver: { type: string, description: "Identity of the human approver (recorded in the audit log)" }
+      responses:
+        "200":
+          description: Resolution recorded
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  decision_id: { type: string }
+                  approved: { type: boolean }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "409": { description: "Decision is not a pending REVIEW (unknown, already resolved, ALLOW or BLOCK)" }
+        "422": { description: "Body does not match the schema" }
+  /v1/audit/verify:
+    get:
+      tags: [operator]
+      summary: Verify the hash-chained audit log (API key required)
+      responses:
+        "200":
+          description: Chain status
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [records, first_broken]
+                properties:
+                  records: { type: integer, description: Number of audit records }
+                  first_broken: { type: integer, nullable: true, description: "Index of the first record whose hash does not chain; null when the chain verifies" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+  /v1/eval/reset:
+    post:
+      tags: [eval]
+      summary: Reset ledger and decisions (eval mode only)
+      description: Returns 404 unless the server was started with GOVERNOR_EVAL_CLOCK=1.
+      responses:
+        "200":
+          description: Reset
+          content:
+            application/json:
+              schema: { type: object, properties: { reset: { type: boolean } } }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "404": { description: "Eval mode is off" }
+  /health:
+    get:
+      tags: [ops]
+      summary: Legacy liveness probe (plain text "ok"; kept for the Python client)
+      security: []
+      responses:
+        "200": { description: "ok, content: { text/plain: { schema: { type: string, example: ok } } }" }
+  /healthz:
+    get:
+      tags: [ops]
+      summary: Liveness probe (process is serving HTTP)
+      security: []
+      responses:
+        "200":
+          description: Alive
+          content: { application/json: { schema: { type: object, properties: { status: { type: string, example: ok } } } } }
+  /readyz:
+    get:
+      tags: [ops]
+      summary: Readiness probe (config valid, master loaded, listener bound)
+      security: []
+      responses:
+        "200":
+          description: Ready
+          content: { application/json: { schema: { type: object, properties: { status: { type: string, example: ready } } } } }
+        "503":
+          description: Starting
+          content: { application/json: { schema: { type: object, properties: { status: { type: string, example: starting } } } } }
+  /metrics:
+    get:
+      tags: [ops]
+      summary: Prometheus metrics (text exposition format 0.0.4)
+      description: |
+        Requires `Authorization: Bearer $GOVERNOR_METRICS_TOKEN` when that variable is set; open otherwise.
+        Series: governor_decisions_total{verdict}, governor_decision_reasons_total{verdict,reason},
+        governor_parse_failures_total{kind}, governor_http_requests_total{method,route,status},
+        governor_http_request_duration_seconds{route} (histogram), governor_ready, governor_build_info{version}.
+        Labels carry rule names and route templates only, never invoice data.
+      security:
+        - {}
+        - metricsToken: []
+      responses:
+        "200": { description: "Metrics, content: { text/plain: { schema: { type: string } } }" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+components:
+  securitySchemes:
+    agentKey:
+      type: http
+      scheme: bearer
+      description: GOVERNOR_API_KEY (the agent's key; >= 16 chars)
+    operatorKey:
+      type: http
+      scheme: bearer
+      description: GOVERNOR_OPERATOR_KEY (humans only; must differ from the agent key)
+    metricsToken:
+      type: http
+      scheme: bearer
+      description: GOVERNOR_METRICS_TOKEN (optional)
+  parameters:
+    DecisionId:
+      in: path
+      name: id
+      required: true
+      schema: { type: string, example: dec_000001 }
+  responses:
+    Unauthorized:
+      description: Missing or wrong bearer token
+  schemas:
+    Request:
+      type: object
+      additionalProperties: false
+      required: [proposal]
+      properties:
+        proposal:
+          description: Parsed by the governor itself so that bank-like keys can be detected (BLOCK) rather than rejected by the HTTP layer.
+          allOf: [{ $ref: "#/components/schemas/Proposal" }]
+        signed_evidence: { $ref: "#/components/schemas/SignedEvidence" }
+        evidence:
+          description: "DEV/TEST ONLY: caller-supplied evidence, read only when the server runs with GOVERNOR_DEV_UNSIGNED_EVIDENCE=1 (requires GOVERNOR_EVAL_CLOCK=1). Ignored when signed_evidence is present; without signed_evidence in a normal deployment the decision is REVIEW (evidence_unsigned)."
+          allOf: [{ $ref: "#/components/schemas/Evidence" }]
+        checker_raw:
+          type: string
+          nullable: true
+          description: Raw quarantined-checker output, parsed fail-closed (anything other than exactly {"signals":[...]} → REVIEW signal checker_unparseable). Absent → checker_missing.
+    SignedEvidence:
+      type: object
+      additionalProperties: false
+      required: [payload, sig]
+      description: |
+        Envelope produced by the extraction service (extractor/service.py), which alone holds the Ed25519 key.
+        `payload` is canonical JSON (sorted keys, no whitespace) with v, key_id, doc_sha256, email_sha256,
+        extractor_version, issued_at, nonce, status (ok|failed), sandbox, and evidence (status ok) or failure.
+        The governor verifies key id, signature, freshness (GOVERNOR_EVIDENCE_MAX_AGE_SECS / _MAX_SKEW_SECS,
+        wall clock), nonce replay and that doc_sha256 equals proposal.document_sha256 before any rule runs.
+      properties:
+        payload: { type: string }
+        sig: { type: string, description: base64 Ed25519 signature over payload bytes }
+    Proposal:
+      type: object
+      additionalProperties: false
+      required: [vendor_id, invoice_no, amount_paise, po_ref]
+      properties:
+        vendor_id: { type: string, example: V001 }
+        invoice_no: { type: string, example: SOS/26-27/0231 }
+        amount_paise: { type: integer, format: int64, minimum: 1, description: "Amount in minor units of currency (paise for INR, cents for USD); the name is kept for compatibility" }
+        currency: { type: string, default: INR, example: INR, description: "ISO 4217. Must match the PO and the invoice; a currency with no configured limits is REVIEW" }
+        po_ref: { type: string, example: PO-2026-0101 }
+        irn: { type: string, nullable: true, description: "GST e-invoice IRN, used in the duplicate key when present" }
+        document_sha256: { type: string, nullable: true, description: "sha256 (hex) of the invoice document; must equal the signed payload's doc_sha256 (missing → REVIEW, different → BLOCK)" }
+    ItemLine:
+      type: object
+      additionalProperties: false
+      required: [description, amount_paise]
+      properties:
+        description: { type: string }
+        amount_paise: { type: integer, format: int64 }
+        is_tax: { type: boolean, default: false, description: "CGST/SGST/IGST/cess line" }
+    Evidence:
+      type: object
+      additionalProperties: false
+      description: Values read from the document/email by deterministic code (assembler), never by the model.
+      properties:
+        text_layer_gstin: { type: string, nullable: true }
+        sender_domain: { type: string, nullable: true }
+        printed_bank_account: { type: string, nullable: true }
+        printed_ifsc: { type: string, nullable: true }
+        all_printed_accounts: { type: array, items: { type: string } }
+        all_printed_ifscs: { type: array, items: { type: string } }
+        printed_total_paise: { type: integer, format: int64, nullable: true }
+        item_lines: { type: array, items: { $ref: "#/components/schemas/ItemLine" } }
+        has_text_layer: { type: boolean, default: false }
+        text_source: { type: string, nullable: true, enum: [text_layer, ocr, null], description: "OCR-read evidence never clears an issuer on its own (REVIEW)" }
+        currency: { type: string, nullable: true, description: "Currency the document prints (ISO 4217); a mismatch with the proposal/PO is REVIEW" }
+        all_currencies: { type: array, items: { type: string }, description: "Every currency marker found on the document" }
+    Verdict:
+      type: string
+      enum: [allow, review, block]
+    Reason:
+      type: object
+      required: [rule, verdict, control, detail]
+      properties:
+        rule: { type: string, example: bank_details_differ_from_master }
+        verdict: { $ref: "#/components/schemas/Verdict" }
+        control: { type: string, enum: [structural, extraction, ai] }
+        detail: { type: string }
+    Signal:
+      type: object
+      required: [kind, severity]
+      properties:
+        kind: { type: string, example: injection_suspected }
+        severity: { type: string, enum: [review, block], description: "No allow variant; signals can only escalate" }
+        detail: { type: string }
+    Payee:
+      type: object
+      description: Always taken from the vendor master, never from the document or proposal.
+      required: [beneficiary_id, bank_name, account_last4]
+      properties:
+        beneficiary_id: { type: string }
+        bank_name: { type: string }
+        account_last4: { type: string }
+    Decision:
+      type: object
+      required: [decision_id, verdict, deterministic_verdict, reasons, signals, payee, tamper_alert, audit_hash]
+      properties:
+        decision_id: { type: string, example: dec_000001 }
+        verdict: { $ref: "#/components/schemas/Verdict" }
+        deterministic_verdict:
+          allOf: [{ $ref: "#/components/schemas/Verdict" }]
+          description: Verdict from deterministic rules alone; `verdict` = max(deterministic_verdict, signals)
+        reasons: { type: array, items: { $ref: "#/components/schemas/Reason" } }
+        signals: { type: array, items: { $ref: "#/components/schemas/Signal" } }
+        payee:
+          nullable: true
+          allOf: [{ $ref: "#/components/schemas/Payee" }]
+          description: Set only for ALLOW or REVIEW
+        tamper_alert: { type: boolean, description: "Bank details on the document differ from the master" }
+        audit_hash: { type: string, description: "Hash of this decision's audit record (hex SHA-256)" }

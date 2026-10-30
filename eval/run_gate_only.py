@@ -12,12 +12,11 @@ import json
 import pathlib
 
 from assembler.evidence import assemble
-from assembler.extract import governor_evidence, printed_total_paise
+from assembler.extract import printed_total_paise
 import sys
 from dataset.gen.make_riskset import build as build_base
 from dataset.gen.make_variants import build as build_var, manifest_hash
 from shield.client import GovernorProc
-from shield.pipeline import BUYER_GSTIN, load_master
 
 ROOT = pathlib.Path(__file__).resolve().parent
 CLEAR = json.dumps({"signals": []})

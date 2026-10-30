@@ -1,0 +1,101 @@
+# Local stack: extractor-key (one-shot: creates the extractor's Ed25519 key, publishes only the public key)
+# + governor (decides; trusts that public key) + extractor (signs evidence; Phase 2) + demo (offline replay + UI).
+#   export GOVERNOR_API_KEY=$(openssl rand -hex 16)
+#   docker compose up --build governor demo        # http://127.0.0.1:8080/healthz, http://127.0.0.1:8000/demo-v3.html
+#   docker compose --profile extractor up --build   # adds the extraction service (same key the governor trusts)
+# To trust an external extractor instead, set GOVERNOR_EXTRACTOR_PUBKEY (64 hex chars) in the environment.
+# Synthetic data only. Ports are published on 127.0.0.1 only.
+name: invoiceshield
+
+x-image: &image
+  build: .
+  image: invoiceshield:local
+
+services:
+  # One-shot: create (or reuse) the extractor's signing key in its own volume and write only the public
+  # key (hex) to a second volume the governor mounts read-only. The governor never sees the private key.
+  extractor-key:
+    <<: *image
+    command:
+      - python
+      - -c
+      - |
+        from extractor import signing
+        sk = signing.load_or_create_key("/keys/extractor.pem")
+        pub = signing.public_hex(sk.public_key())
+        open("/pub/extractor.pub", "w").write(pub)
+        print("extractor public key", pub, "key_id", signing.key_id(sk.public_key()))
+    volumes:
+      - extractor-key:/keys
+      - extractor-pub:/pub
+    read_only: true
+    cap_drop: [ALL]
+    security_opt: ["no-new-privileges:true"]
+    restart: "no"
+
+  governor:
+    <<: *image
+    depends_on:
+      extractor-key:
+        condition: service_completed_successfully
+    environment:
+      GOVERNOR_API_KEY: ${GOVERNOR_API_KEY:?set GOVERNOR_API_KEY (>= 16 chars), e.g. export GOVERNOR_API_KEY=$(openssl rand -hex 16)}
+      GOVERNOR_OPERATOR_KEY: ${GOVERNOR_OPERATOR_KEY:-}
+      GOVERNOR_METRICS_TOKEN: ${GOVERNOR_METRICS_TOKEN:-}
+      GOVERNOR_EXTRACTOR_PUBKEY: ${GOVERNOR_EXTRACTOR_PUBKEY:-}   # overrides the file below when set
+      GOVERNOR_EXTRACTOR_PUBKEY_FILE: /pub/extractor.pub
+      RUST_LOG: ${RUST_LOG:-info}
+      GOVERNOR_DB: /data/governor.db   # durable state (SQLite WAL); backups: docker compose exec governor /app/governor/target/release/governor backup ...
+    ports:
+      - "127.0.0.1:8080:8080"
+    volumes:
+      - governor-data:/data
+      - extractor-pub:/pub:ro
+    read_only: true
+    tmpfs: [/tmp]
+    cap_drop: [ALL]
+    security_opt: ["no-new-privileges:true"]
+    restart: unless-stopped
+
+  # Phase 2 extraction service (extractor/service.py). It listens on 127.0.0.1 only, so it shares the
+  # governor's network namespace: the governor reaches it at 127.0.0.1:8090 and nothing else can.
+  extractor:
+    <<: *image
+    profiles: ["extractor"]
+    command: ["python", "-m", "extractor.service", "--port", "8090", "--key-file", "/keys/extractor.pem"]
+    network_mode: "service:governor"
+    volumes:
+      - extractor-key:/keys:ro
+    depends_on:
+      governor:
+        condition: service_healthy
+    read_only: true
+    tmpfs: [/tmp]
+    cap_drop: [ALL]
+    security_opt: ["no-new-privileges:true"]
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8090/health', timeout=2)"]
+      interval: 10s
+      timeout: 3s
+      retries: 3
+
+  # Offline replay of the recorded dev-set runs (no API key, no network), then serve the replay UI.
+  demo:
+    <<: *image
+    command: ["sh", "-c", "python -m eval.demo && exec python -m http.server 8000 --bind 0.0.0.0 --directory ui"]
+    ports:
+      - "127.0.0.1:8000:8000"
+    tmpfs: [/tmp]
+    cap_drop: [ALL]
+    security_opt: ["no-new-privileges:true"]
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/demo-v3.html', timeout=2)"]
+      interval: 10s
+      timeout: 3s
+      start_period: 60s
+      retries: 3
+
+volumes:
+  governor-data:
+  extractor-key:
+  extractor-pub:

@@ -1,0 +1,14 @@
+.git
+**/target
+.venv
+**/__pycache__
+.pytest_cache
+.env
+*.key
+secrets/
+data/third_party/raw/
+eval/variants/
+ui/build/out/
+ui/video/frames/
+*.mp4
+*.webm

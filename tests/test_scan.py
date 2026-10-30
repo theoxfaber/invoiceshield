@@ -1,9 +1,8 @@
 """Scan path: image-only PDF -> local OCR -> same deterministic extraction."""
 from assembler.evidence import assemble
-from assembler.extract import governor_evidence, printed_total_paise
-from assembler.scan import make_scan, ocr_text
+from assembler.extract import printed_total_paise
+from assembler.scan import make_scan
 from dataset.gen.make_invoice import make_t1
-from shield.pipeline import BUYER_GSTIN
 
 
 def _scan(tmp_path, **kw):

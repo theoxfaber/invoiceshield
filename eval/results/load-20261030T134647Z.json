@@ -1,0 +1,312 @@
+{
+ "kind": "governor_load_test",
+ "endpoint": "POST /v1/actions",
+ "started_utc": "2026-10-30T13:45:56+00:00",
+ "git_commit": "11acaf9",
+ "binary": "governor/target/release/governor-server",
+ "machine": {
+  "note": "single shared sandbox VM; client and server on the same host; other jobs were running",
+  "cpus": 2,
+  "arch": "aarch64",
+  "python": "3.12.15",
+  "loadavg_at_start": [
+   5.33544921875,
+   5.40869140625,
+   5.18994140625
+  ]
+ },
+ "workload": {
+  "bodies": 23,
+  "cases": [
+   "X04",
+   "X05",
+   "X05b",
+   "X05c",
+   "X_ifsc",
+   "X06",
+   "X01",
+   "X02",
+   "X03",
+   "X10",
+   "X09",
+   "X_hi",
+   "L01",
+   "L02",
+   "L03",
+   "L05",
+   "I01",
+   "I02",
+   "I04",
+   "B01",
+   "B02",
+   "B03",
+   "B04"
+  ],
+  "notes": "unique invoice_no per request; eval clock +8 days per request; state reset after every 23 requests (untimed); checker all-clear"
+ },
+ "levels": [
+  {
+   "concurrency": 1,
+   "measured_seconds": 15.001,
+   "warmup_seconds": 2.0,
+   "requests_ok": 6387,
+   "errors": {},
+   "throughput_rps": 425.8,
+   "client_latency_ms": {
+    "p50": 1.765,
+    "p95": 5.694,
+    "p99": 7.852,
+    "max": 13.831,
+    "mean": 2.252
+   },
+   "server_latency_from_metrics": {
+    "count": 7602,
+    "mean_ms": 0.3650529529071292,
+    "p50_le_ms": 0.5,
+    "p95_le_ms": 2.5,
+    "p99_le_ms": 5.0,
+    "buckets_le_s_cumulative": [
+     [
+      0.0005,
+      6265
+     ],
+     [
+      0.001,
+      7000
+     ],
+     [
+      0.0025,
+      7403
+     ],
+     [
+      0.005,
+      7571
+     ],
+     [
+      0.01,
+      7602
+     ],
+     [
+      0.025,
+      7602
+     ],
+     [
+      0.05,
+      7602
+     ],
+     [
+      0.1,
+      7602
+     ],
+     [
+      0.25,
+      7602
+     ],
+     [
+      0.5,
+      7602
+     ],
+     [
+      1.0,
+      7602
+     ],
+     [
+      2.5,
+      7602
+     ],
+     [
+      "+Inf",
+      7602
+     ]
+    ]
+   },
+   "verdicts": {
+    "allow": 1111,
+    "review": 2780,
+    "block": 2496
+   },
+   "state_resets": 330,
+   "server_rss_kb": {
+    "start": 2188,
+    "end": 2916
+   }
+  },
+  {
+   "concurrency": 8,
+   "measured_seconds": 15.005,
+   "warmup_seconds": 2.0,
+   "requests_ok": 8822,
+   "errors": {},
+   "throughput_rps": 587.9,
+   "client_latency_ms": {
+    "p50": 9.368,
+    "p95": 33.306,
+    "p99": 63.331,
+    "max": 173.885,
+    "mean": 13.085
+   },
+   "server_latency_from_metrics": {
+    "count": 9927,
+    "mean_ms": 1.075492163896449,
+    "p50_le_ms": 1.0,
+    "p95_le_ms": 5.0,
+    "p99_le_ms": 10.0,
+    "buckets_le_s_cumulative": [
+     [
+      0.0005,
+      3592
+     ],
+     [
+      0.001,
+      6550
+     ],
+     [
+      0.0025,
+      8947
+     ],
+     [
+      0.005,
+      9628
+     ],
+     [
+      0.01,
+      9915
+     ],
+     [
+      0.025,
+      9927
+     ],
+     [
+      0.05,
+      9927
+     ],
+     [
+      0.1,
+      9927
+     ],
+     [
+      0.25,
+      9927
+     ],
+     [
+      0.5,
+      9927
+     ],
+     [
+      1.0,
+      9927
+     ],
+     [
+      2.5,
+      9927
+     ],
+     [
+      "+Inf",
+      9927
+     ]
+    ]
+   },
+   "verdicts": {
+    "review": 3775,
+    "block": 3683,
+    "allow": 1364
+   },
+   "state_resets": 431,
+   "server_rss_kb": {
+    "start": 2188,
+    "end": 3280
+   }
+  },
+  {
+   "concurrency": 32,
+   "measured_seconds": 15.127,
+   "warmup_seconds": 2.0,
+   "requests_ok": 3281,
+   "errors": {},
+   "throughput_rps": 216.9,
+   "client_latency_ms": {
+    "p50": 89.21,
+    "p95": 430.078,
+    "p99": 699.41,
+    "max": 1508.565,
+    "mean": 140.006
+   },
+   "server_latency_from_metrics": {
+    "count": 3793,
+    "mean_ms": 4.390428443184811,
+    "p50_le_ms": 5.0,
+    "p95_le_ms": 25.0,
+    "p99_le_ms": 25.0,
+    "buckets_le_s_cumulative": [
+     [
+      0.0005,
+      429
+     ],
+     [
+      0.001,
+      505
+     ],
+     [
+      0.0025,
+      1435
+     ],
+     [
+      0.005,
+      2402
+     ],
+     [
+      0.01,
+      3518
+     ],
+     [
+      0.025,
+      3792
+     ],
+     [
+      0.05,
+      3793
+     ],
+     [
+      0.1,
+      3793
+     ],
+     [
+      0.25,
+      3793
+     ],
+     [
+      0.5,
+      3793
+     ],
+     [
+      1.0,
+      3793
+     ],
+     [
+      2.5,
+      3793
+     ],
+     [
+      "+Inf",
+      3793
+     ]
+    ]
+   },
+   "verdicts": {
+    "review": 1253,
+    "block": 1576,
+    "allow": 452
+   },
+   "state_resets": 164,
+   "server_rss_kb": {
+    "start": 2188,
+    "end": 3884
+   }
+  }
+ ],
+ "loadavg_at_end": [
+  5.9814453125,
+  5.55126953125,
+  5.248046875
+ ]
+}

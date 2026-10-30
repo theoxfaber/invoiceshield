@@ -1,6 +1,5 @@
 """Phase 2 trust boundary, end to end through the real governor binary and extraction service:
 the agent side can only forward evidence the extractor signed, for the document it names."""
-import base64
 import hashlib
 import json
 import pathlib

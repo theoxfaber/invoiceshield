@@ -5,12 +5,9 @@ import json
 import pathlib
 import tempfile
 
-from assembler.evidence import assemble
-from assembler.extract import governor_evidence
 from dataset.gen.make_benign import benign_cases, build
 from dataset.gen.make_invoice import PROF
 from shield.client import GovernorProc
-from shield.pipeline import BUYER_GSTIN
 
 ROOT = pathlib.Path(__file__).resolve().parent
 CLEAR = json.dumps({"signals": []})

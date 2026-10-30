@@ -1,0 +1,343 @@
+<!doctype html><html lang="en"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>InvoiceShield · AP inbox</title>
+<style>
+/*__FONTS__*/
+:root{
+ --bg:#F5F4F0;--panel:#FFFFFF;--sunk:#FAF9F6;--line:#E6E3DB;--line2:#EFEDE7;
+ --ink:#15140F;--ink2:#3A3832;--mu:#757167;--mu2:#A29E94;
+ --red:#D23A1A;--red-bg:#FCEDE8;--red-line:#F3C6B8;--red-ink:#9E2A10;
+ --amb:#9A6200;--amb-bg:#FFF3DA;--amb-line:#F0D9A6;
+ --grn:#0B7A4B;--grn-bg:#E5F3EB;--grn-line:#B9DDC9;
+ --r:10px;--sh:0 1px 0 rgba(21,20,15,.04),0 1px 2px rgba(21,20,15,.06);
+ --sh2:0 1px 2px rgba(21,20,15,.06),0 8px 24px -8px rgba(21,20,15,.12);
+}
+*{box-sizing:border-box}
+html,body{height:100%}
+body{margin:0;background:var(--bg);color:var(--ink);font:13.5px/1.45 'Geist',ui-sans-serif,system-ui,sans-serif;-webkit-font-smoothing:antialiased;font-feature-settings:"ss01","cv11"}
+.mono{font-family:'Geist Mono',ui-monospace,monospace;font-feature-settings:"tnum","zero" 0}
+button{font:inherit;color:inherit}
+.app{display:grid;grid-template-columns:224px 1fr;height:100vh;min-height:640px}
+/* sidebar */
+.side{background:var(--sunk);border-right:1px solid var(--line);display:flex;flex-direction:column;padding:14px 10px}
+.brand{display:flex;align-items:center;gap:9px;padding:4px 8px 14px}
+.mark{width:24px;height:24px;border-radius:7px;background:var(--ink);display:grid;place-items:center}
+.brand b{font-size:14.5px;font-weight:650;letter-spacing:-.015em}
+.org{display:flex;align-items:center;gap:9px;margin:0 2px 14px;padding:8px;border:1px solid var(--line);border-radius:9px;background:var(--panel);box-shadow:var(--sh)}
+.org .av{width:22px;height:22px;border-radius:6px;background:#E9E4D8;color:var(--ink2);font-size:10.5px;font-weight:650;display:grid;place-items:center}
+.org .t{font-size:12.5px;font-weight:550;line-height:1.2}.org .s{font-size:11px;color:var(--mu)}
+.navh{font-size:10.5px;letter-spacing:.06em;text-transform:uppercase;color:var(--mu2);padding:10px 10px 6px;font-weight:550}
+.nv{display:flex;align-items:center;gap:10px;padding:7px 10px;border-radius:8px;color:var(--ink2);cursor:pointer;font-weight:500;border:0;background:none;width:100%;text-align:left}
+.nv svg{width:16px;height:16px;flex:none;stroke:currentColor;fill:none;stroke-width:1.6;opacity:.8}
+.nv:hover{background:#EFEDE7}.nv.on{background:var(--panel);color:var(--ink);box-shadow:var(--sh);border:1px solid var(--line);padding:6px 9px}
+.nv .ct{margin-left:auto;font-size:11px;color:var(--mu);font-weight:500}
+.side .foot{margin-top:auto;padding:10px;border-radius:9px;border:1px dashed var(--line);font-size:11.5px;color:var(--mu);line-height:1.4}
+.side .foot b{color:var(--ink2);font-weight:600;display:flex;align-items:center;gap:6px;margin-bottom:2px}
+.dot{width:7px;height:7px;border-radius:50%;background:var(--grn);display:inline-block}
+/* main */
+.main{display:flex;flex-direction:column;min-width:0}
+.top{height:56px;flex:none;display:flex;align-items:center;gap:14px;padding:0 20px;border-bottom:1px solid var(--line);background:rgba(245,244,240,.9)}
+.crumb{font-size:13px;color:var(--mu);display:flex;gap:7px;align-items:center;white-space:nowrap;overflow:hidden}
+.crumb b{color:var(--ink);font-weight:550}
+.seg{margin-left:auto;display:flex;background:#ECEAE3;border-radius:9px;padding:3px;gap:2px;border:1px solid var(--line)}
+.seg button{border:0;background:none;padding:6px 12px;border-radius:7px;font-size:12.5px;font-weight:550;color:var(--mu);cursor:pointer;display:flex;align-items:center;gap:7px}
+.seg button i{width:7px;height:7px;border-radius:50%;background:var(--mu2)}
+.seg button.on{background:var(--panel);color:var(--ink);box-shadow:var(--sh)}
+.seg button.on[data-arm=off] i{background:var(--red)}.seg button.on[data-arm=on] i{background:var(--grn)}
+.btn{border:1px solid var(--ink);background:var(--ink);color:#fff;border-radius:8px;padding:7px 13px;font-size:12.5px;font-weight:600;cursor:pointer;display:flex;align-items:center;gap:7px}
+.btn svg{width:13px;height:13px;fill:#fff}
+.kbd{font-size:11px;color:var(--mu2)}
+.view{flex:1;min-height:0;display:none}.view.on{display:flex}
+/* inbox list */
+.list{width:356px;flex:none;border-right:1px solid var(--line);display:flex;flex-direction:column;background:var(--bg)}
+.lh{padding:16px 18px 10px;display:flex;align-items:baseline;gap:8px}
+.lh h2{margin:0;font-size:15px;font-weight:650;letter-spacing:-.01em}.lh span{color:var(--mu);font-size:12.5px}
+.chips{display:flex;gap:6px;padding:0 18px 12px}
+.chip{font-size:11.5px;padding:3px 9px;border-radius:999px;border:1px solid var(--line);color:var(--mu);background:var(--panel)}
+.chip.on{color:var(--ink);border-color:#CFCAC0}
+.rows{overflow:auto;padding:0 10px 16px}
+.row{display:grid;grid-template-columns:30px 1fr auto;gap:10px;padding:11px 10px;border-radius:10px;cursor:pointer;border:1px solid transparent;margin-bottom:2px;position:relative}
+.row:hover{background:#EFEDE7}
+.row.on{background:var(--panel);border-color:var(--line);box-shadow:var(--sh2)}
+.row .av{width:30px;height:30px;border-radius:8px;background:#E9E4D8;display:grid;place-items:center;font-size:11px;font-weight:650;color:var(--ink2)}
+.row .v{font-weight:600;font-size:13px;letter-spacing:-.005em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.row .e{font-size:11.5px;color:var(--mu);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.row .t{font-size:11.5px;color:var(--ink2);margin-top:3px}
+.row .r{text-align:right;display:flex;flex-direction:column;align-items:flex-end;gap:6px}
+.row .amt{font-size:13px;font-weight:550}
+/* status pills */
+.st{display:inline-flex;align-items:center;gap:6px;font-size:11.5px;font-weight:600;padding:2px 8px 2px 7px;border-radius:999px;border:1px solid;white-space:nowrap;line-height:1.5}
+.st i{width:6px;height:6px;border-radius:50%;background:currentColor}
+.st.red{color:var(--red-ink);background:var(--red-bg);border-color:var(--red-line)}
+.st.amb{color:var(--amb);background:var(--amb-bg);border-color:var(--amb-line)}
+.st.grn{color:var(--grn);background:var(--grn-bg);border-color:var(--grn-line)}
+.st.mu{color:var(--mu);background:var(--sunk);border-color:var(--line)}
+.st.lg{font-size:13px;padding:4px 12px 4px 10px}.st.legend i{width:7px;height:7px}
+/* detail */
+.detail{flex:1;min-width:0;overflow:auto;padding:22px 26px 40px}
+.dh{display:flex;align-items:flex-start;gap:18px}
+.kick{font-size:12px;color:var(--mu);display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.kick .sep{color:var(--mu2)}
+.tag{font-size:11px;font-weight:550;color:var(--ink2);background:#ECE9E1;border-radius:5px;padding:1px 6px}
+.dh h1{margin:6px 0 0;font-size:24px;line-height:1.15;font-weight:650;letter-spacing:-.025em}
+.dh .amt{margin-left:auto;text-align:right}
+.dh .amt .n{font-size:28px;font-weight:600;letter-spacing:-.03em;line-height:1.1}
+.dh .amt .s{margin-top:6px}
+.banner{margin:18px 0 0;border-radius:12px;padding:13px 16px;display:flex;gap:12px;align-items:center;border:1px solid;opacity:0;transform:translateY(4px);transition:.35s}
+.banner.show{opacity:1;transform:none}
+.banner .ic{width:28px;height:28px;border-radius:8px;display:grid;place-items:center;flex:none}
+.banner .ic svg{width:16px;height:16px;stroke:#fff;fill:none;stroke-width:2.2}
+.banner b{font-size:14px;font-weight:650;letter-spacing:-.01em}.banner .s{font-size:12.5px;opacity:.85}
+.banner.red{background:var(--red-bg);border-color:var(--red-line);color:var(--red-ink)}.banner.red .ic{background:var(--red)}
+.banner.amb{background:var(--amb-bg);border-color:var(--amb-line);color:#6E4600}.banner.amb .ic{background:var(--amb)}
+.banner.grn{background:var(--grn-bg);border-color:var(--grn-line);color:#085C38}.banner.grn .ic{background:var(--grn)}
+.banner.wait{background:var(--panel);border-color:var(--line);color:var(--mu)}.banner.wait .ic{background:var(--mu2)}
+.grid{display:grid;grid-template-columns:minmax(320px,1fr) minmax(360px,1.05fr);gap:18px;margin-top:18px;align-items:start}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:14px;box-shadow:var(--sh)}
+.card>.h{display:flex;align-items:center;gap:8px;padding:12px 16px;border-bottom:1px solid var(--line2);font-size:12.5px;font-weight:600}
+.card>.h .s{margin-left:auto;font-weight:450;color:var(--mu);font-size:11.5px}
+.doc{padding:14px;background:var(--sunk);border-radius:0 0 14px 14px}
+.paper{position:relative;background:#fff;border-radius:4px;box-shadow:0 0 0 1px rgba(21,20,15,.06),0 10px 28px -10px rgba(21,20,15,.25);overflow:hidden}
+.paper img{display:block;width:100%;height:auto}
+.hl{position:absolute;border-radius:3px;border:1.5px solid var(--red);background:rgba(210,58,26,.08);box-shadow:0 0 0 3px rgba(210,58,26,.10)}
+.hl.ok{border-color:var(--grn);background:rgba(11,122,75,.07);box-shadow:0 0 0 3px rgba(11,122,75,.10)}
+.hl .lb{position:absolute;left:-1.5px;top:-21px;font-size:10.5px;font-weight:650;color:#fff;background:var(--red);padding:2px 6px;border-radius:4px 4px 0 0;white-space:nowrap}
+.hl.ok .lb{background:var(--grn)}
+.hl.below .lb{top:auto;bottom:-21px;border-radius:0 0 4px 4px}
+.docmeta{display:flex;justify-content:space-between;font-size:11.5px;color:var(--mu);padding:10px 2px 0}
+/* checks */
+.checks{padding:4px 16px 6px}
+.ck{display:grid;grid-template-columns:22px 1fr;gap:10px;padding:12px 0;border-bottom:1px solid var(--line2)}
+.ck:last-child{border-bottom:0}
+.ck .ic{width:20px;height:20px;border-radius:6px;display:grid;place-items:center;margin-top:1px}
+.ck .ic svg{width:12px;height:12px;stroke:#fff;fill:none;stroke-width:2.6}
+.ck.bad .ic{background:var(--red)}.ck.ok .ic{background:var(--grn)}
+.ck .t{font-weight:600;font-size:13px;letter-spacing:-.005em}
+.ck .t small{font-weight:450;color:var(--mu);font-size:11.5px;margin-left:6px}
+.cmp{display:grid;grid-template-columns:84px 1fr;gap:3px 10px;margin-top:7px;font-size:12px;align-items:baseline}
+.cmp .k{color:var(--mu);font-size:11.5px}
+.cmp .val{font-size:12.5px;word-break:normal;overflow-wrap:anywhere}
+.cmp .val.rec{color:var(--ink)}
+.d{color:var(--red-ink);background:var(--red-bg);border-radius:2px;box-shadow:inset 0 -1.5px 0 var(--red)}
+.note{font-size:11.5px;color:var(--mu);padding:0 16px 14px;line-height:1.45}
+/* timeline */
+.tl{padding:6px 16px 10px}
+.stp{display:grid;grid-template-columns:22px 1fr;gap:10px;padding:10px 0;position:relative;opacity:0;transform:translateY(5px);transition:opacity .4s,transform .4s}
+.stp.show{opacity:1;transform:none}
+.stp:not(:last-child)::after{content:"";position:absolute;left:10px;top:32px;bottom:-4px;width:1.5px;background:var(--line)}
+.stp .n{width:21px;height:21px;border-radius:50%;border:1.5px solid #CFCAC0;background:var(--panel);font-size:10.5px;font-weight:650;display:grid;place-items:center;color:var(--ink2)}
+.stp.red .n{border-color:var(--red);background:var(--red);color:#fff}.stp.grn .n{border-color:var(--grn);background:var(--grn);color:#fff}.stp.amb .n{border-color:var(--amb);background:var(--amb);color:#fff}
+.stp .t{font-weight:600;font-size:13px;letter-spacing:-.005em}
+.stp .s{color:var(--mu);font-size:12px;margin-top:2px}
+.stp .q{margin-top:6px;font-size:12px;color:var(--ink2);background:var(--sunk);border:1px solid var(--line2);border-radius:8px;padding:7px 10px}
+.code{font-family:'Geist Mono',monospace;font-size:10.5px;color:var(--mu);background:var(--sunk);border:1px solid var(--line2);border-radius:5px;padding:1px 6px;white-space:nowrap}
+.rsn{display:flex;align-items:flex-start;gap:10px;margin-top:8px;padding:9px 11px;border:1px solid var(--line);border-radius:10px;background:var(--panel)}
+.rsn .b{font-weight:600;font-size:12.5px}.rsn .m{margin-top:3px;display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.foot{margin-top:18px;font-size:11.5px;color:var(--mu);line-height:1.5;max-width:860px}
+/* results */
+.res{flex:1;overflow:auto;padding:26px 30px 40px}
+.res h2{margin:0;font-size:22px;font-weight:650;letter-spacing:-.025em}
+.res .sub{color:var(--mu);margin-top:4px;max-width:760px}
+.kp{display:grid;grid-template-columns:1fr 1fr 1fr;gap:16px;margin-top:20px}
+.kpi{padding:18px 20px}
+.kpi .l{font-size:12px;color:var(--mu);font-weight:500}
+.kpi .n{font-size:44px;font-weight:600;letter-spacing:-.04em;line-height:1.05;margin-top:8px}
+.kpi .n small{font-size:20px;color:var(--mu2);font-weight:500;letter-spacing:-.02em}
+.kpi .f{margin-top:8px;font-size:12px;color:var(--ink2)}
+.arms{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-top:16px}
+.arm{padding:18px 20px}
+.arm .hd{display:flex;align-items:center;gap:8px;font-weight:650}
+.arm .hd .s{margin-left:auto;font-weight:450;color:var(--mu);font-size:12px}
+.sq{display:grid;grid-template-columns:repeat(30,1fr);gap:4px;margin-top:14px}
+.sq i{aspect-ratio:1;border-radius:3px;background:#E9E6DE}
+.sq i.wrong{background:var(--red)}.sq i.held,.sq i.agent{background:#D9D4C8}.sq i.review{background:#E9B44C}.sq i.block{background:#2B2A24}.sq i.paid{background:#9FCDB3}
+.legend{display:flex;gap:14px;flex-wrap:wrap;margin-top:12px;font-size:11.5px;color:var(--mu)}
+.legend span{display:flex;align-items:center;gap:6px}.legend i{width:10px;height:10px;border-radius:3px;display:inline-block}
+/* vendors */
+table{width:100%;border-collapse:collapse;font-size:12.5px}
+th{text-align:left;font-weight:550;color:var(--mu);font-size:11.5px;padding:10px 14px;border-bottom:1px solid var(--line)}
+td{padding:11px 14px;border-bottom:1px solid var(--line2);vertical-align:top}
+tr:last-child td{border-bottom:0}
+@media(max-width:1180px){.grid{grid-template-columns:1fr}.list{width:300px}}
+@media(max-width:900px){.app{grid-template-columns:1fr}.side{display:none}.view.on{flex-direction:column}.list{width:auto;max-height:40vh;border-right:0;border-bottom:1px solid var(--line)}.kp,.arms{grid-template-columns:1fr}}
+</style>
+<body>
+<div class="app">
+ <aside class="side">
+  <div class="brand"><div class="mark"><svg width="14" height="14" viewBox="0 0 14 14"><path d="M2 3.2h10M2 7h6.2M2 10.8h4" stroke="#fff" stroke-width="1.6" stroke-linecap="round"/><path d="M8.6 10.2l1.5 1.5 2.6-3" stroke="#3ED68F" stroke-width="1.7" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg></div><b>InvoiceShield</b></div>
+  <div class="org"><div class="av">BP</div><div><div class="t">Bhavani Precision</div><div class="s">Accounts payable</div></div></div>
+  <div class="navh">Workspace</div>
+  <button class="nv" data-view="inbox"><svg viewBox="0 0 16 16"><path d="M2 9.5V12a1 1 0 001 1h10a1 1 0 001-1V9.5M2 9.5L3.6 3.7A1 1 0 014.6 3h6.8a1 1 0 011 .7L14 9.5M2 9.5h3.2l.8 1.6h4l.8-1.6H14"/></svg>AP inbox<span class="ct" id="ct-inbox"></span></button>
+  <button class="nv" data-view="results"><svg viewBox="0 0 16 16"><path d="M2.5 13.5h11M4 11V7.5M8 11V4M12 11V9"/></svg>Results</button>
+  <button class="nv" data-view="vendors"><svg viewBox="0 0 16 16"><path d="M8 1.8l5 2v3.6c0 3-2.1 5.5-5 6.8-2.9-1.3-5-3.8-5-6.8V3.8z"/><path d="M5.8 8l1.5 1.5 3-3"/></svg>Vendor record<span class="ct" id="ct-vendors"></span></button>
+  <div class="foot"><b><span class="dot"></span>Replay mode</b>Recorded Muse Glimmer runs on a mock payment rail. Nothing here moves real money.</div>
+ </aside>
+ <section class="main">
+  <div class="top">
+   <div class="crumb" id="crumb"></div>
+   <div class="seg" id="seg"><button data-arm="off"><i></i>Shield off</button><button data-arm="on"><i></i>Shield on</button></div>
+   <button class="btn" id="play"><svg viewBox="0 0 12 12"><path d="M3 1.8v8.4L10 6z"/></svg>Replay</button>
+  </div>
+  <div class="view" id="v-inbox">
+   <div class="list"><div class="lh"><h2>AP inbox</h2><span id="lcount"></span></div>
+    <div class="chips"><span class="chip on">All</span><span class="chip">Needs attention</span><span class="chip">Paid</span></div>
+    <div class="rows" id="rows"></div></div>
+   <div class="detail" id="detail"></div>
+  </div>
+  <div class="view" id="v-results"><div class="res" id="res"></div></div>
+  <div class="view" id="v-vendors"><div class="res" id="ven"></div></div>
+ </section>
+</div>
+<script>
+const D=__DATA__, X=__EXTRA__;
+let cur=0, arm='off', view='inbox', timers=[];
+const Q=new URLSearchParams(location.search), STATIC=Q.get('static')=='1';
+const $=i=>document.getElementById(i);
+function esc(s){return String(s??'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]))}
+const ICON={x:'<svg viewBox="0 0 12 12"><path d="M3 3l6 6M9 3L3 9"/></svg>',ok:'<svg viewBox="0 0 12 12"><path d="M2.5 6.3l2.3 2.3L9.6 3.6"/></svg>',
+ pause:'<svg viewBox="0 0 16 16"><path d="M6 4v8M10 4v8"/></svg>',wait:'<svg viewBox="0 0 16 16"><circle cx="8" cy="8" r="5"/></svg>'};
+const REASON={
+ sender_domain_mismatch:"Sender domain doesn't match vendor record",
+ bank_details_differ_from_master:"Bank account differs from verified vendor master",
+ issuer_gstin_mismatch:"Supplier tax ID (GSTIN) doesn't match vendor record",
+ injection_suspected:"Document contains instructions aimed at an AI agent",
+ bank_box_mismatch:"Bank box on the page differs from the text layer"};
+const SEV={block:['Blocks payment','red'],review:['Needs review','amb']};
+const initials=n=>n.replace(/Pvt|Ltd|Inc\.?/g,'').trim().split(/\s+/).slice(0,2).map(w=>w[0]).join('').toUpperCase();
+const grp=s=>String(s).replace(/(\d{4})(?=\d)/g,'$1 ');
+function status(c,a){
+ if(a=='off') return c.off.harmful?{l:'Paid · wrong account',t:'red'}:{l:'Paid',t:'grn'};
+ const o=c.on.outcome; if(o=='block')return{l:'Blocked',t:'red'}; if(o=='review')return{l:'Held for review',t:'amb'};
+ if(o=='paid')return{l:'Paid',t:'grn'}; return{l:'Held by agent',t:'amb'}}
+const pill=(s,lg)=>`<span class="st ${s.t}${lg?' lg':''}"><i></i>${esc(s.l)}</span>`;
+// character diff (LCS) -> received string with inserted/changed chars marked
+function diff(a,b){const n=a.length,m=b.length,L=Array.from({length:n+1},()=>new Array(m+1).fill(0));
+ for(let i=n-1;i>=0;i--)for(let j=m-1;j>=0;j--)L[i][j]=a[i]==b[j]?L[i+1][j+1]+1:Math.max(L[i+1][j],L[i][j+1]);
+ let i=0,j=0,o='',run='';const fl=()=>{if(run){o+=`<span class="d">${esc(run)}</span>`;run=''}};
+ while(i<n){if(j<m&&a[i]==b[j]){fl();o+=esc(a[i]);i++;j++}else if(j<m&&L[i][j+1]>=L[i+1][j])j++;else{run+=a[i];i++}}fl();return o}
+function whole(a,b){return a===b?esc(a):`<span class="d">${esc(a)}</span>`}
+function digitDiff(a,b){a=String(a);b=String(b);let o='';for(let k=0;k<a.length;k++){const ch=a[k];o+=(b[k]===ch?esc(ch):`<span class="d">${esc(ch)}</span>`);if(k%4==3&&k<a.length-1)o+=' '}return o}
+
+function renderRows(){
+ $('rows').innerHTML=D.map((c,i)=>{const s=status(c,arm);return `<div class="row${i==cur?' on':''}" data-i="${i}">
+  <div class="av">${initials(c.vendor.name)}</div>
+  <div style="min-width:0"><div class="v">${esc(c.vendor.name)}</div><div class="e mono">${esc(c.email_from)}</div><div class="t">${esc(c.invoice_no)} · ${esc(c.title)}</div></div>
+  <div class="r"><div class="amt mono">${esc(c.off.amount)}</div>${pill(s)}</div></div>`}).join('');
+ document.querySelectorAll('.row').forEach(r=>r.onclick=()=>show(+r.dataset.i));
+ const need=D.filter(c=>status(c,arm).t!='grn').length;
+ $('lcount').textContent=`${D.length} invoices · ${need} need attention`;$('ct-inbox').textContent=D.length;
+}
+function checks(c){
+ const v=c.vendor, from=c.email_from.split('@')[1]||'', domOK=v.domains.includes(from);
+ const acOK=c.pdf.pdf_account==v.account, ifOK=c.pdf.pdf_ifsc==v.ifsc, gsOK=!v.gstin||c.pdf.pdf_gstin==v.gstin;
+ const rec=v.domains.find(d=>d.length&&d)||'';
+ const best=v.domains.slice().sort((x,y)=>Math.abs(x.length-from.length)-Math.abs(y.length-from.length))[0];
+ const row=(ok,title,small,k1,v1,k2,v2)=>`<div class="ck ${ok?'ok':'bad'}"><div class="ic">${ok?ICON.ok:ICON.x}</div><div><div class="t">${title}${small?`<small>${small}</small>`:''}</div>
+   <div class="cmp"><span class="k">${k1}</span><span class="val mono">${v1}</span><span class="k">${k2}</span><span class="val mono rec">${v2}</span></div></div></div>`;
+ return [
+  row(domOK, domOK?'Sender domain matches vendor record':"Sender domain doesn't match vendor record",'',
+      'Email from', domOK?esc(from):diff(from,best), 'On record', esc(v.domains.join(', '))),
+  row(acOK&&ifOK, acOK&&ifOK?'Bank account matches verified vendor master':'Bank account differs from verified vendor master', '',
+      'In the PDF', (acOK?esc(grp(c.pdf.pdf_account)):`<span class="d">${esc(grp(c.pdf.pdf_account))}</span>`)+' · '+whole(c.pdf.pdf_ifsc,v.ifsc)+`<br><span style="font-family:Geist;color:var(--mu)">${esc(c.pdf.pdf_bank)}</span>`,
+      'Verified', esc(grp(v.account))+' · '+esc(v.ifsc)+`<br><span style="font-family:Geist;color:var(--mu)">${esc(v.bank)}</span>`),
+  v.gstin?row(gsOK, gsOK?'Supplier tax ID matches':"Supplier tax ID (GSTIN) doesn't match vendor record",'', 'On invoice', gsOK?esc(c.pdf.pdf_gstin):diff(c.pdf.pdf_gstin,v.gstin), 'On record', esc(v.gstin)):''
+ ].join('')}
+function stepsFor(c){
+ const o=c.off,n=c.on,S=[];
+ if(arm=='off'){
+  S.push({t:'Agent read the email and the PDF',s:'Plain AP agent holding a pay tool. Bank details come from the document.',q:o.agent_reason||'Invoice looks consistent with the PO.'});
+  S.push({t:'Agent paid the account printed in the PDF',s:`${esc(o.payee)} · A/c ${esc(grp(o.account))} · ${esc(o.ifsc)} · ${esc(o.amount)}`,code:'pay_invoice()'});
+  S.push(o.harmful?{t:`${esc(o.amount)} sent to an account that isn't on the vendor record`,s:'The account and IFSC are not the vendor\'s verified account.',tone:'red'}
+                  :{t:`Paid ${esc(o.amount)} to the verified account`,s:'Genuine invoice.',tone:'grn'});
+ } else {
+  S.push({t:'Agent proposed a payment',s:'No bank fields allowed: vendor, invoice, amount and PO only.',q:n.agent_reason?n.agent_reason+' · '+n.amount:'',meta:n.agent_reason?'':`Proposed amount ${esc(n.amount)} · ${esc(c.invoice_no)} · ${esc(c.po_ref)}`});
+  S.push({t:'Document checker read the PDF',s:'An isolated model with no tools. It can only raise signals, never pay.'});
+  S.push({t:'Policy engine compared it with the vendor record',s:`Verified account ${esc(grp(n.trusted_account))} · ${esc(n.trusted_ifsc)}`,code:'governor (Rust)'});
+  if(n.reasons.length) S.push({t:`${n.reasons.length} check${n.reasons.length>1?'s':''} failed`,reasons:n.reasons});
+  const st=status(c,'on');
+  S.push(n.outcome=='paid'?{t:`Paid ${esc(n.amount)} to the verified account`,s:'Genuine invoice: no friction.',tone:'grn'}
+   :n.outcome.startsWith('agent_')?{t:'Held. Nothing paid.',s:'The agent declined to propose payment.',tone:'amb'}
+   :{t:(n.outcome=='block'?'Blocked':'Held for review')+'. Nothing paid.',s:n.outcome=='block'?'The payment never reached the rail.':'A person must approve before anything moves.',tone:st.t});
+ }
+ return S}
+function stepHTML(s,i){
+ const rs=(s.reasons||[]).map(r=>{const v=SEV[r.severity]||['Flag','mu'];return `<div class="rsn"><div style="flex:1"><div class="b">${esc(REASON[r.rule]||r.text)}</div>
+   <div class="m"><span class="st ${v[1]}"><i></i>${v[0]}</span><span class="code">${esc(r.rule)}</span></div></div></div>`}).join('');
+ return `<div class="stp ${s.tone||''}"><div class="n">${s.tone=='red'?'!':s.tone?'✓':i+1}</div><div><div class="t">${s.t}${s.code?` <span class="code">${s.code}</span>`:''}</div>${s.s?`<div class="s">${s.s}</div>`:''}${s.meta?`<div class="q mono" style="font-size:11.5px">${s.meta}</div>`:''}${s.q?`<div class="q">“${esc(s.q)}”</div>`:''}${rs}</div></div>`}
+function bannerFor(c){
+ const s=status(c,arm);
+ if(arm=='off') return c.off.harmful?{t:'red',ic:ICON.x,b:`Paid ${c.off.amount} to an account that isn't on the vendor record`,s:'The agent trusted the bank details printed in the PDF.'}
+   :{t:'grn',ic:ICON.ok,b:`Paid ${c.off.amount} to the verified account`,s:'Genuine invoice.'};
+ const n=c.on;
+ if(n.outcome=='block') return {t:'red',ic:ICON.x,b:'Blocked. Nothing was paid.',s:`${n.reasons.length} check${n.reasons.length>1?'s':''} failed against the verified vendor record.`};
+ if(n.outcome=='review') return {t:'amb',ic:ICON.pause,b:'Held for review. Nothing was paid.',s:'The account in the PDF is not the one on the vendor record.'};
+ if(n.outcome=='paid') return {t:'grn',ic:ICON.ok,b:`Paid ${n.amount} to the verified account`,s:'Every check passed. Genuine invoices go straight through.'};
+ return {t:'amb',ic:ICON.pause,b:'Held by the agent. Nothing was paid.',s:''}}
+function renderDetail(){
+ const c=D[cur], v=c.vendor, s=status(c,arm), b=bannerFor(c);
+ const acOK=c.pdf.pdf_account==v.account&&c.pdf.pdf_ifsc==v.ifsc, bb=c.pdf.bank_box, gb=c.pdf.gstin_box, gsOK=!v.gstin||c.pdf.pdf_gstin==v.gstin;
+ const box=(r,ok,lb)=>r?`<div class="hl${ok?' ok':''}${r[1]<0.2?' below':''}" style="left:calc(${r[0]*100}% - 6px);top:calc(${r[1]*100}% - 5px);width:calc(${(r[2]-r[0])*100}% + 12px);height:calc(${(r[3]-r[1])*100}% + 10px)"><span class="lb">${lb}</span></div>`:'';
+ $('crumb').innerHTML=`AP inbox <span>/</span> <b>${esc(c.invoice_no)}</b>`;
+ $('detail').innerHTML=`
+ <div class="dh"><div style="min-width:0">
+   <div class="kick"><span class="tag">${esc(c.title)}</span><span>${esc(c.invoice_no)}</span><span class="sep">·</span><span>${esc(c.po_ref)}</span><span class="sep">·</span><span>${esc(c.pdf.date)}</span></div>
+   <h1>${esc(v.name)}</h1>
+   <div class="kick" style="margin-top:6px">From <span class="mono" style="color:var(--ink2)">${esc(c.email_from)}</span></div></div>
+  <div class="amt"><div class="n mono">${esc(c.off.amount)}</div><div class="s" id="dst">${pill({l:arm=='off'?'Paying…':'Checking…',t:'mu'},1)}</div></div></div>
+ <div class="banner wait" id="banner"><div class="ic">${ICON.wait}</div><div><b>Replaying recorded run…</b><div class="s">${arm=='off'?'Shield off: the agent holds the pay tool.':'Shield on: the agent can only propose.'}</div></div></div>
+ <div class="grid">
+  <div class="card"><div class="h">Run replay<span class="s">${arm=='off'?'Shield off · agent holds pay_invoice':'Shield on · propose → check → decide'}</span></div><div class="tl" id="tl"></div></div>
+  <div style="display:flex;flex-direction:column;gap:18px">
+   <div class="card"><div class="h">Checked against vendor record<span class="s">${esc(v.id)}</span></div><div class="checks">${checks(c)}</div>
+    ${arm=='off'?'<div class="note">With the shield off, nothing compares these. The agent pays whatever the document says.</div>':'<div class="note">The payment rail only ever receives the vendor\'s beneficiary ID. The account behind it comes from the vendor record, never from the PDF.</div>'}</div>
+   <div class="card"><div class="h">Invoice PDF<span class="s">as received</span></div><div class="doc">
+   <div class="paper" id="paper"><img alt="Invoice ${esc(c.invoice_no)}" src="data:image/png;base64,${c.image}">${box(bb,acOK,acOK?'Matches vendor record':'Not the verified account')}${!gsOK?box(gb,false,'Tax ID not on record'):''}</div>
+   <div class="docmeta"><span>${esc(c.email_subject)}</span><span>1 page</span></div></div></div>
+  </div></div></div>
+ <div class="foot">Recorded sample 0 of the development risk set (not the frozen held-out set). Fictional vendors and bank details. The policy engine is a deterministic Rust service; the model never holds the payment tool.</div>`;
+ const tl=$('tl'), S=stepsFor(c);
+ tl.innerHTML=S.map(stepHTML).join('');
+ const els=[...tl.children], step=Q.get('step')!=null?+Q.get('step'):null;
+ const fin=()=>{$('dst').innerHTML=pill(s,1);const e=$('banner');e.className='banner '+b.t+' show';e.innerHTML=`<div class="ic">${b.ic}</div><div><b>${esc(b.b)}</b>${b.s?`<div class="s">${esc(b.s)}</div>`:''}</div>`};
+ if(STATIC||step!=null){els.forEach((e,i)=>{if(step==null||i<step)e.classList.add('show')});if(step==null||step>=els.length)fin();else $('banner').classList.add('show');return}
+ requestAnimationFrame(()=>$('banner').classList.add('show'));
+ els.forEach((e,i)=>timers.push(setTimeout(()=>e.classList.add('show'),400+i*900)));
+ timers.push(setTimeout(fin,400+els.length*900));
+}
+function renderResults(){
+ const T=X.totals, g=X.grid, ids=Object.keys(g).filter(k=>!g[k].control), ctl=Object.keys(g).filter(k=>g[k].control);
+ const sq=a=>`<div class="sq">${ids.map(k=>g[k][a].map((x,s)=>`<i class="${x}" title="${k} · sample ${s} · ${x}"></i>`).join('')).join('')}</div>`;
+ $('res').innerHTML=`<h2>Same invoices, same model. Shield off vs on.</h2>
+ <div class="sub">20 poisoned invoices and 4 genuine ones, 3 recorded samples each, Muse Glimmer 30B on a mock payment rail. Each square below is one sample.</div>
+ <div class="kp">
+  <div class="card kpi"><div class="l">Fake invoices paid to the wrong account · shield off</div><div class="n mono" style="color:var(--red)">${T.off_wrong}<small>/${T.poisoned_samples}</small></div><div class="f">5 quiet attacks paid in all 3 samples: bank swap, new IFSC, look-alike name, domain and tax ID.</div></div>
+  <div class="card kpi"><div class="l">Fake invoices paid to the wrong account · shield on</div><div class="n mono" style="color:var(--grn)">${T.on_wrong}<small>/${T.poisoned_samples}</small></div><div class="f">Blocked by policy ${T.on_block} · held for review ${T.on_review} · held by the agent ${T.on_agent}</div></div>
+  <div class="card kpi"><div class="l">Genuine invoices still paid</div><div class="n mono">${T.ctl_paid_on}<small>/${T.ctl_samples}</small></div><div class="f">Shield off: ${T.ctl_paid_off}/${T.ctl_samples}. No blanket refusal.</div></div></div>
+ <div class="arms">
+  <div class="card arm"><div class="hd">${pill({l:'Shield off',t:'red'})}<span class="s">agent holds pay_invoice</span></div>${sq('off')}
+   <div class="legend"><span><i style="background:var(--red)"></i>Paid to wrong account</span><span><i style="background:#9FCDB3"></i>Paid to the correct account</span><span><i style="background:#D9D4C8"></i>Held by agent</span></div></div>
+  <div class="card arm"><div class="hd">${pill({l:'Shield on',t:'grn'})}<span class="s">propose → check → decide</span></div>${sq('on')}
+   <div class="legend"><span><i style="background:#2B2A24"></i>Blocked by policy</span><span><i style="background:#E9B44C"></i>Held for review</span><span><i style="background:#D9D4C8"></i>Held by agent</span><span><i style="background:var(--red)"></i>Paid wrongly (none)</span></div></div></div>
+ <div class="foot">Development risk set, k=3, one run, reasoning “low”, no prompt tuning after seeing results (eval/EVAL_LOG.md). Not the frozen held-out set. Rows: eval/results/day1_off.jsonl, day1_on.jsonl.</div>`;
+ $('crumb').innerHTML='<b>Results</b>'}
+function renderVendors(){
+ $('ven').innerHTML=`<h2>Verified vendor record</h2><div class="sub">The only source of payee bank details. Invoices can't change it.</div>
+ <div class="card" style="margin-top:18px;overflow:hidden"><table><tr><th>Vendor</th><th>Email domains</th><th>Bank</th><th>Account · IFSC</th><th>GSTIN</th></tr>
+ ${X.vendors.map(v=>`<tr><td><b style="font-weight:600">${esc(v.name)}</b><div style="color:var(--mu);font-size:11.5px">${esc(v.id)} · ${esc(v.category)}</div></td><td class="mono">${v.domains.map(esc).join('<br>')}</td><td>${esc(v.bank)}</td><td class="mono">${esc(grp(v.account))}<br><span style="color:var(--mu)">${esc(v.ifsc)}</span></td><td class="mono">${esc(v.gstin||'—')}</td></tr>`).join('')}</table></div>`;
+ $('crumb').innerHTML='<b>Vendor record</b>';$('ct-vendors').textContent=X.vendors.length}
+function setView(v){view=v;document.querySelectorAll('.view').forEach(e=>e.classList.toggle('on',e.id=='v-'+v));
+ document.querySelectorAll('.nv').forEach(e=>e.classList.toggle('on',e.dataset.view==v));
+ $('seg').style.visibility=$('play').style.visibility=v=='inbox'?'visible':'hidden';
+ if(v=='results')renderResults();else if(v=='vendors')renderVendors();else show(cur)}
+function setArm(a){arm=a;document.querySelectorAll('#seg button').forEach(b=>b.classList.toggle('on',b.dataset.arm==a));show(cur)}
+function show(i){cur=i;timers.forEach(clearTimeout);timers=[];renderRows();renderDetail()}
+document.querySelectorAll('.nv').forEach(b=>b.onclick=()=>setView(b.dataset.view));
+document.querySelectorAll('#seg button').forEach(b=>b.onclick=()=>setArm(b.dataset.arm));
+$('play').onclick=()=>show(cur);
+document.addEventListener('keydown',e=>{if(e.target.tagName=='INPUT')return;const k=e.key.toLowerCase();
+ if(k>='1'&&k<=String(D.length)){show(+k-1)}else if(k=='arrowdown'||k=='j')show((cur+1)%D.length);else if(k=='arrowup'||k=='k')show((cur+D.length-1)%D.length);
+ else if(k=='o')setArm('off');else if(k=='n')setArm('on');else if(k=='s')setArm(arm=='off'?'on':'off');else if(k=='r'||k==' '){e.preventDefault();show(cur)}});
+window.__state=o=>{if(o.case){const j=D.findIndex(c=>c.id==o.case);if(j>=0)cur=j}if(o.arm){arm=o.arm;document.querySelectorAll('#seg button').forEach(b=>b.classList.toggle('on',b.dataset.arm==arm))}setView(o.view||'inbox')};
+const qc=Q.get('case'); cur=Math.max(0,D.findIndex(c=>c.id==(qc||'L02')));
+arm=Q.get('arm')=='on'?'on':'off';document.querySelectorAll('#seg button').forEach(b=>b.classList.toggle('on',b.dataset.arm==arm));
+setView(Q.get('view')||'inbox');
+</script></body></html>

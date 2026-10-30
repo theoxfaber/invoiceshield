@@ -97,7 +97,9 @@ def printed_accounts(text: str) -> list[str]:
     text = text or ""
     found = [m.group() for m in ACCT_RE.finditer(text) if classify_number(text, m.start(), m.end()) == "account"]
     # grouped digits ("2327 6810 6955 53") after an explicit account label anywhere in the text
-    found += [re.sub(r"\s+", "", m.group(1)) for m in BOX_ACCT_RE.finditer(text) if " " in m.group(1).strip()]
+    # (joined, it must still be an account-length number: 9-18 digits, like ACCT_RE)
+    found += [j for m in BOX_ACCT_RE.finditer(text) if " " in m.group(1).strip()
+              for j in [re.sub(r"\s+", "", m.group(1))] if 9 <= len(j) <= 18]
     return _uniq(found)
 
 

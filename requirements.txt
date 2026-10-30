@@ -1,6 +1,10 @@
-httpx
-pydantic
-pypdf
-reportlab
-Pillow
-pytest
+# Runtime + test dependencies, pinned (Phase 6, 2026-10-30). Dependabot proposes bumps (.github/dependabot.yml).
+# Kept in sync with [project.dependencies] in pyproject.toml.
+httpx==0.28.1
+pydantic==2.14.2
+pypdf==6.21.4
+reportlab==5.1.0
+Pillow==13.0.0
+cryptography==50.0.2
+pytest==9.2.0
+hypothesis==6.170.14

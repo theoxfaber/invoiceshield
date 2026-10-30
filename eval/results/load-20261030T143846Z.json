@@ -1,0 +1,320 @@
+{
+ "kind": "governor_load_test",
+ "endpoint": "POST /v1/actions",
+ "evidence_path": "signed (fresh Ed25519 extractor envelope per request: signature, key id, freshness, nonce, document sha256 verified; GOVERNOR_EVAL_CLOCK=1 for the ledger clock only)",
+ "state_store": "SQLite WAL file on local disk (temp dir, fresh per level)",
+ "started_utc": "2026-10-30T14:37:55+00:00",
+ "git_commit": "cafdde7",
+ "binary": "/workspace/work/ops-target/release/governor-server",
+ "machine": {
+  "note": "single shared sandbox VM; client and server on the same host; other jobs were running",
+  "cpus": 2,
+  "arch": "aarch64",
+  "python": "3.12.15",
+  "loadavg_at_start": [
+   2.63232421875,
+   3.990234375,
+   3.9970703125
+  ]
+ },
+ "workload": {
+  "bodies": 23,
+  "cases": [
+   "X04",
+   "X05",
+   "X05b",
+   "X05c",
+   "X_ifsc",
+   "X06",
+   "X01",
+   "X02",
+   "X03",
+   "X10",
+   "X09",
+   "X_hi",
+   "L01",
+   "L02",
+   "L03",
+   "L05",
+   "I01",
+   "I02",
+   "I04",
+   "B01",
+   "B02",
+   "B03",
+   "B04"
+  ],
+  "notes": "unique invoice_no per request; eval clock +8 days per request; state reset after every 23 requests (untimed); checker all-clear"
+ },
+ "levels": [
+  {
+   "concurrency": 1,
+   "evidence_path": "signed",
+   "db": "file",
+   "measured_seconds": 15.001,
+   "warmup_seconds": 2,
+   "requests_ok": 5477,
+   "errors": {},
+   "throughput_rps": 365.1,
+   "client_latency_ms": {
+    "p50": 2.233,
+    "p95": 4.027,
+    "p99": 5.789,
+    "max": 9.377,
+    "mean": 2.476
+   },
+   "server_latency_from_metrics": {
+    "count": 6366,
+    "mean_ms": 0.7626839106189119,
+    "p50_le_ms": 1.0,
+    "p95_le_ms": 2.5,
+    "p99_le_ms": 5.0,
+    "buckets_le_s_cumulative": [
+     [
+      0.0005,
+      1141
+     ],
+     [
+      0.001,
+      5352
+     ],
+     [
+      0.0025,
+      6276
+     ],
+     [
+      0.005,
+      6358
+     ],
+     [
+      0.01,
+      6366
+     ],
+     [
+      0.025,
+      6366
+     ],
+     [
+      0.05,
+      6366
+     ],
+     [
+      0.1,
+      6366
+     ],
+     [
+      0.25,
+      6366
+     ],
+     [
+      0.5,
+      6366
+     ],
+     [
+      1.0,
+      6366
+     ],
+     [
+      2.5,
+      6366
+     ],
+     [
+      "+Inf",
+      6366
+     ]
+    ]
+   },
+   "verdicts": {
+    "block": 2144,
+    "allow": 953,
+    "review": 2380
+   },
+   "state_resets": 276,
+   "server_rss_kb": {
+    "start": 4184,
+    "end": 6264
+   }
+  },
+  {
+   "concurrency": 8,
+   "evidence_path": "signed",
+   "db": "file",
+   "measured_seconds": 15.007,
+   "warmup_seconds": 2,
+   "requests_ok": 5797,
+   "errors": {},
+   "throughput_rps": 386.3,
+   "client_latency_ms": {
+    "p50": 13.714,
+    "p95": 58.278,
+    "p99": 102.123,
+    "max": 191.553,
+    "mean": 19.775
+   },
+   "server_latency_from_metrics": {
+    "count": 6621,
+    "mean_ms": 2.3454682416553356,
+    "p50_le_ms": 2.5,
+    "p95_le_ms": 5.0,
+    "p99_le_ms": 10.0,
+    "buckets_le_s_cumulative": [
+     [
+      0.0005,
+      75
+     ],
+     [
+      0.001,
+      777
+     ],
+     [
+      0.0025,
+      4258
+     ],
+     [
+      0.005,
+      6303
+     ],
+     [
+      0.01,
+      6608
+     ],
+     [
+      0.025,
+      6621
+     ],
+     [
+      0.05,
+      6621
+     ],
+     [
+      0.1,
+      6621
+     ],
+     [
+      0.25,
+      6621
+     ],
+     [
+      0.5,
+      6621
+     ],
+     [
+      1.0,
+      6621
+     ],
+     [
+      2.5,
+      6621
+     ],
+     [
+      "+Inf",
+      6621
+     ]
+    ]
+   },
+   "verdicts": {
+    "allow": 885,
+    "block": 2433,
+    "review": 2479
+   },
+   "state_resets": 287,
+   "server_rss_kb": {
+    "start": 4184,
+    "end": 8020
+   }
+  },
+  {
+   "concurrency": 32,
+   "evidence_path": "signed",
+   "db": "file",
+   "measured_seconds": 15.158,
+   "warmup_seconds": 2,
+   "requests_ok": 3225,
+   "errors": {},
+   "throughput_rps": 212.8,
+   "client_latency_ms": {
+    "p50": 89.057,
+    "p95": 448.91,
+    "p99": 700.946,
+    "max": 1303.315,
+    "mean": 143.303
+   },
+   "server_latency_from_metrics": {
+    "count": 3707,
+    "mean_ms": 5.112602056379808,
+    "p50_le_ms": 5.0,
+    "p95_le_ms": 25.0,
+    "p99_le_ms": 25.0,
+    "buckets_le_s_cumulative": [
+     [
+      0.0005,
+      18
+     ],
+     [
+      0.001,
+      95
+     ],
+     [
+      0.0025,
+      509
+     ],
+     [
+      0.005,
+      2214
+     ],
+     [
+      0.01,
+      3450
+     ],
+     [
+      0.025,
+      3706
+     ],
+     [
+      0.05,
+      3707
+     ],
+     [
+      0.1,
+      3707
+     ],
+     [
+      0.25,
+      3707
+     ],
+     [
+      0.5,
+      3707
+     ],
+     [
+      1.0,
+      3707
+     ],
+     [
+      2.5,
+      3707
+     ],
+     [
+      "+Inf",
+      3707
+     ]
+    ]
+   },
+   "verdicts": {
+    "review": 1275,
+    "block": 1489,
+    "allow": 461
+   },
+   "state_resets": 161,
+   "server_rss_kb": {
+    "start": 4184,
+    "end": 8376
+   }
+  }
+ ],
+ "loadavg_at_end": [
+  5.521484375,
+  4.56298828125,
+  4.193359375
+ ]
+}

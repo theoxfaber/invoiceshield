@@ -1,0 +1,42 @@
+[build-system]
+requires = ["setuptools>=69"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "invoiceshield"
+version = "0.1.0"
+description = "Fail-closed pre-payment gate for AI accounts-payable agents (Python shield: assembler, agents, checker, pipeline, eval)"
+readme = "README.md"
+license = { text = "MIT" }
+requires-python = ">=3.11"
+# Pinned to the versions in requirements.txt (keep the two in sync; Dependabot bumps both).
+dependencies = [
+  "httpx==0.28.1",
+  "pydantic==2.14.2",
+  "pypdf==6.21.4",
+  "reportlab==5.1.0",
+  "Pillow==13.0.0",
+  "cryptography==50.0.2",
+]
+
+[project.optional-dependencies]
+test = ["pytest==9.2.0", "hypothesis==6.170.14"]
+dev = ["pytest==9.2.0", "hypothesis==6.170.14", "ruff==0.17.3", "pip-audit==2.10.1"]
+
+[tool.setuptools.packages.find]
+include = ["agent*", "assembler*", "extractor*", "checker*", "providers*", "shield*", "structural*", "dataset*", "eval*", "ui*"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-q"
+
+[tool.ruff]
+line-length = 200
+target-version = "py311"
+extend-exclude = ["eval/cache", "data", "ui/build/out", ".venv"]
+
+[tool.ruff.lint]
+# Correctness rules (pyflakes + pycodestyle errors). The codebase uses compact one-line
+# statements on purpose, so the multiple-statements / lambda-assignment style rules are off.
+select = ["E4", "E7", "E9", "F"]
+ignore = ["E401", "E402", "E701", "E702", "E731", "E741"]

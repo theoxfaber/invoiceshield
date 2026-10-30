@@ -43,7 +43,6 @@ def harmful(case: dict, t) -> tuple[bool, str]:
 
 
 def one(provider, case, sample):
-    from assembler.evidence import assemble
     ev = assemble(case["pdf"], case["cover_email"])
     rail = MockRail()
     o = run_off_agent(provider, ev, rail, sample=sample)

@@ -19,6 +19,10 @@
 //!   GOVERNOR_EVIDENCE_MAX_AGE_SECS (default 300), GOVERNOR_EVIDENCE_MAX_SKEW_SECS (default 30).
 //!   GOVERNOR_DEV_UNSIGNED_EVIDENCE=1  DEV/TEST ONLY: also accept the old caller-supplied
 //!                              `evidence` field. Refused unless GOVERNOR_EVAL_CLOCK=1; off by default.
+//!
+//! Ops (Phase 6): GOVERNOR_BIND (default 127.0.0.1). Startup validation of every variable
+//! above: src/config.rs (all errors listed, exit 2). JSON logs, /healthz, /readyz, /metrics:
+//! src/observability.rs. API schema: docs/openapi.yaml.
 use axum::{
     extract::{Path, State},
     http::{HeaderMap, StatusCode},
@@ -28,7 +32,8 @@ use axum::{
 };
 use invoiceshield_governor::anchor;
 use invoiceshield_governor::persist::{ActionOutcome, Fault, Store};
-use invoiceshield_governor::{Master, TrustConfig, TrustVerifier};
+use invoiceshield_governor::TrustVerifier;
+use invoiceshield_governor::{config::Config, observability};
 use serde::Deserialize;
 use std::{
     path::PathBuf,
@@ -108,11 +113,11 @@ async fn actions(State(s): State<Shared>, h: HeaderMap, body: String) -> impl In
         )
             .into_response(),
         Some(Ok(ActionOutcome::DbRejected(m))) => {
-            eprintln!("db rejected write (duplicate live ledger entry): {m}");
+            tracing::error!(event = "db_rejected_write", error = %m, "duplicate live ledger entry");
             (StatusCode::CONFLICT, Json(serde_json::json!({"error": "duplicate_rejected_by_database", "paid": false}))).into_response()
         }
         Some(Err(e)) => {
-            eprintln!("state store error, failing closed: {e}");
+            tracing::error!(event = "state_store_error", error = %e, "failing closed");
             err(StatusCode::SERVICE_UNAVAILABLE, "state_unavailable")
         }
         None => err(StatusCode::SERVICE_UNAVAILABLE, "state_unavailable"),
@@ -203,62 +208,39 @@ async fn anchor_once(s: &Shared, last: &mut Option<u64>) {
     match tokio::task::spawn_blocking(move || anchor::append(&file, &a2)).await {
         Ok(Ok(())) => *last = Some(seq),
         other => {
-            eprintln!("anchor write failed: {other:?}");
+            tracing::error!(event = "anchor_write_failed", error = ?other);
             return;
         }
     }
     if let Some(url) = &cfg.url {
         if let Err(e) = anchor::post(url, &a).await {
-            eprintln!("anchor POST to {url} failed (file anchor kept): {e}");
+            tracing::warn!(event = "anchor_post_failed", url = %url, error = %e, "file anchor kept");
         }
     }
 }
 
 #[tokio::main]
 async fn main() {
-    let key = std::env::var("GOVERNOR_API_KEY").unwrap_or_default();
-    if key.len() < 16 {
-        eprintln!("GOVERNOR_API_KEY must be set (>= 16 chars)");
-        std::process::exit(2);
+    observability::init_logging();
+    // Fail fast on bad configuration (all errors reported together, exit 2). See config.rs.
+    let cfg = Config::from_env_or_exit();
+    let addr = cfg.addr();
+    let (key, eval_clock, master_path, tcfg) = (cfg.api_key, cfg.eval_clock, cfg.master_path, cfg.trust);
+    if tcfg.dev_unsigned {
+        tracing::warn!(event = "dev_unsigned_evidence", "DEV MODE: unsigned caller-supplied evidence is accepted. Never run this in production.");
     }
-    let eval_clock = std::env::var("GOVERNOR_EVAL_CLOCK").as_deref() == Ok("1");
-    let dev_unsigned = std::env::var("GOVERNOR_DEV_UNSIGNED_EVIDENCE").as_deref() == Ok("1");
-    if dev_unsigned && !eval_clock {
-        eprintln!("GOVERNOR_DEV_UNSIGNED_EVIDENCE=1 is for tests only and requires GOVERNOR_EVAL_CLOCK=1");
-        std::process::exit(2);
-    }
-    let extractor_keys = match TrustConfig::parse_keys(&std::env::var("GOVERNOR_EXTRACTOR_PUBKEY").unwrap_or_default()) {
-        Ok(k) => k,
-        Err(e) => {
-            eprintln!("GOVERNOR_EXTRACTOR_PUBKEY invalid: {e}");
-            std::process::exit(2);
-        }
-    };
-    if extractor_keys.is_empty() && !dev_unsigned {
-        eprintln!("GOVERNOR_EXTRACTOR_PUBKEY must be set (the extraction service's Ed25519 public key)");
-        std::process::exit(2);
-    }
-    let mut tcfg = TrustConfig::new(extractor_keys);
-    tcfg.dev_unsigned = dev_unsigned;
-    let env_i64 = |k: &str, d: i64| std::env::var(k).ok().and_then(|v| v.parse().ok()).unwrap_or(d);
-    tcfg.max_age_secs = env_i64("GOVERNOR_EVIDENCE_MAX_AGE_SECS", 300);
-    tcfg.max_skew_secs = env_i64("GOVERNOR_EVIDENCE_MAX_SKEW_SECS", 30);
-    if dev_unsigned {
-        eprintln!("WARNING: DEV MODE: unsigned caller-supplied evidence is accepted. Never run this in production.");
-    }
-    let path = std::env::var("GOVERNOR_MASTER").unwrap_or_else(|_| "../dataset/fixtures/master.json".into());
-    let master = Master::from_json(&std::fs::read_to_string(&path).expect("read master")).expect("parse master");
     let db = std::env::var("GOVERNOR_DB").unwrap_or_else(|_| if eval_clock { ":memory:".into() } else { "governor.db".into() });
-    let mut store = match Store::open(&db, master) {
+    let mut store = match Store::open(&db, cfg.master) {
         Ok(s) => s,
         Err(e) => {
+            tracing::error!(event = "state_db_open_failed", db = %db, error = %e);
             eprintln!("cannot open state DB {db}: {e}");
             std::process::exit(2);
         }
     };
     store.trust = Some(TrustVerifier::new(tcfg));
     if db == ":memory:" {
-        eprintln!("WARNING: GOVERNOR_DB=:memory: — ledger and audit are lost on exit (eval mode only)");
+        tracing::warn!(event = "state_in_memory", "GOVERNOR_DB=:memory: — ledger and audit are lost on exit (eval mode only)");
     }
     if eval_clock {
         if let Ok(f) = std::env::var("GOVERNOR_TEST_FAULT") {
@@ -271,18 +253,19 @@ async fn main() {
     }
     let anchors = match anchor::key_from_env() {
         Err(e) => {
+            tracing::error!(event = "anchor_key_invalid", error = %e);
             eprintln!("{e}");
             std::process::exit(2);
         }
         Ok(None) => {
-            eprintln!("audit anchoring off (set GOVERNOR_ANCHOR_KEY or GOVERNOR_ANCHOR_KEY_FILE)");
+            tracing::info!(event = "anchoring_off", "set GOVERNOR_ANCHOR_KEY or GOVERNOR_ANCHOR_KEY_FILE to anchor the audit chain");
             None
         }
         Ok(Some(k)) => {
             let file = std::env::var("GOVERNOR_ANCHOR_FILE").map(PathBuf::from).unwrap_or_else(|_| {
                 if db == ":memory:" { PathBuf::from("governor-memory.anchors.jsonl") } else { PathBuf::from(format!("{db}.anchors.jsonl")) }
             });
-            eprintln!("audit anchoring on: {} (pubkey {})", file.display(), hex::encode(k.verifying_key().to_bytes()));
+            tracing::info!(event = "anchoring_on", file = %file.display(), pubkey = %hex::encode(k.verifying_key().to_bytes()));
             Some(Arc::new(AnchorCfg { key: k, file, url: std::env::var("GOVERNOR_ANCHOR_URL").ok().filter(|u| !u.is_empty()) }))
         }
     };
@@ -306,9 +289,14 @@ async fn main() {
         .route("/v1/decisions/:id/resolve", post(resolve))
         .route("/v1/audit/verify", get(audit_verify))
         .route("/v1/eval/reset", post(eval_reset))
+        .merge(observability::routes())
+        .layer(axum::middleware::from_fn(observability::track))
         .with_state(shared);
-    let port = std::env::var("GOVERNOR_PORT").unwrap_or_else(|_| "8080".into());
-    let listener = tokio::net::TcpListener::bind(format!("127.0.0.1:{port}")).await.expect("bind");
-    eprintln!("governor listening on 127.0.0.1:{port} (state: {db})");
+    let listener = tokio::net::TcpListener::bind(addr).await.unwrap_or_else(|e| {
+        tracing::error!(event = "bind_failed", addr = %addr, error = %e);
+        std::process::exit(2);
+    });
+    observability::set_ready(true);
+    tracing::info!(event = "listening", addr = %addr, state = %db, master = %master_path, eval_clock);
     axum::serve(listener, app).await.expect("serve");
 }

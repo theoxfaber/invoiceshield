@@ -275,16 +275,16 @@ fn anchors_detect_edit_truncation_and_forged_anchor() {
     // Single-record edit without recomputing: the chain itself breaks.
     let mut edited = recs.clone();
     edited[1].payload["verdict"] = serde_json::json!("allow_forged");
-    assert_eq!(anchor::verify_chain(&edited, &[a.clone()], &pk).first_broken, Some(1));
+    assert_eq!(anchor::verify_chain(&edited, std::slice::from_ref(&a), &pk).first_broken, Some(1));
 
     // Truncation below the anchored head.
-    let rep = anchor::verify_chain(&recs[..2], &[a.clone()], &pk);
+    let rep = anchor::verify_chain(&recs[..2], std::slice::from_ref(&a), &pk);
     assert!(!rep.ok && rep.anchor_errors[0].contains("truncated"), "{rep:?}");
 
     // An anchor signed by another key (attacker re-anchoring a rewritten chain) is rejected.
     let evil = anchor::generate_key();
     let fake = anchor::sign(&evil, 2, &recs[2].hash, 6);
-    let rep = anchor::verify_chain(&recs, &[fake.clone()], &pk);
+    let rep = anchor::verify_chain(&recs, std::slice::from_ref(&fake), &pk);
     assert!(!rep.ok && rep.anchor_errors[0].contains("signature"), "{rep:?}");
     // Swapping in the pinned pubkey field does not help: the signature is checked, not the field.
     let mut spoof = fake;

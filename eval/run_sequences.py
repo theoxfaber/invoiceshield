@@ -12,11 +12,9 @@ import json
 import pathlib
 import tempfile
 
-from assembler.evidence import assemble
-from assembler.extract import governor_evidence
 from dataset.gen.make_sequences import ZW, build_step_pdf, sequences
 from shield.client import GovernorProc
-from shield.pipeline import BUYER_GSTIN, load_master
+from shield.pipeline import load_master
 
 ROOT = pathlib.Path(__file__).resolve().parent
 CLEAR = json.dumps({"signals": []})

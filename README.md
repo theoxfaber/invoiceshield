@@ -51,7 +51,7 @@ The gate never takes a payee from a document, so the attack moves to the vendor 
 - `dataset/fixtures/`: fictional vendor master. All names, GSTINs, accounts and domains are made up; any match with a real business, account or domain is coincidental.
 - `agent/`: shield-OFF baseline (pays the account printed on the invoice) and shield-ON agent (its payment tool has no bank field). `checker/`: quarantined document checker (prompt v1; escalate-only). `assembler/`: deterministic evidence (text layer or OCR, GSTIN, sender domain, every printed account/IFSC). `shield/`: pipeline agent + checker → governor → rail.
 - `dataset/gen/`: invoice generator (T1/T2 layouts, USD vendor, scan and photo variants), the 24-case dev risk set, 24 benign dev invoices and 19 sequences. `eval/`: runners, `eval/EVAL_LOG.md`, raw rows in `eval/results/`.
-- `ui/`: demo page replaying recorded runs (`python3 -m ui.build_demo` → `ui/demo.html`).
+- `ui/`: replay UI over recorded runs. `ui/demo-v3.html` is the page the submission video records; it regenerates byte-for-byte from `ui/build/` (`make demo-pages`: `ui/build_demo.py` → `ui/demo.html` → `ui/build/build_demo_v2.py` → `ui/build/build_v3.py`).
 
 ## Run it
 
@@ -72,5 +72,12 @@ python3 -m eval.run_gate_only                              # hijacked agent, no 
 ```
 
 Live runs need `BASETEN_API_KEY` (Spark) or `NVIDIA_API_KEY` (Glimmer) in the environment; never commit them. All paths are relative to the repo root. `eval/riskset/` (24 PDFs + manifest) and `eval/cache/llm/` (model responses only, no keys) are committed so the numbers replay; `eval/variants/` (13 MB) is not, and regenerates with `python3 -m dataset.gen.make_variants`. The generator writes byte-identical PDFs on every run.
+
+## Operations
+
+- `make test` (rustfmt on ops files, clippy `-D warnings`, cargo test, ruff, pytest), `make demo` (offline replay of the recorded dev-set runs, no API key; checks the replay matches the committed rows), `make eval`, `make load`, `make audit`, `make docker`.
+- CI: `.github/workflows/ci.yml` (Rust, Python, cargo audit + pip-audit, Docker build + smoke) on every push and PR; Dependabot for cargo, pip, GitHub Actions and Docker.
+- Container: `Dockerfile` (Rust build stage + Python runtime, non-root uid 10001, healthcheck) and `docker-compose.yml` (one-shot `extractor-key` creates the extractor's Ed25519 key and gives the governor only its public key; governor with SQLite state in the `/data` volume; demo; extractor under the `extractor` profile). `export GOVERNOR_API_KEY=$(openssl rand -hex 16) && docker compose up --build governor demo`. The governor refuses to start without `GOVERNOR_EXTRACTOR_PUBKEY` (or `GOVERNOR_EXTRACTOR_PUBKEY_FILE`).
+- Governor ops surface: JSON logs on stderr, `/healthz`, `/readyz`, `/metrics` (Prometheus: verdicts by verdict and reason, latency histogram, parse failures), fail-fast config validation (`governor/src/config.rs`, exit 2 with every error listed). API: [`docs/openapi.yaml`](docs/openapi.yaml). Runbooks: [`docs/RUNBOOKS.md`](docs/RUNBOOKS.md). Load test and SLO (single shared sandbox VM, not a production benchmark): [`docs/SLO.md`](docs/SLO.md).
 
 Everything here was built during the event; see `docs/BUILD_LOG.md` and `docs/DECISIONS.md`.

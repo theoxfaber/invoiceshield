@@ -1,5 +1,4 @@
 """Item-table and total extraction (deterministic) against generator output."""
-import pathlib
 
 from assembler.evidence import assemble
 from assembler.extract import governor_evidence, item_lines, printed_total_paise

@@ -2,6 +2,7 @@
 //! The model proposes; this code decides. Payee always from the vendor master.
 pub mod anchor;
 pub mod audit;
+pub mod config;
 pub mod decisions;
 pub mod engine;
 pub mod ledger;
@@ -10,6 +11,7 @@ pub mod master_change;
 pub mod normalize;
 pub mod persist;
 pub mod trust;
+pub mod observability;
 pub mod verdict;
 
 pub use engine::{Decision, Evidence, Governor, Proposal, Request};

@@ -382,12 +382,15 @@ fn audit_verify_requires_the_api_key() {
     };
     let key = "phase1-test-key-0123456789";
     let master = concat!(env!("CARGO_MANIFEST_DIR"), "/../dataset/fixtures/master.json");
+    // Server stderr goes to a file so a failed start says why.
+    let errlog = std::path::Path::new(env!("CARGO_TARGET_TMPDIR")).join(format!("phase1-audit-verify-{port}.log"));
     let mut child = std::process::Command::new(env!("CARGO_BIN_EXE_governor-server"))
         .env("GOVERNOR_API_KEY", key).env("GOVERNOR_EXTRACTOR_PUBKEY", "d75a980182b10ab7d54bfed3c964073a0ee172f3daa62325af021a68f707511a").env("GOVERNOR_MASTER", master).env("GOVERNOR_PORT", port.to_string())
         .env("GOVERNOR_DB", ":memory:") // Phase 3: keep this test from creating governor.db in the crate dir
-        .env_remove("GOVERNOR_EVAL_CLOCK").stderr(std::process::Stdio::null()).spawn().unwrap();
+        .env_remove("GOVERNOR_EVAL_CLOCK").stderr(std::fs::File::create(&errlog).unwrap()).spawn().unwrap();
     let mut up = false;
-    for _ in 0..100 {
+    // Up to ~20 s: the 5 s budget was flaky on a loaded shared runner.
+    for _ in 0..400 {
         if std::net::TcpStream::connect(("127.0.0.1", port)).is_ok() {
             up = true;
             break;
@@ -395,7 +398,7 @@ fn audit_verify_requires_the_api_key() {
         std::thread::sleep(std::time::Duration::from_millis(50));
     }
     let result = std::panic::catch_unwind(|| {
-        assert!(up, "server did not start");
+        assert!(up, "server did not start within ~20 s; stderr: {}", std::fs::read_to_string(&errlog).unwrap_or_default());
         assert_eq!(http_get(port, "/v1/audit/verify", None), 401);
         assert_eq!(http_get(port, "/v1/audit/verify", Some("wrong-key-wrong-key-00")), 401);
         assert_eq!(http_get(port, "/v1/audit/verify", Some(key)), 200);

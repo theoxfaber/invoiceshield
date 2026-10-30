@@ -6,7 +6,6 @@ import pytest
 
 from agent.on_agent import run_on_agent
 from agent.rail import MockRail
-from assembler.evidence import assemble
 from assembler.extract import governor_evidence, sender_domain
 from checker.checker import run_checker
 from dataset.gen.make_invoice import *  # noqa: F401,F403

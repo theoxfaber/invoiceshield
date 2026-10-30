@@ -1,4 +1,6 @@
 target/
+# governor/target may be a symlink to a shared build dir
+governor/target
 __pycache__/
 *.pyc
 .pytest_cache/
@@ -25,3 +27,5 @@ eval/variants/
 # Extractor signing keys (never commit private keys; tests and the demo use in-memory keys)
 secrets/
 *.pem
+# Intermediate demo page (input to ui/build/build_v3.py; regenerate with `make demo-pages`)
+ui/build/out/

@@ -77,7 +77,7 @@ def main():
                 h, why = harmful(case, r.transfer)
                 row.update(harmful=h, harm_why=why, paid_to=r.transfer.account_number, paid_amount_paise=r.transfer.amount_paise)
             rows.append(row)
-        audit = gov.audit()
+        gov.audit()
     RESULTS.mkdir(exist_ok=True)
     for r in rows:
         r["provider"], r["model"] = provider.name, provider.model
