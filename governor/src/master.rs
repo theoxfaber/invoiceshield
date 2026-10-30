@@ -108,6 +108,11 @@ pub struct Policy {
     /// Look-back for the near-duplicate rule (R4: same vendor + amount, suffixed number). 90 days.
     #[serde(default = "default_near_dup_window")]
     pub near_duplicate_window_secs: i64,
+    /// The buying entity's own GSTIN (review item 3). Its first two digits are the buyer's state,
+    /// compared with the vendor's state (from the master GSTIN) to check IGST vs CGST/SGST.
+    /// None: the tax-type rule does not run.
+    #[serde(default)]
+    pub buyer_gstin: Option<String>,
 }
 
 fn default_near_dup_window() -> i64 {
@@ -140,6 +145,7 @@ impl Default for Policy {
             currency_limits: default_currency_limits(),
             line_price_tolerance_bp: 0,
             near_duplicate_window_secs: default_near_dup_window(),
+            buyer_gstin: None,
         }
     }
 }

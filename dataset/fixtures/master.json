@@ -501,6 +501,6 @@
         "payout_cap_minor": 595200
       }
     },
-    "line_price_tolerance_bp": 0
+    "line_price_tolerance_bp": 0, "buyer_gstin": "24ZZACB7319B1Z5"
   }
 }

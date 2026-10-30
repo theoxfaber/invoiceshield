@@ -91,6 +91,13 @@ pub struct Evidence {
     /// Used only to verify model-proposed item lines verbatim (`lines.rs`); never read for a payee.
     #[serde(default)]
     pub text_layer: Option<String>,
+    /// GST heads the document charges with a non-zero amount (CGST, SGST, UTGST, IGST), read by the
+    /// extractor. Compared with the vendor and buyer states (review item 3).
+    #[serde(default)]
+    pub tax_kinds: Vec<String>,
+    /// "invoice" or "credit_note" (title read by the extractor). A credit note is never payable.
+    #[serde(default)]
+    pub document_kind: Option<String>,
 }
 
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]
@@ -162,6 +169,8 @@ pub struct Governor {
 struct Ctx {
     reasons: Vec<Reason>,
     tamper: bool,
+    /// Never write a ledger entry for this decision (credit notes: nothing to pay or approve).
+    no_ledger: bool,
 }
 
 impl Ctx {
@@ -184,7 +193,7 @@ impl Governor {
             Ok(req) => self.evaluate(&req, now),
             Err(e) => self.finish(
                 None,
-                Ctx { reasons: vec![reason("request_unparseable", Verdict::Review, Control::Structural, e.to_string())], tamper: false },
+                Ctx { reasons: vec![reason("request_unparseable", Verdict::Review, Control::Structural, e.to_string())], tamper: false, no_ledger: false },
                 vec![],
                 now,
             ),
@@ -192,7 +201,7 @@ impl Governor {
     }
 
     pub fn evaluate(&mut self, req: &Request, now: i64) -> Decision {
-        let mut ctx = Ctx { reasons: vec![], tamper: false };
+        let mut ctx = Ctx { reasons: vec![], tamper: false, no_ledger: false };
         let signals = req.checker_raw.as_deref().map(parse_checker_signals).unwrap_or_else(|| {
             vec![Signal { kind: "checker_missing".into(), severity: crate::verdict::Severity::Review, detail: "no checker report".into() }]
         });
@@ -214,6 +223,18 @@ impl Governor {
                 return self.finish(None, ctx, signals, now);
             }
         };
+        // Credit note (review item 3, BEN-06 class): never payable, so REVIEW with no ledger entry
+        // (nothing a human could approve into a payment). A non-positive amount on a credit note
+        // is expected, so it is not the BLOCK a hijacked agent's negative amount gets.
+        let credit_note = req.evidence.document_kind.as_deref() == Some("credit_note");
+        if credit_note {
+            ctx.no_ledger = true;
+            ctx.add("credit_note_not_payable", Verdict::Review, Control::Extraction,
+                "the document is a credit note: nothing is payable; a human records it against the vendor's account");
+            if p.amount_paise <= 0 {
+                return self.finish(Some(&p), ctx, signals, now);
+            }
+        }
         if p.amount_paise <= 0 {
             ctx.add("amount_nonpositive", Verdict::Block, Control::Structural, "amount must be > 0");
             return self.finish(Some(&p), ctx, signals, now);
@@ -256,8 +277,15 @@ impl Governor {
             Some(po) if normalize::currency(&po.currency) != cur => ctx.add("currency_mismatch_po", Verdict::Review, Control::Structural,
                 format!("proposal is in {cur} but {} is raised in {}; amounts cannot be compared", po.po_ref, po.currency)),
             Some(po) => {
-                let available = po.open_balance_paise - self.ledger.po_committed(&po.po_ref, &cur);
-                let hard = available + available.max(0) * pol.po_tolerance_bp / 10_000;
+                // Checked arithmetic (review item 3): an overflow anywhere is a REVIEW, never a wrap.
+                let sums = self.ledger.po_committed(&po.po_ref, &cur)
+                    .and_then(|c| po.open_balance_paise.checked_sub(c))
+                    .and_then(|available| available.max(0).checked_mul(pol.po_tolerance_bp)
+                        .and_then(|t| available.checked_add(t / 10_000)).map(|hard| (available, hard)));
+                let Some((available, hard)) = sums else {
+                    ctx.add("arithmetic_overflow", Verdict::Review, Control::Structural, format!("PO balance arithmetic for {} overflowed", po.po_ref));
+                    return self.finish(Some(&p), ctx, signals, now);
+                };
                 if p.amount_paise > hard {
                     ctx.add("over_po_balance", Verdict::Block, Control::Structural,
                         format!("amount {} > PO open balance {} + tolerance", money(p.amount_paise, &cur), money(available, &cur)));
@@ -295,11 +323,24 @@ impl Governor {
                 ctx.add("duplicate_irn", Verdict::Block, Control::Structural, format!("IRN already used by decision {}", e.decision_id));
             }
         }
+        // 6b. Same document under a new number (review item 3, ATK-10 class): the signed text
+        // layer, with the invoice number taken out, matches a live entry of this vendor.
+        if let Some(ck) = content_key(req.evidence.text_layer.as_deref(), &p.invoice_no) {
+            if let Some(e) = self.ledger.same_content(&p.vendor_id, &key, &ck, now, pol.near_duplicate_window_secs) {
+                ctx.add("near_duplicate_content", Verdict::Review, Control::Extraction,
+                    format!("invoice {} has the same document text as decision {} (only the invoice number differs), within {} days",
+                        p.invoice_no, e.decision_id, pol.near_duplicate_window_secs / 86_400));
+            }
+        }
 
         // 7. Split payments: rolling per-vendor window (paid + pending + this one).
-        let prior = self.ledger.window_sum(&p.vendor_id, &cur, now, pol.window_secs);
+        let Some((prior, with_this)) = self.ledger.window_sum(&p.vendor_id, &cur, now, pol.window_secs)
+            .and_then(|prior| prior.checked_add(p.amount_paise).map(|w| (prior, w))) else {
+            ctx.add("arithmetic_overflow", Verdict::Review, Control::Structural, "vendor window sum overflowed");
+            return self.finish(Some(&p), ctx, signals, now);
+        };
         if let Some(l) = limits {
-            if prior > 0 && prior + p.amount_paise > l.approval_threshold_minor {
+            if prior > 0 && with_this > l.approval_threshold_minor {
                 ctx.add("vendor_window_exceeded", Verdict::Review, Control::Structural,
                     format!("{} in the last {} days + this {} > threshold {}", money(prior, &cur), pol.window_secs / 86_400, money(p.amount_paise, &cur), money(l.approval_threshold_minor, &cur)));
             }
@@ -324,6 +365,38 @@ impl Governor {
             if !vendor.email_domains.iter().any(|m| normalize::domain(m) == d) {
                 ctx.add("sender_domain_mismatch", Verdict::Block, Control::Extraction,
                     format!("sent from {d}, which is not a domain on file for {}", vendor.vendor_id));
+            }
+        }
+
+        // 8b. GST head vs states (review item 3, ATK-38 class; STRUCTURAL states, EXTRACTION heads).
+        // Intra-state supply is CGST+SGST (or UTGST); inter-state is IGST. States are the first two
+        // digits of the vendor's master GSTIN and the buyer's own GSTIN from policy. Stated limits:
+        // place of supply other than the buyer's state, SEZ supplies and exports are not modelled.
+        if let (Some(vg), Some(bg)) = (vendor.gstin.as_deref(), pol.buyer_gstin.as_deref()) {
+            let (vs, bs) = (state_code(vg), state_code(bg));
+            let mut heads: Vec<String> = req.evidence.tax_kinds.iter().map(|k| k.to_ascii_uppercase()).collect();
+            let lines_src = if req.evidence.item_lines.is_empty() { req.proposed_item_lines.as_deref().unwrap_or(&[]) } else { &req.evidence.item_lines[..] };
+            // proposed lines only count once verified (step 10a); the extractor's heads suffice here.
+            if !req.evidence.item_lines.is_empty() || lines::verify_proposed(lines_src, req.evidence.text_layer.as_deref(), req.evidence.printed_total_paise).is_ok() {
+                for l in lines_src.iter().filter(|l| l.is_tax) {
+                    let d = lines::fold(&l.description);
+                    for h in ["cgst", "sgst", "utgst", "igst"] {
+                        if d.contains(h) { heads.push(h.to_ascii_uppercase()); }
+                    }
+                }
+            }
+            heads.sort();
+            heads.dedup();
+            let intra_heads = heads.iter().any(|h| h == "CGST" || h == "SGST" || h == "UTGST");
+            let igst = heads.iter().any(|h| h == "IGST");
+            if let (Some(vs), Some(bs)) = (vs, bs) {
+                if vs == bs && igst {
+                    ctx.add("tax_type_mismatch", Verdict::Review, Control::Extraction,
+                        format!("vendor and buyer are both in state {vs} (intra-state) but the invoice charges IGST; it should be CGST+SGST"));
+                } else if vs != bs && intra_heads {
+                    ctx.add("tax_type_mismatch", Verdict::Review, Control::Extraction,
+                        format!("vendor (state {vs}) and buyer (state {bs}) are in different states but the invoice charges CGST/SGST; it should be IGST"));
+                }
             }
         }
 
@@ -393,10 +466,15 @@ impl Governor {
             }
         }
 
-        self.finish(Some(&p), ctx, signals, now)
+        let ck = content_key(req.evidence.text_layer.as_deref(), &p.invoice_no);
+        self.finish_with(Some(&p), ctx, signals, now, ck)
     }
 
-    fn finish(&mut self, p: Option<&Proposal>, mut ctx: Ctx, signals: Vec<Signal>, now: i64) -> Decision {
+    fn finish(&mut self, p: Option<&Proposal>, ctx: Ctx, signals: Vec<Signal>, now: i64) -> Decision {
+        self.finish_with(p, ctx, signals, now, None)
+    }
+
+    fn finish_with(&mut self, p: Option<&Proposal>, mut ctx: Ctx, signals: Vec<Signal>, now: i64, content: Option<String>) -> Decision {
         let deterministic = ctx.verdict();
         let mut verdict = merge(deterministic, &signals);
         // A tamper alert combined with any other non-allow reason escalates to BLOCK (design §4a).
@@ -426,6 +504,7 @@ impl Governor {
                 Verdict::Review => Some(EntryStatus::Pending),
                 Verdict::Block => None,
             };
+            let status = if ctx.no_ledger { None } else { status };
             if let Some(status) = status {
                 self.ledger.entries.push(Entry {
                     decision_id: decision_id.clone(),
@@ -438,6 +517,7 @@ impl Governor {
                     status,
                     ts: now,
                     near_key: normalize::near_dup_base(&p.invoice_no),
+                    content_key: content.clone(),
                 });
             }
         }
@@ -451,7 +531,7 @@ impl Governor {
     /// A decision that never reached the rules (e.g. evidence failed provenance checks in
     /// `trust.rs`). Audited like any other; with no proposal it can never be ALLOW.
     pub fn reject(&mut self, rule: &str, verdict: Verdict, detail: String, now: i64) -> Decision {
-        let ctx = Ctx { reasons: vec![reason(rule, verdict, Control::Structural, detail)], tamper: false };
+        let ctx = Ctx { reasons: vec![reason(rule, verdict, Control::Structural, detail)], tamper: false, no_ledger: false };
         self.finish(None, ctx, vec![], now)
     }
 
@@ -481,6 +561,27 @@ impl Governor {
         }
         ok
     }
+}
+
+/// Two-digit GST state code of a GSTIN ("24" for Gujarat), when it has one.
+pub fn state_code(gstin: &str) -> Option<String> {
+    let g = normalize::gstin(gstin);
+    let s: String = g.chars().take(2).collect();
+    (s.len() == 2 && s.chars().all(|c| c.is_ascii_digit())).then_some(s)
+}
+
+/// Fingerprint of a document's text with its invoice number removed: sha256 over the folded text
+/// (lowercase, whitespace runs to one space) after every occurrence of the folded invoice number is
+/// replaced. None when there is no meaningful text (under 200 folded chars) or no invoice number.
+pub fn content_key(text: Option<&str>, invoice_no: &str) -> Option<String> {
+    use sha2::{Digest, Sha256};
+    let t = lines::fold(text?);
+    let inv = lines::fold(invoice_no);
+    if t.chars().count() < 200 || inv.chars().count() < 2 {
+        return None;
+    }
+    let stripped = t.replace(inv.as_str(), "\u{1}inv\u{1}");
+    Some(hex::encode(Sha256::digest(stripped.as_bytes())))
 }
 
 fn reason(rule: &str, verdict: Verdict, control: Control, detail: String) -> Reason {

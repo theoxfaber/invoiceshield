@@ -219,8 +219,40 @@ def governor_evidence(ev: Evidence, buyer_gstin: str) -> dict:
         # Signed with the rest; the governor uses it only to verify model-proposed item lines
         # verbatim (governor/src/lines.rs). Capped so a huge document cannot bloat the envelope.
         "text_layer": text[:TEXT_LAYER_CAP],
+        "tax_kinds": tax_kinds(text),
+        "document_kind": document_kind(text),
     }
     return out
+
+
+# --- GST heads and document kind (review item 3, 2026-10-31) -------------------------------------
+_TAX_HEAD_RE = re.compile(r"\b(CGST|SGST|UTGST|IGST)\b", re.I)
+_TAX_AMT_RE = re.compile(r"(?<![\d.,])(\d[\d,]*\.\d{2})(?![\d,])(?!\s*%)")
+
+
+def tax_kinds(text: str) -> list[str]:
+    """GST heads charged with a non-zero amount: the first amount printed after the head (within 60
+    characters and before the next head) must be non-zero. 'IGST 0.00' or 'IGST not applicable'
+    does not count; a percentage ('9%') is not an amount."""
+    text = text or ""
+    found = set()
+    heads = list(_TAX_HEAD_RE.finditer(text))
+    for i, m in enumerate(heads):
+        stop = heads[i + 1].start() if i + 1 < len(heads) else len(text)
+        window = text[m.end():min(stop, m.end() + 60)]
+        a = _TAX_AMT_RE.search(window)
+        if a and _paise(a.group(1)) != 0:
+            found.add(m.group(1).upper())
+    return sorted(found)
+
+
+_CREDIT_NOTE_RE = re.compile(r"^\W*credit\s*note\b", re.I)
+
+
+def document_kind(text: str) -> str:
+    """'credit_note' when one of the first 12 non-empty lines is titled Credit Note, else 'invoice'."""
+    head = [l.strip() for l in (text or "").splitlines() if l.strip()][:12]
+    return "credit_note" if any(_CREDIT_NOTE_RE.match(l) for l in head) else "invoice"
 
 
 # --- Currency ------------------------------------------------------------------------------------

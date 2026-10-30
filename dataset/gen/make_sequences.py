@@ -54,5 +54,14 @@ def sequences() -> list[dict]:
     return S
 
 
+def step_date(st: dict) -> str:
+    """Invoice date printed on a step: 27/10/2026 plus the step's day offset. Before 2026-10-31 every
+    step printed 27/10/2026, which made two genuine invoices days apart byte-identical apart from
+    the number; the content near-duplicate rule (review item 3) exposed it (docs/DECISIONS.md)."""
+    import datetime as _dt
+    return (_dt.date(2026, 10, 27) + _dt.timedelta(days=int(st.get("day", 0)))).strftime("%d/%m/%Y")
+
+
 def build_step_pdf(st: dict, out: pathlib.Path) -> dict:
-    return make_t1(st["issuer"], st["pdf_invoice_no"].strip().replace(ZW, ""), st["po_ref"], st["amount_paise"], out)
+    return make_t1(st["issuer"], st["pdf_invoice_no"].strip().replace(ZW, ""), st["po_ref"], st["amount_paise"], out,
+                   date=step_date(st))

@@ -29,6 +29,10 @@ pub struct Entry {
     /// entries written before it existed read as None.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub near_key: Option<String>,
+    /// Fingerprint of the signed text layer with the invoice number removed (review item 3,
+    /// ATK-10 class: same document re-sent under a bumped number). None when no text was signed.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub content_key: Option<String>,
 }
 
 fn inr() -> String {
@@ -71,21 +75,36 @@ impl Ledger {
         })
     }
 
+    /// Same document content (fingerprint of the text layer minus the invoice number) from the same
+    /// vendor under another invoice number, inside (now - window, now].
+    pub fn same_content(&self, vendor_id: &str, key: &str, content_key: &str, now: i64, window_secs: i64) -> Option<&Entry> {
+        self.live().find(|e| {
+            e.vendor_id == vendor_id
+                && e.invoice_key != key
+                && e.content_key.as_deref() == Some(content_key)
+                && e.ts > now - window_secs
+                && e.ts <= now
+        })
+    }
+
     pub fn irn_seen(&self, irn: &str) -> Option<&Entry> {
         self.live().find(|e| e.irn.as_deref() == Some(irn))
     }
 
     /// Sum of paid + pending for a vendor in one currency in (now - window, now].
-    pub fn window_sum(&self, vendor_id: &str, currency: &str, now: i64, window_secs: i64) -> i64 {
+    /// None on overflow (the caller fails closed).
+    pub fn window_sum(&self, vendor_id: &str, currency: &str, now: i64, window_secs: i64) -> Option<i64> {
+        let since = now.checked_sub(window_secs)?;
         self.live()
-            .filter(|e| e.vendor_id == vendor_id && e.currency == currency && e.ts > now - window_secs && e.ts <= now)
-            .map(|e| e.amount_paise)
-            .sum()
+            .filter(|e| e.vendor_id == vendor_id && e.currency == currency && e.ts > since && e.ts <= now)
+            .try_fold(0i64, |s, e| s.checked_add(e.amount_paise))
     }
 
     /// Amount already committed (paid + pending) against a PO, in the PO's currency.
-    pub fn po_committed(&self, po_ref: &str, currency: &str) -> i64 {
-        self.live().filter(|e| e.po_ref == po_ref && e.currency == currency).map(|e| e.amount_paise).sum()
+    /// None on overflow (the caller fails closed).
+    pub fn po_committed(&self, po_ref: &str, currency: &str) -> Option<i64> {
+        self.live().filter(|e| e.po_ref == po_ref && e.currency == currency)
+            .try_fold(0i64, |s, e| s.checked_add(e.amount_paise))
     }
 
     pub fn set_status(&mut self, decision_id: &str, status: EntryStatus) -> bool {
