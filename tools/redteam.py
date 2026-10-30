@@ -33,11 +33,53 @@ from dataset.gen.make_invoice import make_t1
 from shield.client import BIN, MASTER, GovernorProc
 from shield.pipeline import BUYER_GSTIN, load_master
 
+try:  # Phase 2 (signed evidence) builds
+    from shield.client import ExtractorProc
+    SIGNED = True
+except ImportError:  # pragma: no cover
+    ExtractorProc, SIGNED = None, False
+
 REPO = pathlib.Path(__file__).resolve().parents[1]
 CLEAR = json.dumps({"signals": []})
 NOW = 1_793_000_000
 DAY = 86_400
 RESULTS = []
+
+
+def gov_dev(**kw):
+    """Governor that accepts hand-built evidence (DEV/TEST path on Phase 2 builds). Used for
+    probes of the RULES given some evidence; the trust boundary itself is probed in trust()."""
+    if SIGNED:
+        kw["dev_unsigned"] = True
+    return GovernorProc(**kw)
+
+
+def prod_governor(port, db, extractor=None):
+    """Production-mode server (no eval clock, on-disk ledger, signed evidence only)."""
+    k = secrets.token_hex(16)
+    env = {**os.environ, "GOVERNOR_API_KEY": k, "GOVERNOR_MASTER": str(MASTER), "GOVERNOR_PORT": str(port),
+           "GOVERNOR_DB": str(db)}
+    for v in ("GOVERNOR_EVAL_CLOCK", "GOVERNOR_DEV_UNSIGNED_EVIDENCE"):
+        env.pop(v, None)
+    if extractor is not None:
+        env["GOVERNOR_EXTRACTOR_PUBKEY"] = extractor.public_key_hex
+    pr = subprocess.Popen([str(BIN)], env=env, stderr=subprocess.DEVNULL, cwd=str(pathlib.Path(db).parent))
+    cl = httpx.Client(base_url=f"http://127.0.0.1:{port}", headers={"Authorization": f"Bearer {k}"}, trust_env=False, timeout=30)
+    for _ in range(100):
+        try:
+            if cl.get("/health").status_code == 200:
+                break
+        except httpx.HTTPError:
+            time.sleep(0.1)
+    return pr, cl
+
+
+def signed_body(ex, pdf, sender, proposal, checker=None):
+    import hashlib
+    doc = pathlib.Path(pdf).read_bytes()
+    env = ex.extract(doc, {"from": sender})
+    return {"proposal": {**proposal, "document_sha256": hashlib.sha256(doc).hexdigest()}, "signed_evidence": env,
+            "checker_raw": checker or CLEAR}
 
 
 def rec(cat, name, expect, observed, outcome, detail=None):
@@ -54,6 +96,82 @@ def ev_for(pdf, sender):
     return governor_evidence(assemble(pdf, {"from": sender}), BUYER_GSTIN)
 
 
+def trust(tmp, g, gprop, gev):
+    """Phase 2 trust boundary: strict governor + the real extraction service."""
+    import base64
+    import hashlib
+    import json as _j
+    x = make_t1("V001", "SOS/26-27/0911", "PO-2026-0101", 2360000, tmp / "tx.pdf",
+                bank={"bank_name": "Fraud Bank", "ifsc": "HDFC0009999", "bank_account": "50100999988887"})
+    xprop = {**gprop, "invoice_no": "SOS/26-27/0911"}
+    with GovernorProc() as gov:
+        ex = gov.extractor
+        gov.reset()
+        d = gov.post(signed_body(ex, g["pdf"], g["cover_email"]["from"], gprop), NOW)
+        rec("trust", "genuine invoice through the signed extraction service", "ALLOW", verdict(d),
+            "held" if d["verdict"] == "allow" else "finding")
+        gov.reset()
+        d = gov.post({"proposal": xprop, "evidence": dict(ev_for(x["pdf"], x["cover_email"]["from"]), printed_bank_account=None,
+                                                         printed_ifsc=None, all_printed_accounts=[], all_printed_ifscs=[]),
+                      "checker_raw": CLEAR}, NOW)
+        rec("trust", "R1: bank-swap PDF with caller-forged evidence (bank fields stripped)", "not ALLOW",
+            verdict(d), "held" if d["verdict"] != "allow" else "finding")
+        gov.reset()
+        d = gov.post({"proposal": {**gprop, "invoice_no": "SOS/26-27/0912", "amount_paise": 7000000},
+                      "evidence": dict(gev, printed_total_paise=7000000, item_lines=[]), "checker_raw": CLEAR}, NOW)
+        rec("trust", "R2: Rs 23,600 invoice at Rs 70,000 with a forged printed total", "not ALLOW", verdict(d),
+            "held" if d["verdict"] != "allow" else "finding")
+        gov.reset()
+        d = gov.post(signed_body(ex, g["pdf"], g["cover_email"]["from"], {**gprop, "amount_paise": 7000000}), NOW)
+        rec("trust", "R2 through the signed path: same over-payment, honest evidence", "REVIEW (amount differs from document)",
+            verdict(d), "held" if d["verdict"] != "allow" else "finding")
+        gov.reset()
+        honest = gov.post(signed_body(ex, x["pdf"], x["cover_email"]["from"], xprop), NOW)
+        rec("trust", "bank-swap PDF through the signed path", "REVIEW + tamper alert", verdict(honest),
+            "held" if honest["verdict"] != "allow" and honest.get("tamper_alert") else "finding")
+        # tamper with a signed envelope: strip bank fields from the payload without re-signing
+        gov.reset()
+        body = signed_body(ex, x["pdf"], x["cover_email"]["from"], xprop)
+        pl = _j.loads(body["signed_evidence"]["payload"])
+        ev_obj = pl.get("evidence", pl)
+        for k in ("printed_bank_account", "printed_ifsc"):
+            if k in ev_obj:
+                ev_obj[k] = None
+        for k in ("all_printed_accounts", "all_printed_ifscs"):
+            if k in ev_obj:
+                ev_obj[k] = []
+        body["signed_evidence"] = dict(body["signed_evidence"], payload=_j.dumps(pl, sort_keys=True, separators=(",", ":"), ensure_ascii=False))
+        d = gov.post(body, NOW)
+        rec("trust", "R1/R3: signed envelope edited after signing (bank fields stripped)", "BLOCK (signature fails)", verdict(d),
+            "held" if d["verdict"] == "block" else ("held" if d["verdict"] != "allow" else "finding"))
+        # replay one envelope twice
+        gov.reset()
+        body = signed_body(ex, g["pdf"], g["cover_email"]["from"], {**gprop, "invoice_no": "SOS/26-27/0913"})
+        d1 = gov.post(body, NOW)
+        gov.reset()  # even with the ledger wiped, the nonce must not be accepted twice
+        d2 = gov.post(body, NOW)
+        rec("trust", "same signed envelope submitted twice (ledger reset in between)", "second: BLOCK evidence_replayed",
+            f"{verdict(d1)} then {verdict(d2)}", "held" if d2["verdict"] == "block" else "finding")
+        # envelope for document A presented with document B's hash
+        gov.reset()
+        body = signed_body(ex, g["pdf"], g["cover_email"]["from"], gprop)
+        body["proposal"]["document_sha256"] = hashlib.sha256(pathlib.Path(x["pdf"]).read_bytes()).hexdigest()
+        d = gov.post(body, NOW)
+        rec("trust", "genuine envelope bound to a different document's hash", "BLOCK document_hash_mismatch", verdict(d),
+            "held" if d["verdict"] == "block" else "finding")
+        # envelope signed by another key
+        with ExtractorProc() as rogue:
+            gov.reset()
+            d = gov.post(signed_body(rogue, x["pdf"], x["cover_email"]["from"], xprop), NOW)
+        rec("trust", "envelope signed by an unknown extractor key", "BLOCK evidence_signature_invalid", verdict(d),
+            "held" if d["verdict"] == "block" else "finding")
+        gov.reset()
+        b2 = signed_body(ex, g["pdf"], g["cover_email"]["from"], {**gprop, "invoice_no": "SOS/26-27/0914"})
+        b2["signed_evidence"] = dict(b2["signed_evidence"], sig=base64.b64encode(b"\0" * 64).decode())
+        d = gov.post(b2, NOW)
+        rec("trust", "envelope with a zeroed signature", "BLOCK", verdict(d), "held" if d["verdict"] == "block" else "finding")
+
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--tag", default=dt.datetime.now(dt.timezone(dt.timedelta(hours=5, minutes=30))).strftime("%Y%m%d-%H%M"))
@@ -67,7 +185,7 @@ def main():
     gev = ev_for(g["pdf"], g["cover_email"]["from"])
     gprop = {"vendor_id": "V001", "invoice_no": "SOS/26-27/0900", "amount_paise": 2360000, "po_ref": "PO-2026-0101"}
 
-    with GovernorProc() as gov:
+    with gov_dev() as gov:
         h = gov.http
         gov.reset()
         d = gov.evaluate(gprop, gev, CLEAR, now=NOW)
@@ -83,11 +201,12 @@ def main():
         gov.reset()
         forged = dict(xev, printed_bank_account=None, printed_ifsc=None, all_printed_accounts=[], all_printed_ifscs=[])
         d = gov.evaluate(p, forged, CLEAR, now=NOW)
-        rec("forged_evidence", "bank-swap PDF, caller strips bank fields from evidence",
+        rec("forged_evidence_dev" if SIGNED else "forged_evidence", "bank-swap PDF, caller strips bank fields from evidence",
             "REVIEW + tamper alert (the document asks for another account)",
             f"honest evidence: {verdict(honest)}; forged evidence: {verdict(d)}",
-            "finding" if d["verdict"] == "allow" else "held",
-            "The governor trusts the evidence object it is sent. Money still goes only to the master account "
+            ("info" if SIGNED else ("finding" if d["verdict"] == "allow" else "held")),
+            ("DEV/TEST path only on this build (GOVERNOR_DEV_UNSIGNED_EVIDENCE); production refuses caller evidence, see "
+             "the trust probes. " if SIGNED else "") + "The governor trusts the evidence object it is sent. Money still goes only to the master account "
             "(payee never comes from evidence), but the tamper alert and REVIEW disappear. Fix in Phase 2: "
             "governor-owned or Ed25519-signed evidence.")
         gov.reset()
@@ -95,15 +214,17 @@ def main():
         iev = ev_for(infl["pdf"], infl["cover_email"]["from"])
         forged = dict(iev, printed_total_paise=7000000, item_lines=[])
         d = gov.evaluate({**gprop, "invoice_no": "SOS/26-27/0902", "amount_paise": 7000000}, forged, CLEAR, now=NOW)
-        rec("forged_evidence", "Rs 23,600 invoice proposed at Rs 70,000 with forged printed_total and no item lines",
-            "REVIEW (amount differs from the document)", verdict(d), "finding" if d["verdict"] == "allow" else "held",
-            "Over-payment to the right payee inside PO balance and threshold. Same root cause and fix as above.")
+        rec("forged_evidence_dev" if SIGNED else "forged_evidence", "Rs 23,600 invoice proposed at Rs 70,000 with forged printed_total and no item lines",
+            "REVIEW (amount differs from the document)", verdict(d),
+            "info" if SIGNED else ("finding" if d["verdict"] == "allow" else "held"),
+            ("DEV/TEST path only on this build. " if SIGNED else "") + "Over-payment to the right payee inside PO balance and threshold. Same root cause and fix as above.")
         gov.reset()
         scan_ev = dict(gev, text_source="text_layer")
         d = gov.evaluate({**gprop, "invoice_no": "SOS/26-27/0903"}, dict(gev, text_source="ocr"), CLEAR, now=NOW)
         d2 = gov.evaluate({**gprop, "invoice_no": "SOS/26-27/0904"}, scan_ev, CLEAR, now=NOW + DAY * 8)
-        rec("forged_evidence", "scan relabelled text_source=text_layer", "REVIEW (scans always need a person)",
-            f"as ocr: {verdict(d)}; relabelled: {verdict(d2)}", "finding" if d2["verdict"] == "allow" else "held",
+        rec("forged_evidence_dev" if SIGNED else "forged_evidence", "scan relabelled text_source=text_layer", "REVIEW (scans always need a person)",
+            f"as ocr: {verdict(d)}; relabelled: {verdict(d2)}",
+            "info" if SIGNED else ("finding" if d2["verdict"] == "allow" else "held"),
             "The OCR REVIEW rule keys off a caller-supplied label. Same fix (governor-owned evidence).")
         r = h.post("/v1/actions", json={"proposal": gprop, "evidence": dict(gev, payee_override="x"), "checker_raw": CLEAR},
                    headers={"x-eval-now": str(NOW)})
@@ -131,38 +252,45 @@ def main():
         rec("replay", "IRN reused under a new invoice number", "BLOCK", f"{verdict(d5)} then {verdict(d6)}",
             "held" if d6["verdict"] == "block" else "finding")
 
-    # restart: is the ledger durable? (production mode, on-disk DB when the build supports GOVERNOR_DB)
+    # restart: is the ledger durable? (production mode, on-disk DB)
     db = tmp / "gov.db"
-    def prod(port):
-        k = secrets.token_hex(16)
-        env = {**os.environ, "GOVERNOR_API_KEY": k, "GOVERNOR_MASTER": str(MASTER), "GOVERNOR_PORT": str(port),
-               "GOVERNOR_DB": str(db)}
-        env.pop("GOVERNOR_EVAL_CLOCK", None)
-        pr = subprocess.Popen([str(BIN)], env=env, stderr=subprocess.DEVNULL, cwd=str(tmp))
-        cl = httpx.Client(base_url=f"http://127.0.0.1:{port}", headers={"Authorization": f"Bearer {k}"}, trust_env=False, timeout=10)
-        for _ in range(80):
-            try:
-                if cl.get("/health").status_code == 200:
-                    break
-            except httpx.HTTPError:
-                time.sleep(0.1)
-        return pr, cl
-    pr, cl = prod(18741)
-    d1 = cl.post("/v1/actions", json={"proposal": gprop, "evidence": gev, "checker_raw": CLEAR}).json()
-    pr.terminate(); pr.wait(timeout=5)
-    pr, cl = prod(18742)
+    ex = ExtractorProc() if SIGNED else None
     try:
-        d2 = cl.post("/v1/actions", json={"proposal": gprop, "evidence": gev, "checker_raw": CLEAR}).json()
-    finally:
+        body = (lambda: signed_body(ex, g["pdf"], g["cover_email"]["from"], gprop)) if SIGNED else \
+               (lambda: {"proposal": gprop, "evidence": gev, "checker_raw": CLEAR})
+        pr, cl = prod_governor(18741, db, ex)
+        d1 = cl.post("/v1/actions", json=body()).json()
         pr.terminate(); pr.wait(timeout=5)
-    rec("replay", "same invoice after a governor restart (production mode, GOVERNOR_DB on disk)",
-        "BLOCK duplicate (ledger survives restart)", f"{verdict(d1)}, restart, {verdict(d2)}",
-        "finding" if d2["verdict"] == "allow" else "held",
-        "Before Phase 3 the ledger was in memory and a restart forgot every payment (pre-phase1 run: ALLOW). "
-        "Eval mode still uses :memory: by design.")
+        pr, cl = prod_governor(18742, db, ex)
+        try:
+            d2 = cl.post("/v1/actions", json=body()).json()
+            r = cl.post("/v1/eval/reset")
+            rec("http", "eval reset endpoint in production mode", "404", f"HTTP {r.status_code}",
+                "held" if r.status_code == 404 else "finding")
+            d3 = cl.post("/v1/actions", json=body(), headers={"x-eval-now": "999999999999"}).json()
+            rec("http", "x-eval-now clock header in production mode (to dodge the 7-day window)",
+                "ignored: still a duplicate BLOCK", verdict(d3), "held" if d3["verdict"] == "block" else "finding")
+            if SIGNED:
+                r = cl.post("/v1/actions", json={"proposal": {**gprop, "invoice_no": "SOS/26-27/0999"}, "evidence": gev,
+                                                 "checker_raw": CLEAR})
+                rec("trust", "caller-supplied evidence in production mode", "REVIEW evidence_unsigned (never read)",
+                    verdict(r.json()), "held" if r.json()["verdict"] != "allow" else "finding")
+        finally:
+            pr.terminate(); pr.wait(timeout=5)
+        rec("replay", "same invoice after a governor restart (production mode, GOVERNOR_DB on disk)",
+            "BLOCK duplicate (ledger survives restart)", f"{verdict(d1)}, restart, {verdict(d2)}",
+            "finding" if d2["verdict"] == "allow" else "held",
+            "Before Phase 3 the ledger was in memory and a restart forgot every payment (pre-phase1 run: ALLOW). "
+            "Eval mode still uses :memory: by design.")
+    finally:
+        if ex:
+            ex.close()
+
+    if SIGNED:
+        trust(tmp, g, gprop, gev)
 
     # ---------------- splits
-    with GovernorProc() as gov:
+    with gov_dev() as gov:
         gov.reset()
         a1 = make_t1("V001", "SOS/26-27/0960", "PO-2026-0101", 6000000, tmp / "s1.pdf")
         a2 = make_t1("V001", "SOS/26-27/0961", "PO-2026-0102", 6000000, tmp / "s2.pdf")
@@ -183,7 +311,7 @@ def main():
             "/".join(outs), "info", "Known limit S05: the 7-day window never sees more than one. PO balance still caps the total.")
 
     # ---------------- currency
-    with GovernorProc() as gov:
+    with gov_dev() as gov:
         po = next(p for p in master["pos"] if p["owner_vendor_id"] == "V003")
         po_cur = po.get("currency", "INR (no currency field)")
         u = make_t1("V003", "BC-INV-7001", po["po_ref"], 50000, tmp / "u.pdf")
@@ -228,7 +356,7 @@ def main():
     cyr = sup["gstin"].replace("A", "\u0410", 1)  # Cyrillic A
     text = f"GSTIN: {cyr}\nA/c No: {sup['bank_account']}\nIFSC: {sup['ifsc'].replace('B', 'В', 1)}\nTotal Payable: 23600.00"
     e = governor_evidence(Evidence("", 1, text, {"text_source": "text_layer"}), BUYER_GSTIN)
-    with GovernorProc() as gov:
+    with gov_dev() as gov:
         gov.reset()
         d = gov.evaluate(gprop, e, CLEAR, now=NOW)
         rec("unicode", "issuer GSTIN with a Cyrillic A (extractor path)", "not read as the vendor's GSTIN; REVIEW",
@@ -301,30 +429,6 @@ def main():
         alive = gov.http.get("/health").status_code
         rec("http", "server alive after the oversized body", "200", f"HTTP {alive}", "held" if alive == 200 else "finding")
 
-    # prod mode: eval hooks must be off
-    key = secrets.token_hex(16)
-    env = {**os.environ, "GOVERNOR_API_KEY": key, "GOVERNOR_MASTER": str(MASTER), "GOVERNOR_PORT": "18733",
-           "GOVERNOR_DB": str(tmp / "prod.db")}
-    env.pop("GOVERNOR_EVAL_CLOCK", None)
-    proc = subprocess.Popen([str(BIN)], env=env, stderr=subprocess.DEVNULL, cwd=str(tmp))
-    try:
-        c = httpx.Client(base_url="http://127.0.0.1:18733", headers={"Authorization": f"Bearer {key}"}, trust_env=False, timeout=10)
-        for _ in range(50):
-            try:
-                if c.get("/health").status_code == 200:
-                    break
-            except httpx.HTTPError:
-                time.sleep(0.1)
-        r = c.post("/v1/eval/reset")
-        rec("http", "eval reset endpoint in production mode", "404", f"HTTP {r.status_code}", "held" if r.status_code == 404 else "finding")
-        d1 = c.post("/v1/actions", json={"proposal": gprop, "evidence": gev, "checker_raw": CLEAR}, headers={"x-eval-now": "1"}).json()
-        d2 = c.post("/v1/actions", json={"proposal": gprop, "evidence": gev, "checker_raw": CLEAR}, headers={"x-eval-now": "999999999999"}).json()
-        rec("http", "x-eval-now clock header in production mode (to dodge the 7-day window)", "ignored: second is a duplicate BLOCK",
-            f"{verdict(d1)} then {verdict(d2)}", "held" if d2["verdict"] == "block" else "finding")
-    finally:
-        proc.terminate()
-        proc.wait(timeout=5)
-
     # ---------------- oversized / hostile PDFs (assembler, in-process)
     from reportlab.pdfgen import canvas
     big_pdf = tmp / "pages.pdf"
@@ -338,9 +442,10 @@ def main():
     e = governor_evidence(assemble(big_pdf, {}), BUYER_GSTIN)
     rec("pdf", f"1,500-page text PDF ({big_pdf.stat().st_size / 1e6:.1f} MB)",
         "bounded time/memory, or refused", f"assembled in {time.time() - t0:.1f}s; maxrss +{(resource.getrusage(resource.RUSAGE_SELF).ru_maxrss - r0) / 1024:.0f} MB; "
-        f"{len(e['all_printed_accounts'])} accounts extracted", "finding",
-        "No page or size cap in assemble(): time grows linearly with pages; a large enough file ties up the worker. "
-        "Phase 2 adds a sandboxed extractor with CPU/memory/time limits.")
+        f"{len(e['all_printed_accounts'])} accounts extracted", "info" if SIGNED else "finding",
+        "In-process assemble() has no page or size cap (time grows linearly with pages). "
+        + ("Production extraction now runs in the Phase 2 sandbox (next probes)." if SIGNED else
+           "Phase 2 adds a sandboxed extractor with CPU/memory/time limits."))
     from PIL import Image
     img_pdf = tmp / "img.pdf"
     pages = [Image.new("L", (1700, 2200), 255) for _ in range(3)]
@@ -348,7 +453,29 @@ def main():
     t0 = time.time()
     ev = assemble(img_pdf, {})
     rec("pdf", "3-page image-only PDF (OCR path)", "bounded", f"OCR {time.time() - t0:.1f}s for 3 pages ({ev.metadata['text_source']})",
-        "info", "OCR runs per page with no page cap: an N-page scan costs about N x this. Same Phase 2 fix.")
+        "info", "In-process assemble() has no page cap: an N-page scan costs about N x this. Production extraction runs in the "
+        "Phase 2 sandbox (50 pages, 10 MB, CPU/wall limits)." if SIGNED else "OCR runs per page with no page cap: an N-page scan costs about N x this. Same Phase 2 fix.")
+    if SIGNED:
+        with ExtractorProc() as ex:
+            for label, path in (("1,500-page text PDF", big_pdf), ("3-page image-only PDF", img_pdf)):
+                t0 = time.time()
+                env = ex.extract(pathlib.Path(path).read_bytes(), {})
+                pl = json.loads(env["payload"])
+                st = pl.get("status") or (pl.get("evidence") or {}).get("status")
+                why = pl.get("failure") or (pl.get("evidence") or {}).get("failure")
+                rec("pdf", f"{label} through the sandboxed extraction service", "bounded (limits) and signed either way",
+                    f"{time.time() - t0:.1f}s, status={st}" + (f" ({why})" if why else ""), "info",
+                    "Phase 2 sandbox (extractor/sandbox.py Limits): 10 MB input cap checked before spawning, 50-page cap "
+                    "checked in the worker, CPU 30 s, wall 60 s, memory/file limits. A document that breaks them is signed "
+                    "as failed and the governor answers REVIEW. Under the caps, OCR cost is still linear in pages.")
+            t0 = time.time()
+            env = ex.extract(b"%PDF-1.7\n" + b"0" * (11 * 1024 * 1024), {})
+            pl = json.loads(env["payload"])
+            st = pl.get("status") or (pl.get("evidence") or {}).get("status")
+            why = pl.get("failure") or (pl.get("evidence") or {}).get("failure")
+            rec("pdf", "11 MB file through the sandboxed extraction service", "refused before parsing, signed as failed",
+                f"{time.time() - t0:.1f}s, status={st}" + (f" ({why})" if why else ""),
+                "held" if st == "failed" else "finding", "10 MB input cap (Limits.max_bytes) checked before the worker spawns.")
     junk = tmp / "junk.pdf"
     junk.write_bytes(b"%PDF-1.7\n" + os.urandom(200_000))
     try:

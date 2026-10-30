@@ -46,6 +46,12 @@ from dataset.real.load import check_labels, load_midd, load_sparrow
 from dataset.real.sources import RAW
 from shield.client import GovernorProc
 
+try:  # Phase 2 (signed evidence) builds
+    from shield.client import ExtractorProc  # noqa: F401
+    SIGNED = True
+except ImportError:  # pragma: no cover
+    SIGNED = False
+
 ROOT = pathlib.Path(__file__).resolve().parent
 CLEAR = json.dumps({"signals": []})
 DEFAULT_THRESHOLD_PAISE = 1_00_000_00
@@ -231,7 +237,10 @@ def run_gate(cases, setting: str) -> list[dict]:
         mp = pathlib.Path(d) / "master.json"
         mp.write_text(json.dumps(master))
         vendors = {v["vendor_id"]: v for v in master["vendors"]}
-        with GovernorProc(master=mp) as gov:
+        # Counterfactual evidence is built from the labelled OCR text (MIDD has no PDFs), so this
+        # uses the DEV/TEST unsigned path on Phase 2 builds. It measures the RULES given evidence;
+        # the signed trust boundary is probed in tools/redteam.py, not here.
+        with GovernorProc(master=mp, **({"dev_unsigned": True} if SIGNED else {})) as gov:
             for c in cases:
                 gov.reset()
                 g = c["gold"]

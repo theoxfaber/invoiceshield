@@ -48,6 +48,13 @@ from assembler.evidence import assemble
 from assembler.extract import governor_evidence
 from shield.client import GovernorProc
 
+try:  # Phase 2 builds: the governor reads only evidence signed by the extraction service
+    from shield.client import ExtractorProc  # noqa: F401
+    from extractor.service import DEFAULT_BUYER_GSTIN as SERVICE_BUYER_GSTIN
+    SIGNED = True
+except ImportError:  # pragma: no cover
+    SIGNED, SERVICE_BUYER_GSTIN = False, None
+
 CLEAR = json.dumps({"signals": []})
 _HUMAN = {"pay": "pay", "paid": "pay", "approve": "pay", "approved": "pay", "allow": "pay",
           "hold": "hold", "review": "hold", "query": "hold", "pending": "hold",
@@ -104,7 +111,11 @@ def run(csv_path: pathlib.Path, master: pathlib.Path, buyer_gstin: str, base_ts:
         rows = list(csv.DictReader(f))
     order = sorted(range(len(rows)), key=lambda i: (_ts(rows[i], i, base_ts), i))
     out = []
-    with GovernorProc(master=master) as gov:
+    # Signed (production) path when the extraction service reads with this buyer GSTIN; the
+    # service's buyer is fixed at startup, so another buyer falls back to the DEV/TEST unsigned
+    # path with the same extractor run in-process. The report records which path was used.
+    signed = SIGNED and buyer_gstin == SERVICE_BUYER_GSTIN
+    with GovernorProc(master=master, **({} if signed or not SIGNED else {"dev_unsigned": True})) as gov:
         gov.reset()
         for i in order:
             row = rows[i]
@@ -118,13 +129,16 @@ def run(csv_path: pathlib.Path, master: pathlib.Path, buyer_gstin: str, base_ts:
             if not pdf.is_absolute():
                 pdf = csv_path.parent / pdf
             try:
-                ev = assemble(pdf, {"from": row.get("sender_email", "")})
-                gev = governor_evidence(ev, buyer_gstin)
                 prop = {"vendor_id": row["vendor_id"], "invoice_no": row["invoice_no"], "amount_paise": _paise(row),
                         "po_ref": row["po_ref"]}
                 if (row.get("currency") or "").strip():
                     prop["currency"] = row["currency"].strip().upper()
-                d = gov.evaluate(prop, gev, row.get("checker_raw") or CLEAR, now=_ts(row, i, base_ts))
+                cover = {"from": row.get("sender_email", "")}
+                if signed:  # production path: PDF -> sandboxed extraction service -> signed evidence -> governor
+                    d = gov.evaluate_document(prop, pdf, cover, row.get("checker_raw") or CLEAR, now=_ts(row, i, base_ts))
+                else:
+                    gev = governor_evidence(assemble(pdf, cover), buyer_gstin)
+                    d = gov.evaluate(prop, gev, row.get("checker_raw") or CLEAR, now=_ts(row, i, base_ts))
                 shield = d["verdict"]
                 rec.update(shield=shield, reasons=[f"{r['rule']}:{r['verdict']}" for r in d["reasons"]],
                            reason_detail=[r.get("detail", "") for r in d["reasons"]], tamper_alert=d["tamper_alert"],
@@ -141,6 +155,7 @@ def run(csv_path: pathlib.Path, master: pathlib.Path, buyer_gstin: str, base_ts:
               for h in ("pay", "hold", "reject")}
     return {
         "csv": str(csv_path), "master": str(master), "rows": len(rows), "valid": n,
+        "evidence_path": "signed" if signed else ("dev_unsigned" if SIGNED else "unsigned"),
         "agreement_strict": {"k": agree, "n": n, "rate": round(agree / n, 4) if n else None, "wilson95": wilson(agree, n)},
         "pay_decision_agreement": {"k": sum((r["human"] == "pay") == (r["shield"] == "allow") for r in valid), "n": n},
         "cohen_kappa_pay_vs_not": kappa(valid),
