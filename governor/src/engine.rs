@@ -317,6 +317,13 @@ impl Governor {
             ctx.add("near_duplicate_invoice", Verdict::Review, Control::Structural,
                 format!("invoice {} looks like a re-submission of decision {} (same vendor and amount {}, number differs only by a suffix, within {} days)",
                     p.invoice_no, e.decision_id, money(p.amount_paise, &cur), pol.near_duplicate_window_secs / 86_400));
+        } else if let Some(e) = self.ledger.sequential_resubmission(&p.vendor_id, &p.po_ref, &cur, p.amount_paise, &key, now, SEQUENTIAL_RESUBMIT_WINDOW_SECS) {
+            // 2026-10-31 (run1 finding ATK-10, tuned on the already-seen v1 set): an already-paid
+            // invoice re-sent with its number bumped by one. REVIEW, not BLOCK: genuine consecutive
+            // invoices for the same amount on the same PO within two weeks exist (weekly fixed fees).
+            ctx.add("sequential_resubmission", Verdict::Review, Control::Structural,
+                format!("invoice {} is one or two numbers away from decision {} (same vendor, PO and amount {}, within {} days)",
+                    p.invoice_no, e.decision_id, money(p.amount_paise, &cur), SEQUENTIAL_RESUBMIT_WINDOW_SECS / 86_400));
         }
         if let Some(irn) = p.irn.as_deref() {
             if let Some(e) = self.ledger.irn_seen(irn) {
@@ -638,6 +645,9 @@ fn trailing_bracket(desc: &str) -> Option<&str> {
     }
     None
 }
+
+/// Look-back for `sequential_resubmission` (14 days).
+pub const SEQUENTIAL_RESUBMIT_WINDOW_SECS: i64 = 14 * 86_400;
 
 /// Structured PO-line matching (replaces the old substring test). Returns one problem per line that
 /// is not covered; empty when every charge line fits a PO line.

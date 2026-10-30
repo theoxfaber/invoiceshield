@@ -30,6 +30,24 @@ fn invoice_no_pass(raw: &str) -> String {
         .collect()
 }
 
+/// Sequential re-submission (2026-10-31, run1 finding ATK-10): two duplicate keys (already passed
+/// through `invoice_no()`) that are identical except that the trailing digit run differs by 1 or 2
+/// ("SIS26271101" / "SIS26271102", "1186" / "1187"). Runs longer than 18 digits never match.
+pub fn sequential_pair(a: &str, b: &str) -> bool {
+    fn split(k: &str) -> Option<(&str, u64)> {
+        let nd = k.chars().rev().take_while(|c| c.is_ascii_digit()).count();
+        if nd == 0 || nd > 18 {
+            return None;
+        }
+        let (head, tail) = k.split_at(k.len() - nd);
+        tail.parse::<u64>().ok().map(|n| (head, n))
+    }
+    match (split(a), split(b)) {
+        (Some((ha, na)), Some((hb, nb))) => ha == hb && (1..=2).contains(&na.abs_diff(nb)),
+        _ => false,
+    }
+}
+
 /// Near-duplicate base (red-team R4): the duplicate key of `raw` with one trailing re-submission
 /// suffix removed, or None when the number has no such suffix. A suffix is, right after a digit,
 /// either 1-3 letters with an optional separator ("INV-101A", "INV-101-A", "0900/REV") or a
