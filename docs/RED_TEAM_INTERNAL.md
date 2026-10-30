@@ -9,6 +9,7 @@
   - `eval/results/redteam-internal-post-phase3.json`: governor built from `main` at `a07989b`, adding the Phase 3 SQLite ledger. The restart probe now runs in production mode with an on-disk `GOVERNOR_DB`.
   - `eval/results/redteam-internal-post-phase2.json`: governor rebuilt from `main` at `30a3678` (Phases 1, 2, 3 and 6) plus this branch, which does not touch `governor/` or `extractor/`. It has Phase 2 signed evidence, and the binary refuses to start without `GOVERNOR_EXTRACTOR_PUBKEY`. The run uses the real extraction service (`extractor/`) and adds 11 trust-boundary probes and a sandbox size-cap probe. An earlier file with this name was built against a stale pre-Phase-2 binary. It was discarded and never committed.
   - `eval/results/redteam-internal-post-phase4.json`: the same harness against a governor rebuilt from `main` at `e28727f` (adds Phase 4 security), about 21:40 IST. Every probe has the same outcome as post-Phase-2; only the 401 response body text differs. The harness has no probes yet for Phase 4's own features (roles, maker-checker, rate limits, which are off in eval mode, and TLS).
+  - `eval/results/redteam-internal-post-r4r6.json`: governor built from branch `hardening/redteam-fixes` (main d21d7e3 + the R4 and R6 rules, DECISIONS.md 22:10 IST), about 22:50 IST. 49 held, 0 findings, 10 info.
 - Rerun: `python3 -m tools.redteam --tag <name>`. It needs `governor/target/release/governor-server`.
 - Runs 2026-10-30, about 19:00–19:20 IST; post-Phase-2 run about 21:10 IST. Frozen-rule policy: **nothing here changed a gate rule.** Findings are recorded below and assigned to the phase that owns the fix.
 
@@ -24,6 +25,7 @@ Outcome key:
 | post-Phase-3 governor (`main` a07989b) | 35 | 6 | 4 |
 | post-Phase-2 governor (`main` 30a3678, signed evidence) | 47 | 2 | 10 |
 | post-Phase-4 governor (`main` e28727f), same probes | 47 | 2 | 10 |
+| post-R4/R6 governor (`hardening/redteam-fixes`), same probes | 49 | 0 | 10 |
 
 The post-Phase-1 run has more probes, because it adds 5 currency probes.
 
@@ -34,16 +36,16 @@ The post-Phase-2 run has 59 probes:
 
 ## Findings (post-Phase-2 unless stated)
 
-Open after Phase 2: **R4** (suffix re-submit) and **R6** (Cyrillic IFSC). Phase 2 closed R1–R3 and R7; Phase 3 closed R5.
+Open after Phase 2: **R4** (suffix re-submit) and **R6** (Cyrillic IFSC). Phase 2 closed R1–R3 and R7; Phase 3 closed R5. **R4 and R6 were closed on Oct 30 (DECISIONS.md 22:10 IST), before the blind-case run**; nothing is open from this list.
 
 | # | attack | what happened | why it matters | fix / owner |
 |---|---|---|---|---|
 | R1 | **Forged evidence: bank-swap PDF, the caller strips the bank fields from the evidence object** | pre-Phase-2: honest evidence → REVIEW + tamper; forged → **ALLOW**. Post-Phase-2: forged → REVIEW `evidence_unsigned` | The governor trusts the evidence it is sent. Money still goes only to the master account, because the payee never comes from evidence. But the tamper alert and REVIEW vanish. | **Fixed by Phase 2**: the production governor reads only evidence signed by the extraction service. Caller evidence → REVIEW `evidence_unsigned`. An envelope edited after signing → BLOCK `evidence_signature_invalid`. Through the signed path, the bank-swap PDF → REVIEW + tamper. |
 | R2 | **Forged evidence: ₹23,600 invoice proposed at ₹70,000 with a forged `printed_total` and no item lines** | pre-Phase-2: **ALLOW**. Post-Phase-2: forged → REVIEW `evidence_unsigned`; honest signed evidence → REVIEW `amount_differs_from_printed_total` | Overpayment to the right payee, inside the PO balance and threshold. This was the harmful one. | **Fixed by Phase 2** |
 | R3 | **Forged evidence: a scan relabelled `text_source=text_layer`** | pre-Phase-2: as OCR → REVIEW; relabelled → **ALLOW**. Post-Phase-2: production reads `text_source` only from the signed envelope | The scan-needs-a-person rule keyed off a caller-supplied label. | **Fixed by Phase 2**: an edited envelope fails its signature (BLOCK). The relabel still ALLOWs on the DEV/TEST unsigned path only (info). |
-| R4 | Same invoice re-sent with a suffix on the number (`…/0900-A`) | **ALLOW** (still open post-Phase-2) | The duplicate key is vendor + normalised number. A new suffix is a new invoice, and the amount is under the window threshold. No PDF-hash or (vendor, amount, date) near-duplicate check exists. | Proposal: REVIEW on same vendor + same amount + same PDF hash within N days (rules change, after the held-out run) |
+| R4 | Same invoice re-sent with a suffix on the number (`…/0900-A`) | **ALLOW** through post-Phase-4; post-R4/R6: REVIEW `near_duplicate_invoice` | The duplicate key is vendor + normalised number. A new suffix is a new invoice, and the amount is under the window threshold. | **Fixed** (DECISIONS.md Oct 30 22:10 IST): same vendor + same amount + one number = the other plus a 1-3 letter or separator+1-2 digit suffix, within 90 days → REVIEW; persisted in the SQLite ledger. Still not covered: a re-submission under an unrelated new number (no PDF-hash check). |
 | R5 | **Same invoice after a governor restart** | pre-Phase-3: **ALLOW** (ledger forgotten); post-Phase-3 (production mode, on-disk DB): BLOCK `duplicate_invoice` | The in-memory ledger meant a restart re-opened every paid invoice to duplicate payment. | **Fixed by Phase 3** (SQLite WAL ledger). Eval mode still uses `:memory:` by design. |
-| R6 | IFSC with a Cyrillic `В` (extractor path) | not extracted, no tamper alert (still open post-Phase-2) | Homoglyph IFSCs are invisible to `IFSC_RE`. The payee still can't change, and the same document already REVIEWs on its GSTIN. | Candidate: NFKC + confusable fold, and flag any non-ASCII inside an IFSC- or GSTIN-shaped token |
+| R6 | IFSC with a Cyrillic `В` (extractor path) | not extracted, no tamper alert through post-Phase-4; post-R4/R6: extracted as printed, tamper alert (that document: BLOCK, tamper + unreadable GSTIN) | Homoglyph IFSCs were invisible to `IFSC_RE`. The payee still can't change. | **Fixed** (DECISIONS.md Oct 30 22:10 IST): the extractor reports tokens that fold (NFKC + Cyrillic/Greek table) into an IFSC or account shape as printed; the governor sets tamper + REVIEW on any non-ASCII bank value, including a Cyrillic letter inside otherwise-matching account digits. |
 | R7 | 1,500-page PDF (0.7 MB); 11 MB file | pre-Phase-2: assembled in about 1–2 s, no cap. Post-Phase-2, through the extraction service: 1,500 pages → signed `failed` (`too_many_pages:1500>50`) in 0.3 s; 11 MB → signed `failed` (`file_too_large`) in 0.2 s; a 3-page image-only PDF → ok in about 16 s | In-process `assemble()` still has no cap, but production extraction runs in the sandbox. Under the caps, OCR cost is still linear in pages (about 5 s a page here), bounded by CPU 30 s and wall 60 s. | **Fixed by Phase 2** (`extractor/sandbox.py` Limits: 10 MB, 50 pages, CPU 30 s, wall 60 s, memory and file limits; failed → REVIEW) |
 | (pre-P1) | USD invoice proposed with no currency (cents read as paise) | **ALLOW** before Phase 1 | Cents were compared with INR-paise balances and thresholds. | **Fixed by Phase 1**: now REVIEW (`currency_mismatch_invoice`, `currency_mismatch_po`) |
 | (pre-P1) | `/v1/audit/verify` without a token | HTTP 200 before Phase 1 | Unauthenticated information about the audit log. | **Fixed by Phase 1**: now 401 |
@@ -112,4 +114,4 @@ Info only:
 
 1. An **external** review by someone outside the team, against `tools/redteam.py`'s list plus their own ideas.
 2. Done: rerun after Phase 2 merged (`redteam-internal-post-phase2.json`). R1–R3 and R7 now hold. R5 was re-checked after Phase 3 and holds. Re-run on the Phase 4 governor: same outcomes (`redteam-internal-post-phase4.json`). Still to do: add probes for Phase 4 itself (role separation, maker-checker bypass, rate limits in production mode, TLS).
-3. Decide R4 and the "no readable total → REVIEW" rule (see `docs/FINDINGS_REAL_INVOICES.md` F3) together, as one rules change after the frozen held-out run.
+3. Done for R4 (Oct 30 22:10 IST). The "no readable total → REVIEW" rule (`docs/FINDINGS_REAL_INVOICES.md` F3) is still undecided.
