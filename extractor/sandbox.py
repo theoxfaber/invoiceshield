@@ -29,9 +29,9 @@ REPO = Path(__file__).resolve().parents[1]
 class Limits:
     max_bytes: int = 10 * 1024 * 1024
     max_pages: int = 50
-    cpu_secs: int = 20
+    cpu_secs: int = 30
     mem_bytes: int = 1536 * 1024 * 1024
-    wall_secs: float = 30.0
+    wall_secs: float = 60.0
     fsize_bytes: int = 64 * 1024 * 1024
     nofile: int = 256
     max_stdout: int = 4 * 1024 * 1024

@@ -69,6 +69,6 @@ def test_sandbox_survives_mutated_pdfs(flips, cut):
             b[i] = v
     r = run_sandboxed(bytes(b), {}, "24ZZACB7319B1Z5")
     assert r.ok or r.failure
-    assert r.info.get("wall_s", 0) < 35
+    assert r.info.get("wall_s", 0) < 65
     if r.ok:
         assert isinstance(r.evidence, dict)

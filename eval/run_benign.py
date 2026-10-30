@@ -22,7 +22,6 @@ def main():
         for c in benign_cases():
             gov.reset()
             meta = build(c, pathlib.Path(t) / f"{c['id']}.pdf")
-            ev = assemble(meta["pdf"], meta["cover_email"])
             prop = {"vendor_id": c["vendor_id"], "invoice_no": c["invoice_no"], "amount_paise": c["rupees"] * 100, "po_ref": c["po_ref"],
                     "currency": PROF["vendors"][c["vendor_id"]].get("currency", "INR")}
             d = gov.evaluate_document(prop, meta["pdf"], meta["cover_email"], CLEAR, now=1_793_000_000)

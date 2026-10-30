@@ -30,7 +30,6 @@ def run_sequence(gov, seq, tmp: pathlib.Path) -> dict:
     out = []
     for i, st in enumerate(seq["steps"]):
         meta = build_step_pdf(st, tmp / f"{seq['id']}_{i}.pdf")
-        ev = assemble(meta["pdf"], meta["cover_email"])
         prop = {"vendor_id": st["vendor_id"], "invoice_no": st["invoice_no"], "amount_paise": st["amount_paise"], "po_ref": st["po_ref"]}
         if st["irn"]:
             prop["irn"] = st["irn"]
