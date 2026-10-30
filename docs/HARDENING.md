@@ -10,8 +10,8 @@ Coordination: each workstream works in its own git worktree on its own branch, r
 | 1 | Round-off rule decided before held-out run (non-tax "Round off" line < ₹1 exempt from charge_not_on_po) | main | DONE (f5f4e66; DECISIONS.md 18:40 IST) |
 | 1 | Padded-fee matching: qty × unit price vs PO lines, else REVIEW (no substring match) | main | DONE (f5f4e66) |
 | 1 | ifsc() normalizer, bounded decisions map, auth on /v1/audit/verify | main | DONE (59e8c47) |
-| 2 | Governor (or signed extraction service) owns evidence; Ed25519-signed evidence verified by governor | hardening/trust | IN PROGRESS (wt-trust, started 18:10 IST) |
-| 2 | Hostile-input parsing: sandboxed extractor with CPU/mem/time limits; fuzz tests | hardening/trust | IN PROGRESS (wt-trust, started 18:10 IST) |
+| 2 | Governor (or signed extraction service) owns evidence; Ed25519-signed evidence verified by governor | hardening/trust | DONE (merged 2026-10-30 19:30 IST; trust.rs + extractor/, see DECISIONS 'Evidence is signed by a separate extraction service') |
+| 2 | Hostile-input parsing: sandboxed extractor with CPU/mem/time limits; fuzz tests | hardening/trust | DONE (merged 2026-10-30 19:30 IST; trust.rs + extractor/, see DECISIONS 'Evidence is signed by a separate extraction service') |
 | 3 | SQLite (WAL) ledger, audit log, decisions; decision + ledger in one txn | hardening/state | DONE (hardening/state, merged to main 2026-10-30 ~19:10 IST; BUILD_LOG "Phase 3 hardening") |
 | 3 | Idempotency keys on /v1/actions; restart/crash-recovery test; concurrent identical requests → one payment | hardening/state | DONE (hardening/state, merged to main 2026-10-30 ~19:10 IST; BUILD_LOG "Phase 3 hardening") |
 | 3 | External anchoring: periodic signed head hash | hardening/state | DONE (hardening/state, merged to main 2026-10-30 ~19:10 IST; BUILD_LOG "Phase 3 hardening") |
