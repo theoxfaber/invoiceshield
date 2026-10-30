@@ -411,6 +411,16 @@ impl Governor {
         self.next_id = 1;
     }
 
+    /// Next decision number. Read/set by the durable store (persist.rs) so ids keep
+    /// counting across restarts and processes; never affects a verdict.
+    pub fn next_id(&self) -> u64 {
+        self.next_id
+    }
+
+    pub fn set_next_id(&mut self, n: u64) {
+        self.next_id = n.max(1);
+    }
+
     /// Human decision on a pending REVIEW (out of band, never via the agent).
     pub fn resolve_review(&mut self, decision_id: &str, approve: bool, approver: &str, now: i64) -> bool {
         let ok = self.ledger.set_status(decision_id, if approve { EntryStatus::Paid } else { EntryStatus::Rejected });
