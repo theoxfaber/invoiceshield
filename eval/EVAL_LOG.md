@@ -241,3 +241,72 @@ day1_on_spark_phase4.jsonl vs day1_on_spark_usdagent.jsonl: rows 72/72, differin
 ```
 
 The ON arms are compared with the `_usdagent` files because the USD-agent fix (d4eb3ac) changed the ON agent's tool and therefore its cached responses; against those, nothing moved. An earlier run of the same comparisons on the pre-rebase branch (vs `day1_on_signed_2026-10-30` / `_phase1`) was also 0 differing. Files: `eval/results/{day1_gate_only,benign_gate_only,sequences_gate_only,day1_on,day1_on_spark}_phase4.jsonl`.
+
+## Fri Oct 30, 2026, ~19:15 IST: public real invoices (Phase 5): extraction accuracy + gate false positives
+
+**Not a held-out result, and mostly not our own data.**
+- MIDD (Zenodo 5113009, CC BY 4.0) is real Indian GST invoices, but only as OCR token streams: no images, no line breaks. It comes from a few suppliers and one buyer group, so the invoices are clustered.
+- Sparrow (HF katanaml-org/invoices-donut-data-v1, MIT) is real images of generated invoice content.
+- Labels:
+  - MIDD's own tags for GSTIN, invoice no and total.
+  - My hand labels for bank account and IFSC, per supplier, set only where the text prints them. I spot-checked 60 invoices.
+  - Sparrow's labels.
+- Raw data stays outside git (pinned by sha256 in `dataset/real/manifest.json`). Labels are committed hashed.
+- The extractor was changed after the "before" run. The "after" numbers are tuned on this data.
+- Wilson 95% intervals assume independence, which clustering violates; they are too narrow.
+
+Details and every caveat: `docs/FINDINGS_REAL_INVOICES.md`.
+
+Runner: `python3 -m eval.run_real [--tag T] [--no-fields]`. Governor: built from `main` (`e636306`, re-confirmed identical at `a07989b`). Gate setting `text_layer_cf`:
+- the OCR text is treated as a digital text layer;
+- a synthetic master/PO matches the labels;
+- the checker is clear;
+- the threshold is raised out of the way;
+- the ledger is reset per invoice.
+
+As the scans really are (`ocr_as_is`), every invoice is REVIEW by policy: MIDD 578/578, Sparrow 74/74.
+
+| | before (extractor on `main`) | after (this branch) |
+|---|---|---|
+| raw | `eval/results/real-before.json` | `eval/results/real-after.json` |
+| MIDD gate FP, any non-ALLOW (n=578) | **153 (26.5%, 23.0–30.2)**, 61 BLOCK | **50 (8.7%, 6.6–11.2)**, 1 BLOCK |
+| MIDD gate FP excl. REVIEWs whose only reasons are currency (OCR noise) | 132 (22.8%, 19.6–26.4) | 28 (4.8%, 3.4–6.9) |
+| Sparrow gate FP (n=74) | 7 (9.5%, 4.7–18.3) | 7 (9.5%, 4.7–18.3) |
+| MIDD supplier GSTIN (true value) | 542/663 (81.8%) | 654/663 (98.6%, 97.4–99.3) |
+| MIDD bank account | 517/537 (96.3%), 13 wrong | 522/537 (97.2%, 95.4–98.3), 4 wrong |
+| MIDD IFSC | 339/555 (61.1%) | 339/555 (61.1%), unchanged on purpose |
+| MIDD total | **0/579** | 561/579 (96.9%, 95.1–98.0) |
+| MIDD invoice no (candidate reader) | none | 528/678 (77.9%) |
+| MIDD currency as the governor reads it | 674/684 (98.5%), 10 wrong from OCR noise | same |
+| MIDD docs with a spurious account | 9/684 | 0/684 |
+| Sparrow invoice no / currency / total / line items | 0 / 71 / 0 / 0 of 74 / 71 / 74 / 74 | 74/74 / 71/71 / **0/74** / **0/74** |
+
+Gate FP reasons after (MIDD):
+- currency_mismatch_invoice 24
+- issuer_gstin_unreadable 22
+- currency_ambiguous 19
+- bank_details_differ_from_master 4 (OCR-misread digits)
+- issuer_gstin_mismatch 1 (the BLOCK)
+- amount_differs_from_printed_total 1
+
+Before Phase 1 merged, the same extractors on the old governor gave 132/578 (61 BLOCK) and 28/578 (1 BLOCK). Raw: `eval/results/real-prephase1-{before,after}.json`. 151/578 MIDD invoices exceed ₹1,00,000 and would REVIEW under the default policy anyway.
+
+Main causes found:
+1. OCR'd buyer GSTIN taken for the issuer, which caused 52 of the 61 BLOCKs.
+2. OCR slips in supplier GSTINs.
+3. No real invoice prints "Total Payable", so the amount rules were silently skipped (fail-open).
+4. Phones next to "Bank of …" in addresses, and VAT TIN lines, read as accounts.
+5. Item tables are never read on real layouts.
+6. Stray `$`/`€` from OCR trip Phase 1's currency rules.
+
+Causes 1, 2 and 4 are fixed in the extractor; 3 is fixed in part; 5 and 6 are open findings. Regression: `governor_evidence()` is byte-identical between `main`'s extractor and this branch on all 216 dev/clean/variant documents (24 risk set, 72 T2/scan/photo, 60 + 60 clean). The gate-only dev, benign and sequence verdicts are unchanged.
+
+Also new: the shadow-mode harness `tools/shadow.py`, tested on the synthetic `tools/shadow_sample.csv` (22 rows):
+- agreement 20/21 (95.2%, 77.3–99.2);
+- kappa 0.90;
+- the one disagreement is the modelled team mistake: the team paid X04 and the shield BLOCKed it;
+- 0 invoices the team stopped that the shield would pay.
+
+It is synthetic and was never run on real AP decisions. The internal red team is in `docs/RED_TEAM_INTERNAL.md`, raw in `eval/results/redteam-internal-*.json`:
+- post-Phase-3: 35 held, 6 findings, 4 info;
+- the open findings are forged caller-supplied evidence (3), the near-duplicate suffix, the homoglyph IFSC, and no PDF size cap.

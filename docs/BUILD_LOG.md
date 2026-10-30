@@ -238,3 +238,29 @@ Planning documents (threat model, eval plan, demo script) were written before ki
 - **Tests**: `cargo test --locked` 133 passed (7 config unit + 12 fixture + 5 fuzz + 21 gate + 4 master_change + 22 phase1 + 19 security + 6 security_process + 15 state + 5 state_process + 17 trust). New: `tests/security.rs` (identities/roles/legacy keys/`*_FILE`, token bucket + bounded map, limit defaults, config validation, proposer cannot resolve (code + trigger), idempotency key bound to identity, full bank-change flow incl. wrong number / maker / duplicate approver / cooling-off REVIEW→ALLOW / restart, single approver never applies, reject during cooling-off, details-differ rejects, no number on file, invalid details, v1→v2 migration, RFC 4231 HMAC vector, forged applied row blocks vendor) and `tests/security_process.rs` (real binary: 401/403 per route and role, agent+approver identity refuses to start, 2 approvers + cooling-off over HTTP with `x-eval-now`, 429 per identity and after failed auth, TLS start + HTTPS request + plain HTTP refused, bad TLS / both `X` and `X_FILE` / no agent → exit 2). `cargo clippy --all-targets -- -D warnings` clean; `rustfmt --check src/config.rs src/observability.rs` clean. `cargo audit` (RustSec DB, 1395 advisories, 174 crates) clean; Python deps unchanged (pip-audit scope unchanged). pytest (excluding the dataset-generator `test_variants.py`, untouched): 167 passed, exit 0, including Phase 6's `test_openapi.py` route-contract test with the new routes.
 - **Evals** (eval/EVAL_LOG.md, `eval/results/*_phase4.jsonl`): gate-only 23/23, benign 24/24, sequences 19/19 identical to the Phase 2/Phase 1 files; ON Glimmer and Spark 72/72 each identical to `_usdagent`. Held-out set and blind cases not run.
 - **Process note**: the sandbox workspace was rolled back once mid-session (~21:00 IST), losing unpushed commits; the work was redone from the surviving tree and pushed to `origin/hardening/security` early after that.
+
+### Fri Oct 30, 19:35 IST: Hardening Phase 5 (real-invoice evidence, shadow harness, internal red team), branch hardening/real-eval
+- **Public data** (`dataset/real/`):
+  - MIDD: 708 real Indian GST invoices (684 distinct), OCR token streams, CC BY 4.0, Zenodo 5113009.
+  - Sparrow: 76 invoice images, generated content, MIT.
+  - Raw data is under gitignored `data/third_party/raw/`, pinned by sha256 in `dataset/real/manifest.json`. The committed labels are anonymised (identifiers salted-sha256). Bank account/IFSC are my hand labels, spot-checked on 60.
+  - Skipped: unlicensed HF sets, and Kaggle sets that need a login.
+- **`eval/run_real.py`**: field accuracy (GSTIN, IFSC, account, total, currency, invoice no, line items) and gate false-positive rate, with Wilson 95% CIs.
+  - MIDD gate FP (counterfactual text layer, `main` governor): **153/578 → 50/578** (BLOCK 61 → 1); 132 → 28 excluding currency-only OCR noise.
+  - Total extraction 0 → 96.9%; GSTIN 81.8% → 98.6%.
+  - Writeup: `docs/FINDINGS_REAL_INVOICES.md`. Log: `eval/EVAL_LOG.md`.
+- **Extractor fixes** (`assembler/extract.py`, `structural/gstin.py`):
+  - checksum-gated OCR repair of GSTINs, with the buyer recognised after repair;
+  - a total confirmed by amount-in-words plus a matching figure (fallback when "Total Payable" is absent);
+  - `tin`/`vat`/`cst` labels as non-bank;
+  - a mobile-shaped number next to a bare "bank" word is no longer an account.
+  - New `assembler/fields.py` (invoice no and currency candidate readers, not used by the governor).
+  - Regression: evidence byte-identical on all 216 dev/clean/variant documents.
+- **Shadow mode** `tools/shadow.py`: a CSV of (invoice, human AP decision) runs the shield on one throwaway ledger and reports a confusion matrix, agreement (Wilson CI), kappa, and the disagreements. Synthetic sample `tools/shadow_sample.csv` plus tests. Not run on real AP data.
+- **Internal red team** `tools/redteam.py` → `docs/RED_TEAM_INTERNAL.md` (internal, not an external review):
+  - pre-Phase-1: 27 held / 9 findings;
+  - post-Phase-1: 34 / 7 (Phase 1 fixed the currency and audit-auth findings);
+  - post-Phase-3: 35 / 6 (Phase 3 fixed restart replay).
+  - Open: forged caller-supplied evidence ×3 (Phase 2), near-duplicate suffix, homoglyph IFSC, no PDF size cap.
+- Frozen held-out set not touched; no gate rule edited (rule-level ideas F3 and R4 written up as findings).
+- Tests: see the merge entry below.

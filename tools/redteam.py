@@ -131,12 +131,35 @@ def main():
         rec("replay", "IRN reused under a new invoice number", "BLOCK", f"{verdict(d5)} then {verdict(d6)}",
             "held" if d6["verdict"] == "block" else "finding")
 
-    # restart: is the ledger durable?
-    with GovernorProc() as gov:
-        d = gov.evaluate(gprop, gev, CLEAR, now=NOW + 300)
-        rec("replay", "same invoice after a governor restart", "BLOCK duplicate (ledger survives restart)", verdict(d),
-            "finding" if d["verdict"] == "allow" else "held",
-            "At this commit the ledger is in memory; a restart forgets every payment. Phase 3 (SQLite WAL ledger) fixes this.")
+    # restart: is the ledger durable? (production mode, on-disk DB when the build supports GOVERNOR_DB)
+    db = tmp / "gov.db"
+    def prod(port):
+        k = secrets.token_hex(16)
+        env = {**os.environ, "GOVERNOR_API_KEY": k, "GOVERNOR_MASTER": str(MASTER), "GOVERNOR_PORT": str(port),
+               "GOVERNOR_DB": str(db)}
+        env.pop("GOVERNOR_EVAL_CLOCK", None)
+        pr = subprocess.Popen([str(BIN)], env=env, stderr=subprocess.DEVNULL, cwd=str(tmp))
+        cl = httpx.Client(base_url=f"http://127.0.0.1:{port}", headers={"Authorization": f"Bearer {k}"}, trust_env=False, timeout=10)
+        for _ in range(80):
+            try:
+                if cl.get("/health").status_code == 200:
+                    break
+            except httpx.HTTPError:
+                time.sleep(0.1)
+        return pr, cl
+    pr, cl = prod(18741)
+    d1 = cl.post("/v1/actions", json={"proposal": gprop, "evidence": gev, "checker_raw": CLEAR}).json()
+    pr.terminate(); pr.wait(timeout=5)
+    pr, cl = prod(18742)
+    try:
+        d2 = cl.post("/v1/actions", json={"proposal": gprop, "evidence": gev, "checker_raw": CLEAR}).json()
+    finally:
+        pr.terminate(); pr.wait(timeout=5)
+    rec("replay", "same invoice after a governor restart (production mode, GOVERNOR_DB on disk)",
+        "BLOCK duplicate (ledger survives restart)", f"{verdict(d1)}, restart, {verdict(d2)}",
+        "finding" if d2["verdict"] == "allow" else "held",
+        "Before Phase 3 the ledger was in memory and a restart forgot every payment (pre-phase1 run: ALLOW). "
+        "Eval mode still uses :memory: by design.")
 
     # ---------------- splits
     with GovernorProc() as gov:
@@ -280,9 +303,10 @@ def main():
 
     # prod mode: eval hooks must be off
     key = secrets.token_hex(16)
-    env = {**os.environ, "GOVERNOR_API_KEY": key, "GOVERNOR_MASTER": str(MASTER), "GOVERNOR_PORT": "18733"}
+    env = {**os.environ, "GOVERNOR_API_KEY": key, "GOVERNOR_MASTER": str(MASTER), "GOVERNOR_PORT": "18733",
+           "GOVERNOR_DB": str(tmp / "prod.db")}
     env.pop("GOVERNOR_EVAL_CLOCK", None)
-    proc = subprocess.Popen([str(BIN)], env=env, stderr=subprocess.DEVNULL)
+    proc = subprocess.Popen([str(BIN)], env=env, stderr=subprocess.DEVNULL, cwd=str(tmp))
     try:
         c = httpx.Client(base_url="http://127.0.0.1:18733", headers={"Authorization": f"Bearer {key}"}, trust_env=False, timeout=10)
         for _ in range(50):

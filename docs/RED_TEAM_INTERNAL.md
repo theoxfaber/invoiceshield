@@ -6,6 +6,7 @@
 - Raw results:
   - `eval/results/redteam-internal-pre-phase1.json`: pre-Phase-1 governor binary, built 2026-10-29; engine source unchanged through `473cb60`.
   - `eval/results/redteam-internal-post-phase1.json`: governor built from `main` at `e636306`, with Phase 1 currency, PO lines, the `ifsc()` normaliser and audit auth.
+  - `eval/results/redteam-internal-post-phase3.json`: governor built from `main` at `a07989b`, adding the Phase 3 SQLite ledger. The restart probe now runs in production mode with an on-disk `GOVERNOR_DB`.
 - Rerun: `python3 -m tools.redteam --tag <name>`. It needs `governor/target/release/governor-server`.
 - Run 2026-10-30, about 19:00–19:20 IST. Frozen-rule policy: **nothing here changed a gate rule.** Findings are recorded below and assigned to the phase that owns the fix.
 
@@ -18,10 +19,11 @@ Outcome key:
 |---|---|---|---|
 | pre-Phase-1 governor | 27 | 9 | 4 |
 | post-Phase-1 governor (`main` e636306) | 34 | 7 | 4 |
+| post-Phase-3 governor (`main` a07989b) | 35 | 6 | 4 |
 
 The post-Phase-1 run has more probes, because it adds 5 currency probes.
 
-## Findings (post-Phase-1 unless stated)
+## Findings (post-Phase-3 unless stated)
 
 | # | attack | what happened | why it matters | fix / owner |
 |---|---|---|---|---|
@@ -29,13 +31,13 @@ The post-Phase-1 run has more probes, because it adds 5 currency probes.
 | R2 | **Forged evidence: ₹23,600 invoice proposed at ₹70,000 with a forged `printed_total` and no item lines** | **ALLOW** | Overpayment to the right payee, inside the PO balance and threshold. This is the harmful one. | Phase 2 (same root cause) |
 | R3 | **Forged evidence: a scan relabelled `text_source=text_layer`** | as OCR → REVIEW; relabelled → **ALLOW** | The scan-needs-a-person rule keys off a caller-supplied label. | Phase 2 |
 | R4 | Same invoice re-sent with a suffix on the number (`…/0900-A`) | **ALLOW** | The duplicate key is vendor + normalised number. A new suffix is a new invoice, and the amount is under the window threshold. No PDF-hash or (vendor, amount, date) near-duplicate check exists. | Proposal: REVIEW on same vendor + same amount + same PDF hash within N days (rules change, after the held-out run) |
-| R5 | **Same invoice after a governor restart** | **ALLOW** (ledger forgotten) | The in-memory ledger means a restart re-opens every paid invoice to duplicate payment. | Phase 3: SQLite WAL ledger, restart test |
+| R5 | **Same invoice after a governor restart** | pre-Phase-3: **ALLOW** (ledger forgotten); post-Phase-3 (production mode, on-disk DB): BLOCK `duplicate_invoice` | The in-memory ledger meant a restart re-opened every paid invoice to duplicate payment. | **Fixed by Phase 3** (SQLite WAL ledger). Eval mode still uses `:memory:` by design. |
 | R6 | IFSC with a Cyrillic `В` (extractor path) | not extracted, no tamper alert | Homoglyph IFSCs are invisible to `IFSC_RE`. The payee still can't change, and the same document already REVIEWs on its GSTIN. | Candidate: NFKC + confusable fold, and flag any non-ASCII inside an IFSC- or GSTIN-shaped token |
-| R7 | 1,500-page PDF (0.7 MB) | assembled in about 2 s, no cap; a 3-page image-only PDF takes about 17–21 s of OCR | There is no page, size or time cap in `assemble()`. A large or image-heavy file ties up a worker, and the cost is linear in pages. | Phase 2: sandboxed extractor with CPU, memory and time limits |
+| R7 | 1,500-page PDF (0.7 MB) | assembled in about 1–2 s, no cap; a 3-page image-only PDF takes about 17–21 s of OCR | There is no page, size or time cap in `assemble()`. A large or image-heavy file ties up a worker, and the cost is linear in pages. | Phase 2: sandboxed extractor with CPU, memory and time limits |
 | (pre-P1) | USD invoice proposed with no currency (cents read as paise) | **ALLOW** before Phase 1 | Cents were compared with INR-paise balances and thresholds. | **Fixed by Phase 1**: now REVIEW (`currency_mismatch_invoice`, `currency_mismatch_po`) |
 | (pre-P1) | `/v1/audit/verify` without a token | HTTP 200 before Phase 1 | Unauthenticated information about the audit log. | **Fixed by Phase 1**: now 401 |
 
-## What held (post-Phase-1)
+## What held (post-Phase-3)
 
 - **Replay and duplicates.** These were all BLOCKed:
   - An identical request sent twice.
@@ -85,5 +87,5 @@ Info only:
 ## Next steps
 
 1. An **external** review by someone outside the team, against `tools/redteam.py`'s list plus their own ideas.
-2. Rerun this harness after Phase 2 (R1–R3, R7) and Phase 3 (R5) merge, and record the change.
+2. Rerun this harness after Phase 2 (R1–R3, R7) merges, and record the change. R5 was re-checked after Phase 3 and now holds.
 3. Decide R4 and the "no readable total → REVIEW" rule (see `docs/FINDINGS_REAL_INVOICES.md` F3) together, as one rules change after the frozen held-out run.

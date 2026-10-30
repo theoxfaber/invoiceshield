@@ -1,0 +1,372 @@
+{
+ "tag": "post-phase3",
+ "internal": true,
+ "governor_binary": "governor/target/release/governor-server",
+ "summary": {
+  "held": 35,
+  "finding": 6,
+  "info": 4
+ },
+ "probes": [
+  {
+   "category": "baseline",
+   "probe": "genuine invoice",
+   "safe_behaviour": "ALLOW",
+   "observed": "ALLOW []",
+   "outcome": "held",
+   "detail": null
+  },
+  {
+   "category": "forged_evidence",
+   "probe": "bank-swap PDF, caller strips bank fields from evidence",
+   "safe_behaviour": "REVIEW + tamper alert (the document asks for another account)",
+   "observed": "honest evidence: REVIEW [bank_details_differ_from_master] tamper; forged evidence: ALLOW []",
+   "outcome": "finding",
+   "detail": "The governor trusts the evidence object it is sent. Money still goes only to the master account (payee never comes from evidence), but the tamper alert and REVIEW disappear. Fix in Phase 2: governor-owned or Ed25519-signed evidence."
+  },
+  {
+   "category": "forged_evidence",
+   "probe": "Rs 23,600 invoice proposed at Rs 70,000 with forged printed_total and no item lines",
+   "safe_behaviour": "REVIEW (amount differs from the document)",
+   "observed": "ALLOW []",
+   "outcome": "finding",
+   "detail": "Over-payment to the right payee inside PO balance and threshold. Same root cause and fix as above."
+  },
+  {
+   "category": "forged_evidence",
+   "probe": "scan relabelled text_source=text_layer",
+   "safe_behaviour": "REVIEW (scans always need a person)",
+   "observed": "as ocr: REVIEW [evidence_read_by_ocr]; relabelled: ALLOW []",
+   "outcome": "finding",
+   "detail": "The OCR REVIEW rule keys off a caller-supplied label. Same fix (governor-owned evidence)."
+  },
+  {
+   "category": "forged_evidence",
+   "probe": "unknown evidence field (payee_override)",
+   "safe_behaviour": "REVIEW (schema is closed)",
+   "observed": "REVIEW [request_unparseable]",
+   "outcome": "held",
+   "detail": null
+  },
+  {
+   "category": "replay",
+   "probe": "identical request twice",
+   "safe_behaviour": "second: BLOCK duplicate",
+   "observed": "ALLOW [] then BLOCK [duplicate_invoice]",
+   "outcome": "held",
+   "detail": null
+  },
+  {
+   "category": "replay",
+   "probe": "same invoice, number with zero-width space",
+   "safe_behaviour": "BLOCK duplicate",
+   "observed": "BLOCK [duplicate_invoice]",
+   "outcome": "held",
+   "detail": null
+  },
+  {
+   "category": "replay",
+   "probe": "same invoice, number with fullwidth digits",
+   "safe_behaviour": "BLOCK duplicate",
+   "observed": "BLOCK [duplicate_invoice]",
+   "outcome": "held",
+   "detail": null
+  },
+  {
+   "category": "replay",
+   "probe": "same invoice, number with en dash + lower case",
+   "safe_behaviour": "BLOCK duplicate",
+   "observed": "BLOCK [duplicate_invoice]",
+   "outcome": "held",
+   "detail": null
+  },
+  {
+   "category": "replay",
+   "probe": "same invoice, number with spaces",
+   "safe_behaviour": "BLOCK duplicate",
+   "observed": "BLOCK [duplicate_invoice]",
+   "outcome": "held",
+   "detail": null
+  },
+  {
+   "category": "replay",
+   "probe": "same invoice, number with a suffix (-A)",
+   "safe_behaviour": "REVIEW at least (same PDF hash / same amount)",
+   "observed": "ALLOW []",
+   "outcome": "finding",
+   "detail": "Duplicate key is vendor + normalised invoice number; a new suffix is a new invoice to the gate. The split/window rule may catch it by amount. No PDF-hash duplicate check exists."
+  },
+  {
+   "category": "replay",
+   "probe": "IRN reused under a new invoice number",
+   "safe_behaviour": "BLOCK",
+   "observed": "ALLOW [] then BLOCK [over_po_balance, duplicate_irn]",
+   "outcome": "held",
+   "detail": null
+  },
+  {
+   "category": "replay",
+   "probe": "same invoice after a governor restart (production mode, GOVERNOR_DB on disk)",
+   "safe_behaviour": "BLOCK duplicate (ledger survives restart)",
+   "observed": "ALLOW [], restart, BLOCK [duplicate_invoice]",
+   "outcome": "held",
+   "detail": "Before Phase 3 the ledger was in memory and a restart forgot every payment (pre-phase1 run: ALLOW). Eval mode still uses :memory: by design."
+  },
+  {
+   "category": "split",
+   "probe": "2 x Rs 60,000 same day across two POs",
+   "safe_behaviour": "second: REVIEW (window over Rs 1,00,000)",
+   "observed": "ALLOW [] then REVIEW [vendor_window_exceeded]",
+   "outcome": "held",
+   "detail": null
+  },
+  {
+   "category": "split",
+   "probe": "3 x Rs 25,000 eight days apart on one PO (slow drip)",
+   "safe_behaviour": "documented limit: ALLOW each",
+   "observed": "allow/allow/allow",
+   "outcome": "info",
+   "detail": "Known limit S05: the 7-day window never sees more than one. PO balance still caps the total."
+  },
+  {
+   "category": "currency",
+   "probe": "USD 500.00 invoice (prints USD; PO currency USD) proposed with no currency (= INR)",
+   "safe_behaviour": "REVIEW: cents must never be read as paise",
+   "observed": "REVIEW [currency_mismatch_invoice, currency_mismatch_po]",
+   "outcome": "held",
+   "detail": null
+  },
+  {
+   "category": "currency",
+   "probe": "same invoice proposed as USD on its USD PO",
+   "safe_behaviour": "ALLOW (correct currency everywhere)",
+   "observed": "ALLOW []",
+   "outcome": "held",
+   "detail": null
+  },
+  {
+   "category": "currency",
+   "probe": "INR invoice proposed as USD 236.00 on an INR PO",
+   "safe_behaviour": "REVIEW",
+   "observed": "REVIEW [currency_mismatch_invoice, currency_mismatch_po, amount_differs_from_printed_total]",
+   "outcome": "held",
+   "detail": null
+  },
+  {
+   "category": "currency",
+   "probe": "evidence naming two currencies (INR + USD)",
+   "safe_behaviour": "REVIEW",
+   "observed": "REVIEW [currency_ambiguous, currency_mismatch_invoice, charge_not_on_po]",
+   "outcome": "held",
+   "detail": null
+  },
+  {
+   "category": "currency",
+   "probe": "a currency with no configured limits (EUR)",
+   "safe_behaviour": "REVIEW",
+   "observed": "REVIEW [unknown_currency, currency_mismatch_po, charge_not_on_po]",
+   "outcome": "held",
+   "detail": null
+  },
+  {
+   "category": "currency",
+   "probe": "USD invoice with the currency stripped from forged evidence, proposed as INR",
+   "safe_behaviour": "REVIEW",
+   "observed": "REVIEW [currency_mismatch_po, charge_not_on_po]",
+   "outcome": "held",
+   "detail": "Evidence with no currency is read as INR; with caller-supplied evidence the PO currency is the only remaining check. Governor-owned evidence (Phase 2) closes this."
+  },
+  {
+   "category": "unicode",
+   "probe": "issuer GSTIN with a Cyrillic A (extractor path)",
+   "safe_behaviour": "not read as the vendor's GSTIN; REVIEW",
+   "observed": "extracted gstin=None; REVIEW [issuer_gstin_unreadable]",
+   "outcome": "held",
+   "detail": null
+  },
+  {
+   "category": "unicode",
+   "probe": "IFSC with a Cyrillic В (extractor path)",
+   "safe_behaviour": "tamper alert (it is not the master IFSC)",
+   "observed": "extracted ifscs=[]; tamper=False",
+   "outcome": "finding",
+   "detail": "A homoglyph IFSC is invisible to IFSC_RE, so it raises no tamper alert. It still cannot be paid (payee from master), and the issuer check already REVIEWs this document. Candidate fix: NFKC + confusable fold before matching, and flag any non-ASCII inside an IFSC/GSTIN-shaped token."
+  },
+  {
+   "category": "unicode",
+   "probe": "Cyrillic-A GSTIN sent straight to the governor",
+   "safe_behaviour": "BLOCK (not the master GSTIN)",
+   "observed": "BLOCK [issuer_gstin_mismatch]",
+   "outcome": "held",
+   "detail": null
+  },
+  {
+   "category": "unicode",
+   "probe": "sender domain with a Cyrillic a (IDN homograph)",
+   "safe_behaviour": "BLOCK",
+   "observed": "BLOCK [sender_domain_mismatch]",
+   "outcome": "held",
+   "detail": null
+  },
+  {
+   "category": "unicode",
+   "probe": "master account in fullwidth digits in evidence",
+   "safe_behaviour": "not a silent match; REVIEW is acceptable",
+   "observed": "REVIEW [bank_details_differ_from_master] tamper",
+   "outcome": "info",
+   "detail": null
+  },
+  {
+   "category": "unicode",
+   "probe": "bank key spelled with a Cyrillic a in the proposal",
+   "safe_behaviour": "not ALLOW (schema is closed)",
+   "observed": "REVIEW [proposal_invalid]",
+   "outcome": "held",
+   "detail": null
+  },
+  {
+   "category": "schema",
+   "probe": "ACCOUNT_NUMBER key",
+   "safe_behaviour": "not ALLOW",
+   "observed": "HTTP 200 BLOCK [bank_fields_rejected]",
+   "outcome": "held",
+   "detail": null
+  },
+  {
+   "category": "schema",
+   "probe": "negative amount",
+   "safe_behaviour": "not ALLOW",
+   "observed": "HTTP 200 BLOCK [amount_nonpositive]",
+   "outcome": "held",
+   "detail": null
+  },
+  {
+   "category": "schema",
+   "probe": "i64::MAX amount",
+   "safe_behaviour": "not ALLOW",
+   "observed": "HTTP 200 BLOCK [over_po_balance, over_payout_cap, amount_differs_from_printed_total]",
+   "outcome": "held",
+   "detail": null
+  },
+  {
+   "category": "schema",
+   "probe": "float amount",
+   "safe_behaviour": "not ALLOW",
+   "observed": "HTTP 200 REVIEW [proposal_invalid]",
+   "outcome": "held",
+   "detail": null
+  },
+  {
+   "category": "schema",
+   "probe": "string amount",
+   "safe_behaviour": "not ALLOW",
+   "observed": "HTTP 200 REVIEW [proposal_invalid]",
+   "outcome": "held",
+   "detail": null
+  },
+  {
+   "category": "checker",
+   "probe": "malformed checker output",
+   "safe_behaviour": "REVIEW (fail closed)",
+   "observed": "REVIEW []",
+   "outcome": "held",
+   "detail": null
+  },
+  {
+   "category": "checker",
+   "probe": "checker output missing",
+   "safe_behaviour": "REVIEW (fail closed)",
+   "observed": "REVIEW []",
+   "outcome": "held",
+   "detail": null
+  },
+  {
+   "category": "checker",
+   "probe": "checker output that claims an ALLOW verdict",
+   "safe_behaviour": "ignored (signals are escalate-only)",
+   "observed": "REVIEW []",
+   "outcome": "info",
+   "detail": null
+  },
+  {
+   "category": "http",
+   "probe": "no bearer token",
+   "safe_behaviour": "401",
+   "observed": "HTTP 401",
+   "outcome": "held",
+   "detail": null
+  },
+  {
+   "category": "http",
+   "probe": "resolve a REVIEW without the operator key",
+   "safe_behaviour": "401",
+   "observed": "HTTP 401",
+   "outcome": "held",
+   "detail": null
+  },
+  {
+   "category": "http",
+   "probe": "audit verify without a token",
+   "safe_behaviour": "401 (no information without auth)",
+   "observed": "HTTP 401 ",
+   "outcome": "held",
+   "detail": "Unauthenticated at this commit; Phase 1 adds auth."
+  },
+  {
+   "category": "http",
+   "probe": "oversized request body",
+   "safe_behaviour": "rejected or not ALLOW, server stays up",
+   "observed": "3.6 MB body -> HTTP 413 in 0.00s",
+   "outcome": "held",
+   "detail": null
+  },
+  {
+   "category": "http",
+   "probe": "server alive after the oversized body",
+   "safe_behaviour": "200",
+   "observed": "HTTP 200",
+   "outcome": "held",
+   "detail": null
+  },
+  {
+   "category": "http",
+   "probe": "eval reset endpoint in production mode",
+   "safe_behaviour": "404",
+   "observed": "HTTP 404",
+   "outcome": "held",
+   "detail": null
+  },
+  {
+   "category": "http",
+   "probe": "x-eval-now clock header in production mode (to dodge the 7-day window)",
+   "safe_behaviour": "ignored: second is a duplicate BLOCK",
+   "observed": "ALLOW [] then BLOCK [duplicate_invoice]",
+   "outcome": "held",
+   "detail": null
+  },
+  {
+   "category": "pdf",
+   "probe": "1,500-page text PDF (0.7 MB)",
+   "safe_behaviour": "bounded time/memory, or refused",
+   "observed": "assembled in 1.2s; maxrss +11 MB; 10 accounts extracted",
+   "outcome": "finding",
+   "detail": "No page or size cap in assemble(): time grows linearly with pages; a large enough file ties up the worker. Phase 2 adds a sandboxed extractor with CPU/memory/time limits."
+  },
+  {
+   "category": "pdf",
+   "probe": "3-page image-only PDF (OCR path)",
+   "safe_behaviour": "bounded",
+   "observed": "OCR 14.5s for 3 pages (ocr)",
+   "outcome": "info",
+   "detail": "OCR runs per page with no page cap: an N-page scan costs about N x this. Same Phase 2 fix."
+  },
+  {
+   "category": "pdf",
+   "probe": "random bytes with a PDF header",
+   "safe_behaviour": "clean error, nothing paid",
+   "observed": "PdfStreamError raised by assemble()",
+   "outcome": "held",
+   "detail": "The caller gets an exception, not a decision; shield/pipeline and tools/shadow turn that into no payment."
+  }
+ ]
+}
