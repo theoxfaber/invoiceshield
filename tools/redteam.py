@@ -331,7 +331,6 @@ def main():
             rec("currency", "same invoice proposed as USD on its USD PO", "ALLOW (correct currency everywhere)", verdict(d),
                 "held" if d["verdict"] == "allow" else "finding")
             gov.reset()
-            inr_po = next(p for p in master["pos"] if p["owner_vendor_id"] == "V001")
             d = gov.evaluate({**gprop, "currency": "USD", "amount_paise": 23600}, gev, CLEAR, now=NOW)
             rec("currency", "INR invoice proposed as USD 236.00 on an INR PO", "REVIEW", verdict(d),
                 "held" if d["verdict"] != "allow" else "finding")

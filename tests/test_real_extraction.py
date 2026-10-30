@@ -32,7 +32,7 @@ def test_ocr_copy_of_the_buyer_is_not_taken_for_the_issuer():
 
 def test_gstin_split_after_state_code_and_ocr_slips_are_read():
     assert issuer_gstins(f"GSTIN No . : 27 {SUP[2:]}", BUY) == [SUP]
-    assert issuer_gstins(f"GST No . : 27ZZAFQ1234KIZ9", BUY) == [SUP]
+    assert issuer_gstins("GST No . : 27ZZAFQ1234KIZ9", BUY) == [SUP]
 
 
 def test_strict_gstin_with_bad_checksum_is_still_reported():
