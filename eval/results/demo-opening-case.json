@@ -1,0 +1,64 @@
+{
+ "case": "OC1 (fictional; modelled on a publicly reported Oct 2026 campaign)",
+ "pdf": "dataset/demo/opening/OC1.pdf",
+ "pdf_sha256": "295540c2ac513488862862a3ec98147332f71f88370822367618ccb77591f4a3",
+ "commit": "9e12a73435249b54caf36d2d20f4ac595ec014e6",
+ "recorded_at_ist": "2026-10-31T03:10:18+05:30",
+ "proposal": {
+  "vendor_id": "V001",
+  "invoice_no": "SOS/26-27/0241",
+  "amount_paise": 5900000,
+  "po_ref": "PO-2026-0101",
+  "currency": "INR"
+ },
+ "arms": {
+  "rules": {
+   "verdict": "block",
+   "tamper_alert": true,
+   "reasons": [
+    {
+     "rule": "sender_domain_mismatch",
+     "verdict": "block",
+     "detail": "sent from bhavani-precision.co.in, which is not a domain on file for V001"
+    },
+    {
+     "rule": "bank_details_differ_from_master",
+     "verdict": "review",
+     "detail": "invoice asks for different bank details than V001 has on file (Bank of Baroda). Payment can only go to the account on file; confirm with the vendor by phone."
+    }
+   ],
+   "signals": [],
+   "payee": null,
+   "checker": null
+  },
+  "both": {
+   "verdict": "block",
+   "tamper_alert": true,
+   "reasons": [
+    {
+     "rule": "sender_domain_mismatch",
+     "verdict": "block",
+     "detail": "sent from bhavani-precision.co.in, which is not a domain on file for V001"
+    },
+    {
+     "rule": "bank_details_differ_from_master",
+     "verdict": "review",
+     "detail": "invoice asks for different bank details than V001 has on file (Bank of Baroda). Payment can only go to the account on file; confirm with the vendor by phone."
+    }
+   ],
+   "signals": [
+    {
+     "kind": "checker_unparseable",
+     "severity": "review",
+     "detail": "checker output rejected: EOF while parsing a value at line 1 column 0"
+    }
+   ],
+   "payee": null,
+   "checker": {
+    "ok": false,
+    "cached": false,
+    "n_signals": 0
+   }
+  }
+ }
+}
