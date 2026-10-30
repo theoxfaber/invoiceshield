@@ -38,10 +38,40 @@ def _jl(p: pathlib.Path) -> list[dict]:
     return [json.loads(x) for x in p.read_text().splitlines() if x.strip()]
 
 
+def variant(cid: str = "B01-photo") -> dict:
+    """One scan/photo variant of a dev case, made by the same generator as dataset.gen.make_variants.
+
+    eval/variants/ is not committed (13 MB, regenerable). The PDF there is used when present;
+    otherwise this one variant is rendered into eval/variants/ (gitignored). The photo render is
+    not byte-deterministic, which is why callers re-check the gate verdict against the recorded one.
+    """
+    import tempfile
+
+    from assembler.scan import make_photo, make_scan
+    from dataset.gen.make_invoice import make_t1
+    from dataset.gen.make_riskset import cases as risk_cases
+
+    base, var = cid.rsplit("-", 1)
+    c = next(x for x in risk_cases() if x["id"] == base)
+    g = dict(c["gen"])
+    vid = g.pop("vid", None) or c["vendor_id"]
+    out = REPO / "eval" / "variants" / f"{cid}.pdf"
+    with tempfile.TemporaryDirectory() as t:
+        tmp = pathlib.Path(t) / f"{cid}.pdf"
+        m = make_t1(vid, c["invoice_no"], c["po_ref"], c["amount_paise"], tmp, layout="t2" if var == "t2" else "t1", **g)
+        if not out.exists():
+            out.parent.mkdir(parents=True, exist_ok=True)
+            if var in ("scan", "photo"):
+                (make_scan if var == "scan" else make_photo)(tmp, out)
+            else:
+                tmp.replace(out)
+    return {"id": cid, "vendor_id": c["vendor_id"], "invoice_no": c["invoice_no"], "po_ref": c["po_ref"],
+            "amount_paise": c["amount_paise"], "pdf": out, "cover_email": m["cover_email"]}
+
+
 def cases() -> list[dict]:
     on = {(r["id"], r["sample"]): r for r in _jl(R / "day1_on_spark_usdagent.jsonl")}
     rman = {c["id"]: c for c in json.loads((REPO / "eval" / "riskset" / "manifest.json").read_text())}
-    vman = {c["id"]: c for c in json.loads((REPO / "eval" / "variants" / "manifest.json").read_text())}
     var = {r["id"]: r for r in _jl(R / "variants_gate_only_phase1.jsonl")}
     oc = json.loads((R / "demo-opening-case.json").read_text())
     out = []
@@ -50,9 +80,9 @@ def cases() -> list[dict]:
         out.append({"id": cid, "proposal": {k: v for k, v in r["agent_args"].items() if k != "reason"},
                     "pdf": REPO / rman[cid]["pdf"], "email": rman[cid]["cover_email"], "checker_raw": r["checker_raw"],
                     "recorded": r["outcome"], "recorded_reasons": r["reasons"], "source": "day1_on_spark_usdagent.jsonl"})
-    v = vman["B01-photo"]
+    v = variant("B01-photo")
     out.append({"id": "B01-photo", "proposal": {k: v[k] for k in ("vendor_id", "invoice_no", "amount_paise", "po_ref")},
-                "pdf": REPO / v["pdf"], "email": v["cover_email"], "checker_raw": CLEAR,
+                "pdf": v["pdf"], "email": v["cover_email"], "checker_raw": CLEAR,
                 "recorded": var["B01-photo"]["verdict"],
                 "recorded_reasons": [":".join(x.split(":")[:2]) for x in var["B01-photo"]["reasons"]],
                 "source": "variants_gate_only_phase1.jsonl"})

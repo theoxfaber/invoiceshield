@@ -112,10 +112,11 @@ def thumb(pdf: pathlib.Path, width: int = 520) -> str:
 
 
 # ---------------------------------------------------------------- data
-def build_data() -> dict:
+def build_data(thumbs: bool = True) -> dict:
     var = jl("variants_gate_only_phase1.jsonl")
     base = jl("day1_gate_only_fa.jsonl")
-    vman = {c["id"]: c for c in json.loads((REPO / "eval" / "variants" / "manifest.json").read_text())}
+    from ui.review_demo import variant
+    vb01 = variant("B01-photo")
     photo, t2, orig = row(var, "B01-photo"), row(var, "B01-t2"), row(base, "B01")
     spark_on = jl(ON_FILES["spark"])
     empty = row(spark_on, *EMPTY_CHECKER)
@@ -123,9 +124,9 @@ def build_data() -> dict:
     oc = json.loads((R / "demo-opening-case.json").read_text())
 
     failclosed = {
-        "photo": {"id": "B01-photo", "invoice_no": vman["B01-photo"]["invoice_no"], "verdict": photo["verdict"],
+        "photo": {"id": "B01-photo", "invoice_no": vb01["invoice_no"], "verdict": photo["verdict"],
                   "reasons": photo["reasons"], "tamper_alert": photo["tamper_alert"],
-                  "img": thumb(REPO / vman["B01-photo"]["pdf"]), "img_orig": thumb(REPO / "eval" / "riskset" / "B01.pdf"),
+                  "img": thumb(vb01["pdf"]) if thumbs else "", "img_orig": thumb(REPO / "eval" / "riskset" / "B01.pdf") if thumbs else "",
                   "orig_verdict": orig["verdict"], "orig_reasons": orig["reasons"], "t2_verdict": t2["verdict"],
                   "source": "eval/results/variants_gate_only_phase1.jsonl (B01-photo, B01-t2); eval/results/day1_gate_only_fa.jsonl (B01)"},
         "empty": {"id": empty["id"], "sample": empty["sample"], "outcome": empty["outcome"], "reasons": empty["reasons"],

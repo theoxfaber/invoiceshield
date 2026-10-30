@@ -41,7 +41,7 @@ def test_results_view_matches_score_files():
 @pytest.mark.skipif(not shutil.which("pdftoppm"), reason="needs poppler-utils")
 def test_console_regenerates_from_results():
     from ui.build.build_console import build_data
-    assert mask(build_data()) == mask(embedded()), "ui/console.html is stale: run python3 -m ui.build.build_console"
+    assert mask(build_data(thumbs=False)) == mask(embedded()), "ui/console.html is stale: run python3 -m ui.build.build_console"
 
 
 def test_review_demo_reproduces_recorded_verdicts():
