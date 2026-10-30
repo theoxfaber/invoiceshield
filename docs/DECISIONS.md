@@ -53,3 +53,6 @@ Payee binding only holds if the master itself cannot be changed by a forged lett
 
 ## 2026-10-30 01:30 IST: What we changed after seeing the clean-invoice results, and what we did not
 The first false-positive run (38/60 PAY on the gate path) exposed two extraction bugs, fixed with tests and with both runs kept: labelled reference fields outside the label vocabulary were treated as unlabelled numbers, and the item-table parser could not read a multi-column (HSN / qty x rate) table or negative amounts. We did **not** change the `charge_not_on_po` rule for "Round off" lines although it caused every remaining false positive: that is a policy choice, and changing it after seeing the set would make the number meaningless. A fresh-seed set was generated and run once after the fixes to give a less-tuned figure.
+
+## Fri Oct 30: round-off rule NOT changed
+The 2–4 "Round off" REVIEWs on clean invoices (charge_not_on_po) stay as measured. Rules are frozen as of now; the held-out run uses the current engine. Reported as a known false-positive source (about 2/60 to 4/60), not quietly fixed.

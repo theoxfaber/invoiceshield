@@ -163,3 +163,7 @@ Planning documents (threat model, eval plan, demo script) were written before ki
 ### Fri Oct 30, 05:20 IST: checkpoint (build loop)
 - Round-off rule drafted (ignore a "round" line under ₹1 in `charge_not_on_po`, engine.rs ~l.294) but not committed: the Rust toolchain/zig-cc linker shim is gone after a sandbox reset (`cc` not found), so it could not be tested. Reverted.
 - Next: restore the linker shim, apply the round-off change with a test, rerun clean-FP, then freeze rules and run the held-out set once.
+
+### Fri Oct 30, 08:20 IST: rules frozen (build loop)
+- Rust toolchain is gone again (no cargo/cc), so the round-off tweak can't be tested. Decision: leave the engine unchanged and report round-off holds (2–4 of 60 clean) as a known false-positive source. See DECISIONS.md.
+- Next: generate the non-K rows of the frozen held-out set and run once (Fri night/Sat); no rule edits after.
