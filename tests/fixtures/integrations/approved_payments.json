@@ -1,0 +1,5 @@
+[
+ {"decision_id": "D000001", "vendor_id": "V001", "invoice_key": "INV-2026-0042", "amount_minor": 1234550, "currency": "INR", "po_ref": "PO-2026-0101", "ts": 1793350800, "beneficiary_id": "BENE_V001"},
+ {"decision_id": "D000002", "vendor_id": "V002", "invoice_key": "CL/26/1187", "amount_minor": 8000000, "currency": "INR", "po_ref": "PO-2026-0102", "ts": 1793437200, "beneficiary_id": "BENE_V002", "approver": "ravi"},
+ {"decision_id": "D000003", "vendor_id": "V003", "invoice_key": "BC-7781", "amount_minor": 129900, "currency": "USD", "po_ref": "PO-2026-0103", "ts": 1793437300, "beneficiary_id": "BENE_V003"}
+]

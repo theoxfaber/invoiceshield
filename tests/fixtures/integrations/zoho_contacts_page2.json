@@ -1,0 +1,6 @@
+{"code": 0, "message": "success",
+ "contacts": [
+  {"contact_id": "460000000026051", "contact_name": "Unmapped Vendor", "company_name": "Unmapped Vendor LLP", "contact_type": "vendor", "gst_no": "24ZZAUV0000A1Z1"},
+  {"contact_id": "460000000026052", "contact_name": "Acme Customer", "contact_type": "customer"}
+ ],
+ "page_context": {"page": 2, "per_page": 200, "has_more_page": false}}

@@ -1,0 +1,7 @@
+{"code": 0, "message": "success",
+ "vendorpayments": [
+  {"payment_id": "460000000031001", "vendor_id": "460000000026049", "amount": 12345.50, "reference_number": "D000001"},
+  {"payment_id": "460000000031002", "vendor_id": "460000000026050", "amount": 80001.00, "reference_number": "D000002"},
+  {"payment_id": "460000000031003", "vendor_id": "460000000026050", "amount": 5000.00, "reference_number": "manual-entry-77"}
+ ],
+ "page_context": {"page": 1, "per_page": 200, "has_more_page": false}}

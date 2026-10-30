@@ -1,0 +1,6 @@
+{"code": 0, "message": "success",
+ "contacts": [
+  {"contact_id": "460000000026049", "contact_name": "Sharma Office Supplies Pvt Ltd", "company_name": "Sharma Office Supplies Pvt Ltd", "contact_type": "vendor", "gst_no": "24ZZACS4821A1ZX", "custom_fields": [{"label": "invoiceshield_vendor_id", "value": "V001"}]},
+  {"contact_id": "460000000026050", "contact_name": "Coastal Logistics Pvt", "company_name": "Coastal Logistics Pvt", "contact_type": "vendor", "gst_no": "37ZZAFC5390B1ZO", "custom_fields": [{"label": "invoiceshield_vendor_id", "value": "V002"}]}
+ ],
+ "page_context": {"page": 1, "per_page": 200, "has_more_page": true}}
