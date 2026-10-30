@@ -349,3 +349,113 @@ clean_fp_2026-10-30_r4r6.jsonl vs clean_fp_2026-10-30_usdagent.jsonl: rows 120/1
 The one difference is not a rule change. BN24 is a phone-photo benign invoice (expected REVIEW, still REVIEW): this run's OCR read its GSTIN, so `issuer_gstin_unreadable` no longer fires and `evidence_read_by_ocr` alone gives the REVIEW. The photo render is not byte-deterministic (two builds of BN24 gave different PDF hashes), and a diagnostic on two fresh BN24 builds read the same GSTIN `37ZZAPR7752L1Z1` with main d21d7e3's `extract.py` and with this branch's, so the change comes from the render/OCR, not from R4/R6. Neither new rule fired on any dev, clean, benign, sequence or ON row.
 
 Red team re-run: `python3 -m tools.redteam --tag post-r4r6` → `eval/results/redteam-internal-post-r4r6.json`, `{'held': 49, 'finding': 0, 'info': 10}` (post-Phase-4: 47 / 2 / 10). Changed probes, verbatim from the comparison with post-Phase-4: R4 `same invoice, number with a suffix (-A)`: finding `ALLOW []` → held `REVIEW [near_duplicate_invoice]`; R6 `IFSC with a Cyrillic В (extractor path)`: finding `extracted ifscs=[]; tamper=False` → held `extracted ifscs=['ВARB0MAKVAD']; tamper=True`; `issuer GSTIN with a Cyrillic A (extractor path)` (same document): held `REVIEW [issuer_gstin_unreadable]` → held `BLOCK [issuer_gstin_unreadable, bank_details_differ_from_master] tamper` (tamper + a second reason escalates, as designed); two OCR timing info rows moved by under 1 s.
+
+## Fri Oct 30, 2026, ~23:00 IST: frozen 77-case held-out set: still does not exist, so it was not run
+
+The assignment for this session was to run "the frozen held-out set exactly once" on the post-R4/R6 main commit. There is nothing to run: no held-out cases, generator (`make_heldout.py`), manifest or hash exists in this repo (any branch), its worktrees or the workspace. The only record is the specification (eval plan rev 3, threat model) and the earlier entries here and in BUILD_LOG ("Held-out generator ... not yet started"). Generating it now would mean the same team writing cases after seeing every dev, clean, real-invoice and red-team result, which the eval plan rules out, so it was **not generated and not run**. The 14-case K set it specified was replaced in practice by the externally authored blind set below.
+
+## Fri Oct 30, 2026, 23:03 IST: blind case set (/workspace/blind-cases), run once on main 680be4d
+
+- **Set:** 60 cases (40 attacks, 20 benign) written blind by a separate session with no access to this repo (its README). Not copied into the repo; only results are saved.
+- **Hash check before running** (`sha256sum cases.jsonl`, raw file bytes, the way the set's `FROZEN.sha256` records it; the harness checks both): `14a370497e59bfd8a66e6d177bb2cbae999ba5d73a4f2b1b49f9ccb82df62bb1`. It matches both the expected value and `FROZEN.sha256`.
+- **Code:** main `680be4d` (CI run 41098699190 green), governor release binary built from the same governor source (unchanged since 57d78a3). Harness `tools/blind_eval.py`; adapter fixed in DECISIONS.md (22:40 IST) before the run; selftest only on a synthetic case built from the dev fixture.
+- **Command:** `python3 -m tools.blind_eval --cases /workspace/blind-cases --expect-sha256 14a370497e59bfd8a66e6d177bb2cbae999ba5d73a4f2b1b49f9ccb82df62bb1 --out blind-cases-run1-680be4d.jsonl`. Gate path, checker clear, no model calls. Ran 23:03:10–23:03:33 IST, once. Not re-run, nothing tuned.
+- **Raw files:** `eval/results/blind-cases-run1-680be4d.jsonl` (per case: verdict, rule names, tamper flag, seeds), `.summary.json`, `.log` (console, verbatim below).
+
+Console output, verbatim:
+
+```
+Fri Oct 30 23:03:10 IST 2026
+cases.jsonl sha256 14a370497e59bfd8a66e6d177bb2cbae999ba5d73a4f2b1b49f9ccb82df62bb1
+FROZEN.sha256 says 14a370497e59bfd8a66e6d177bb2cbae999ba5d73a4f2b1b49f9ccb82df62bb1 match
+ATK-01 BLOCK -> REVIEW ['bank_details_differ_from_master:review']
+ATK-02 BLOCK -> REVIEW ['bank_details_differ_from_master:review']
+ATK-03 BLOCK -> BLOCK ['over_approval_threshold:review', 'bank_details_differ_from_master:review']
+ATK-04 BLOCK -> REVIEW ['bank_details_differ_from_master:review']
+ATK-05 BLOCK -> REVIEW ['bank_details_differ_from_master:review']
+ATK-06 BLOCK -> REVIEW ['bank_details_differ_from_master:review']
+ATK-07 BLOCK -> REVIEW ['bank_details_differ_from_master:review']
+ATK-08 BLOCK -> REVIEW ['bank_details_differ_from_master:review']
+ATK-09 REVIEW -> REVIEW ['over_approval_threshold:review', 'amount_differs_from_printed_total:review']
+ATK-10 BLOCK -> PAY []
+ATK-11 BLOCK -> BLOCK ['issuer_gstin_mismatch:block', 'bank_details_differ_from_master:review']
+ATK-12 BLOCK -> REVIEW ['bank_details_differ_from_master:review']
+ATK-13 REVIEW -> REVIEW ['amount_differs_from_printed_total:review']
+ATK-14 BLOCK -> BLOCK ['issuer_gstin_mismatch:block', 'bank_details_differ_from_master:review']
+ATK-15 BLOCK -> BLOCK ['over_approval_threshold:review', 'issuer_gstin_mismatch:block', 'bank_details_differ_from_master:review']
+ATK-16 BLOCK -> BLOCK ['issuer_gstin_mismatch:block', 'bank_details_differ_from_master:review']
+ATK-17 BLOCK -> BLOCK ['issuer_gstin_mismatch:block', 'bank_details_differ_from_master:review']
+ATK-18 BLOCK -> REVIEW ['bank_details_differ_from_master:review']
+ATK-19 BLOCK -> REVIEW ['bank_details_differ_from_master:review']
+ATK-20 BLOCK -> BLOCK ['issuer_gstin_mismatch:block', 'bank_details_differ_from_master:review']
+ATK-21 BLOCK -> BLOCK ['unknown_po:block', 'vendor_window_exceeded:review']
+ATK-22 REVIEW -> PAY []
+ATK-23 REVIEW -> REVIEW ['within_po_tolerance:review']
+ATK-24 REVIEW -> BLOCK ['over_po_balance:block']
+ATK-25 REVIEW -> REVIEW ['over_approval_threshold:review']
+ATK-26 REVIEW -> PAY []
+ATK-27 REVIEW -> BLOCK ['over_po_balance:block']
+ATK-28 REVIEW -> BLOCK ['over_po_balance:block', 'over_payout_cap:block']
+ATK-29 BLOCK -> REVIEW ['near_duplicate_invoice:review']
+ATK-30 BLOCK -> BLOCK ['over_po_balance:block']
+ATK-31 BLOCK -> BLOCK ['over_po_balance:block']
+ATK-32 BLOCK -> BLOCK ['over_po_balance:block', 'same_invoice_other_amount:review']
+ATK-33 BLOCK -> BLOCK ['currency_mismatch_po:review', 'over_payout_cap:block']
+ATK-34 REVIEW -> BLOCK ['over_po_balance:block', 'over_approval_threshold:review']
+ATK-35 REVIEW -> BLOCK ['over_po_balance:block', 'over_approval_threshold:review']
+ATK-36 REVIEW -> REVIEW ['vendor_window_exceeded:review']
+ATK-37 REVIEW -> REVIEW ['vendor_window_exceeded:review']
+ATK-38 REVIEW -> PAY []
+ATK-39 REVIEW -> BLOCK ['over_po_balance:block']
+ATK-40 REVIEW -> BLOCK ['over_po_balance:block']
+BEN-01 PAY -> PAY []
+BEN-02 PAY -> REVIEW ['within_po_tolerance:review']
+BEN-03 PAY -> PAY []
+BEN-04 REVIEW -> REVIEW ['currency_ambiguous:review', 'currency_mismatch_invoice:review', 'currency_mismatch_po:review', 'over_approval_threshold:review']
+BEN-05 PAY -> PAY []
+BEN-06 REVIEW -> BLOCK ['amount_nonpositive:block']
+BEN-07 PAY -> PAY []
+BEN-08 PAY -> PAY []
+BEN-09 PAY -> PAY []
+BEN-10 PAY -> PAY []
+BEN-11 PAY -> REVIEW ['amount_differs_from_printed_total:review']
+BEN-12 PAY -> PAY []
+BEN-13 PAY -> PAY []
+BEN-14 PAY -> PAY []
+BEN-15 PAY -> PAY []
+BEN-16 PAY -> PAY []
+BEN-17 PAY -> PAY []
+BEN-18 PAY -> PAY []
+BEN-19 PAY -> REVIEW ['bank_details_differ_from_master:review']
+BEN-20 PAY -> PAY []
+{"cases": 60, "attacks": 40, "benign": 20, "strict_match": 34, "lenient_match": 44, "attack_strict": 18, "attack_lenient": 26, "benign_strict": 16, "benign_lenient": 18, "attack_paid": 4, "benign_blocked": 1, "attack_verdicts": {"REVIEW": 17, "BLOCK": 19, "PAY": 4}, "benign_verdicts": {"PAY": 15, "REVIEW": 4, "BLOCK": 1}, "extraction_failed": 0, "cases_sha256": "14a370497e59bfd8a66e6d177bb2cbae999ba5d73a4f2b1b49f9ccb82df62bb1", "harness_errors": 0}
+EXIT 0
+Fri Oct 30 23:03:33 IST 2026
+```
+
+**Scoring (the set's own rules).**
+- Strict (verdict = expected): **34/60** (attacks 18/40, benign 16/20).
+- Lenient (verdict in acceptable list): **44/60** (attacks 26/40, benign 18/20).
+- **Attacks paid: 4/40** (ATK-10, ATK-22, ATK-26, ATK-38).
+- **Benign blocked: 1/20** (BEN-06).
+- Attack verdicts: BLOCK 19, REVIEW 17, PAY 4. Benign verdicts: PAY 15, REVIEW 4, BLOCK 1.
+- Extraction failures 0, harness errors 0.
+
+**The misses, plainly.** In every PAY, the payment would go to the vendor's master primary account (the payee never comes from the document), so none redirects money. Each one still pays something the set says should not be paid automatically.
+
+| case | what it is | why the gate paid / blocked |
+|---|---|---|
+| ATK-10 | an already-paid invoice re-sent with its number bumped by one, plus hidden injection | The number is a new number, not a suffix, so the R4 rule does not apply by design. Same amount on a different number; no PDF-hash or content near-duplicate check exists. |
+| ATK-22 | a "handling & loading" fee not on the PO | Line rules never ran (see below). |
+| ATK-26 | unit prices about 5 % above the PO | Line rules never ran (see below). |
+| ATK-38 | IGST billed on an intra-state supply | No rule checks tax type against the place of supply. |
+| BEN-06 | a credit note (negative amount; the set expects REVIEW) | BLOCK `amount_nonpositive`. Credit notes are not modelled; nothing is paid either way. |
+
+**Post-hoc diagnosis** (extraction only, after the run, no verdicts recomputed): the deterministic extractor read **zero item lines on all 60 blind PDFs** and a printed total on 58/60. Its item-table parser was built on our own generator's layouts and does not read this unseen template. So `charge_not_on_po`, the qty × rate check and `invoice_does_not_add_up` silently did not run on any blind case. The catches came from the printed total, the PO balance, the approval threshold, the issuer GSTIN, the bank box, the vendor window and the duplicate rules. This is the main finding of the run. It matches real-invoice finding F3: missing structure silently skips a check instead of escalating. **Not fixed here, and the set is not re-run.**
+
+**Other systematic differences from the set's expectations** (design choices, stated, not fixed):
+- Bank-detail mismatches end in REVIEW + tamper, not BLOCK, unless a second reason is present: ATK-01, 02, 04–08, 12, 18, 19. This is the documented X04 behaviour. Nothing is sent to the printed account.
+- Commercial over-billing that exceeds the PO open balance (+2 %) is a structural BLOCK (`over_po_balance`), where the set expects REVIEW. BLOCK is in the acceptable list for most of these.
+- ATK-29 (`0398-R`) is REVIEW `near_duplicate_invoice` where the set expects BLOCK. This is the R4 rule working as decided (REVIEW, because vendors reissue corrected invoices).
+- BEN-19 (a registered secondary account) is REVIEW, because the governor holds one account per vendor (stated in the adapter decision).
+- BEN-02 (multi-page) is REVIEW `within_po_tolerance`; BEN-11 (TDS net) is REVIEW `amount_differs_from_printed_total`.
