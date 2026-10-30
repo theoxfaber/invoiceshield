@@ -12,7 +12,7 @@ const TEXT: &str = "TAX INVOICE\nSharma Office Supplies\nGSTIN: 24ZZACS0001A1Z5\
 const TEXT_FEE: &str = "TAX INVOICE\nSl\nDescription\nQty\nRate\nTaxable Value\n1\nA4 copier paper 75 gsm\n4802\n100\n250.00\n25,000.00\n2\nUrgent handling fee\n9985\n1\n5,000.00\n5,000.00\nTaxable Total\n₹ 30,000.00\nCGST\n₹ 2,700.00\nSGST\n₹ 2,700.00\nGRAND TOTAL\n₹ 35,400.00\n";
 
 fn master() -> Master {
-    let mut m = Master { policy: Policy::default(), ..Default::default() };
+    let mut m = Master { policy: Policy { buyer_gstin: Some("24ZZACB7319B1Z5".into()), ..Policy::default() }, ..Default::default() };
     m.vendors.insert("V001".into(), Vendor {
         vendor_id: "V001".into(), legal_name: "Sharma Office Supplies Pvt Ltd".into(), gstin: Some(GSTIN.into()), pan: None,
         beneficiary_id: "BEN_V001".into(), bank_account: "77770000000101".into(), ifsc: "BARB0MAKARP".into(),
