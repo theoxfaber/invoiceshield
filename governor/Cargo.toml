@@ -46,6 +46,11 @@ path = "src/bin/server.rs"
 [[bin]]
 name = "governor"
 path = "src/bin/governor.rs"
+# Review item 3 (2026-10-31): integer overflow panics instead of wrapping, even in release builds.
+# The panic is caught by nothing on the money path, so the request fails rather than mis-sums.
+[profile.release]
+overflow-checks = true
+
 # Indian digit grouping (1_00_000 = one lakh) is intentional in amounts and fixtures.
 [lints.clippy]
 inconsistent_digit_grouping = "allow"
