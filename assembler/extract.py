@@ -319,7 +319,23 @@ def printed_total_paise(text: str) -> int | None:
     if m:
         rupees, _, paise = m[-1].replace(",", "").partition(".")
         return int(rupees) * 100 + int((paise + "00")[:2]) if rupees.isdigit() else None
-    return words_confirmed_total_paise(text or "")
+    w = words_confirmed_total_paise(text or "")
+    if w is not None:
+        return w
+    return labelled_total_paise(text or "")
+
+
+# Review item 2 (2026-10-31): the first blind set printed "GRAND TOTAL", not "Total Payable", and
+# the extractor read no total on some layouts. Last resort: the amount printed right after a
+# grand-total style label (same line or the next line). The last such label wins (totals come last).
+_GRAND_RE = re.compile(r"(?:grand\s+total|invoice\s+total|total\s+invoice\s+(?:value|amount)|total\s+amount\s+(?:payable|due)|"
+                       r"net\s+(?:amount\s+)?payable|amount\s+payable|balance\s+due|total\s+due|amount\s+due)"
+                       r"[^\n\d]{0,24}\n?[^\n\d]{0,12}?(-?\d[\d,]*\.\d{2})(?![\d%])", re.I)
+
+
+def labelled_total_paise(text: str) -> int | None:
+    m = _GRAND_RE.findall(text or "")
+    return _paise(m[-1]) if m else None
 
 
 _NUM_WORDS = {

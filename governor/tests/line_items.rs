@@ -72,7 +72,7 @@ fn empty_model_proposal_is_the_same_as_none() {
 }
 
 #[test]
-fn no_printed_total_does_not_trigger_the_rule() {
+fn no_printed_total_does_not_trigger_the_line_rule() {
     // Nothing to check lines against: other rules decide (unchanged behaviour).
     let d = run(ev(TEXT, None), None);
     assert!(!rules(&d).contains(&"line_items_unreadable".into()), "{:?}", d.reasons);
@@ -172,4 +172,11 @@ fn wire_json_accepts_proposed_lines() {
     });
     let d = g.evaluate_json(&body.to_string(), 1_000);
     assert_eq!(d.verdict, Verdict::Allow, "{:?}", d.reasons);
+}
+
+#[test]
+fn signed_text_without_a_readable_total_reviews() {
+    let d = run(ev(TEXT, None), None);
+    assert_eq!(d.verdict, Verdict::Review, "{:?}", d.reasons);
+    assert!(rules(&d).contains(&"total_unreadable".into()));
 }

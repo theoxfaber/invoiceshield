@@ -443,6 +443,11 @@ impl Governor {
                     "the document has a text layer and a printed total, but no item lines could be read; a human must check what is being charged"),
             }
         }
+        // A signed text layer with no readable total: nothing to hold the proposal to. Fail closed.
+        if ev.has_text_layer && ev.printed_total_paise.is_none() && ev.text_layer.as_deref().is_some_and(|t| !t.trim().is_empty()) {
+            ctx.add("total_unreadable", Verdict::Review, Control::Extraction,
+                "the document has a text layer but no total could be read; a human must check the amount");
+        }
         let items: &[ItemLine] = if ev.item_lines.is_empty() { &model_lines } else { &ev.item_lines };
         if let Some(total) = ev.printed_total_paise {
             if total != p.amount_paise {
