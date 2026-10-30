@@ -75,22 +75,6 @@ impl Ledger {
         })
     }
 
-    /// Sequential re-submission (ATK-10 class): same vendor, PO, amount and currency, inside
-    /// (now - window, now], and the invoice numbers differ only by a trailing number one or two apart.
-    #[allow(clippy::too_many_arguments)]
-    pub fn sequential_resubmission(&self, vendor_id: &str, po_ref: &str, currency: &str, amount: i64, key: &str, now: i64, window_secs: i64) -> Option<&Entry> {
-        self.live().find(|e| {
-            e.vendor_id == vendor_id
-                && e.po_ref == po_ref
-                && e.currency == currency
-                && e.amount_paise == amount
-                && e.invoice_key != key
-                && e.ts > now - window_secs
-                && e.ts <= now
-                && crate::normalize::sequential_pair(&e.invoice_key, key)
-        })
-    }
-
     /// Same document content (fingerprint of the text layer minus the invoice number) from the same
     /// vendor under another invoice number, inside (now - window, now].
     pub fn same_content(&self, vendor_id: &str, key: &str, content_key: &str, now: i64, window_secs: i64) -> Option<&Entry> {

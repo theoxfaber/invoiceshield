@@ -183,27 +183,3 @@ fn pure_numeric_invoice_numbers_do_not_panic() {
     let d = eval(&mut g, "V1", "1187", 10_000_00, "PO-1", ev(GJ, &[]), 1_000);
     assert_eq!(d.verdict, Verdict::Allow, "{:?}", d.reasons);
 }
-
-#[test]
-fn sequential_resubmission_is_review_within_two_weeks_only() {
-    use invoiceshield_governor::normalize::sequential_pair;
-    assert!(sequential_pair("SIS26271101", "SIS26271102") && sequential_pair("1187", "1185"));
-    assert!(!sequential_pair("SIS26271101", "SIS26271104") && !sequential_pair("A101", "B102") && !sequential_pair("INV", "INV"));
-    // paid INV-1101, then INV-1102 for the same amount on the same PO 7 days later -> REVIEW
-    let mut g = Governor::new(master(Some(BUYER)));
-    let d = eval(&mut g, "V1", "INV-1101", 10_000_00, "PO-1", ev(GJ, &[]), 1_000);
-    assert_eq!(d.verdict, Verdict::Allow, "{:?}", d.reasons);
-    let d = eval(&mut g, "V1", "INV-1102", 10_000_00, "PO-1", ev(GJ, &[]), 1_000 + 7 * 86_400);
-    assert_eq!(d.verdict, Verdict::Review, "{:?}", d.reasons);
-    assert!(rules(&d).contains(&"sequential_resubmission".into()), "{:?}", d.reasons);
-    // the next month's invoice (30 days later) is not flagged
-    let mut g = Governor::new(master(Some(BUYER)));
-    eval(&mut g, "V1", "INV-1101", 10_000_00, "PO-1", ev(GJ, &[]), 1_000);
-    let d = eval(&mut g, "V1", "INV-1102", 10_000_00, "PO-1", ev(GJ, &[]), 1_000 + 30 * 86_400);
-    assert!(!rules(&d).contains(&"sequential_resubmission".into()), "{:?}", d.reasons);
-    // a different amount is not flagged
-    let mut g = Governor::new(master(Some(BUYER)));
-    eval(&mut g, "V1", "INV-1101", 10_000_00, "PO-1", ev(GJ, &[]), 1_000);
-    let d = eval(&mut g, "V1", "INV-1102", 9_000_00, "PO-1", ev(GJ, &[]), 1_000 + 7 * 86_400);
-    assert!(!rules(&d).contains(&"sequential_resubmission".into()), "{:?}", d.reasons);
-}
