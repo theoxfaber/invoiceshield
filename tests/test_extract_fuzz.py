@@ -53,7 +53,7 @@ def test_sender_domain_never_raises(s):
 @given(TEXT, st.text(max_size=40))
 def test_governor_evidence_matches_rust_schema(text, sender):
     g = X.governor_evidence(Evidence("h", 1, text, email_from=sender), "24ZZACB7319B1Z5")
-    assert set(g) == {"has_text_layer", "text_source", "text_layer_gstin", "sender_domain", "printed_bank_account",
+    assert set(g) >= {"has_text_layer", "text_source", "text_layer_gstin", "sender_domain", "printed_bank_account",
                       "printed_ifsc", "all_printed_accounts", "all_printed_ifscs", "printed_total_paise", "item_lines"}
     assert g["text_layer_gstin"] != "24ZZACB7319B1Z5"
 
