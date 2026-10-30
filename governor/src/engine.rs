@@ -3,6 +3,7 @@
 //! by deterministic code (EXTRACTION). Model output only enters as escalate-only signals.
 use crate::audit::AuditLog;
 use crate::ledger::{Entry, EntryStatus, Ledger};
+use crate::lines;
 use crate::master::Master;
 use crate::normalize;
 use crate::verdict::{merge, parse_checker_signals, Signal, Verdict};
@@ -86,9 +87,13 @@ pub struct Evidence {
     /// Every currency marker found in the document text. More than one distinct → REVIEW.
     #[serde(default)]
     pub all_currencies: Vec<String>,
+    /// The text layer the extraction service read (capped), signed with the rest of the evidence.
+    /// Used only to verify model-proposed item lines verbatim (`lines.rs`); never read for a payee.
+    #[serde(default)]
+    pub text_layer: Option<String>,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Default, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
 pub struct Request {
     pub proposal: serde_json::Value,
@@ -97,6 +102,10 @@ pub struct Request {
     /// Raw checker output, parsed fail-closed by the governor itself.
     #[serde(default)]
     pub checker_raw: Option<String>,
+    /// Item lines proposed by the quarantined model when the deterministic parser read none.
+    /// Untrusted: used only if `lines::verify_proposed` passes against the signed text layer.
+    #[serde(default)]
+    pub proposed_item_lines: Option<Vec<ItemLine>>,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
@@ -341,21 +350,43 @@ impl Governor {
         // 10. Amount rules (EXTRACTION). The proposal must equal what the document asks for, the
         // document must add up, and every charge line must be something the PO actually buys.
         let ev = &req.evidence;
+        // 10a. Which item lines the rules run on: the deterministic parser's first; when it read
+        // none, model-proposed lines only if they verify verbatim against the signed text layer.
+        // Fail closed (review item 1, 2026-10-31): a document with a text layer and a printed
+        // total whose lines nobody could read (or verify) is REVIEW, never a silent pass.
+        let mut model_lines: Vec<ItemLine> = vec![];
+        if ev.item_lines.is_empty() && ev.has_text_layer && ev.printed_total_paise.is_some() {
+            match req.proposed_item_lines.as_deref() {
+                Some(pl) if !pl.is_empty() => match lines::verify_proposed(pl, ev.text_layer.as_deref(), ev.printed_total_paise) {
+                    Ok(()) => {
+                        model_lines = pl.to_vec();
+                        ctx.add("line_items_model_verified", Verdict::Allow, Control::Ai,
+                            format!("the parser read no item lines; {} model-proposed lines were verified verbatim against the signed text layer and add up to the printed total", pl.len()));
+                    }
+                    Err(problems) => ctx.add("line_items_unreadable", Verdict::Review, Control::Extraction,
+                        format!("the parser read no item lines and the model-proposed lines failed verification: {}", problems.join("; "))),
+                },
+                _ => ctx.add("line_items_unreadable", Verdict::Review, Control::Extraction,
+                    "the document has a text layer and a printed total, but no item lines could be read; a human must check what is being charged"),
+            }
+        }
+        let items: &[ItemLine] = if ev.item_lines.is_empty() { &model_lines } else { &ev.item_lines };
         if let Some(total) = ev.printed_total_paise {
             if total != p.amount_paise {
                 ctx.add("amount_differs_from_printed_total", Verdict::Review, Control::Extraction,
                     format!("proposal {} but the invoice prints Total Payable {}", money(p.amount_paise, &cur), money(total, &ev_cur)));
             }
-            if !ev.item_lines.is_empty() {
-                let sum: i64 = ev.item_lines.iter().map(|l| l.amount_paise).sum();
-                if sum != total {
-                    ctx.add("invoice_does_not_add_up", Verdict::Review, Control::Extraction,
-                        format!("its lines add up to {} but it prints Total Payable {}", money(sum, &ev_cur), money(total, &ev_cur)));
+            if !items.is_empty() {
+                match items.iter().try_fold(0i64, |s, l| s.checked_add(l.amount_paise)) {
+                    Some(sum) if sum == total => {}
+                    Some(sum) => ctx.add("invoice_does_not_add_up", Verdict::Review, Control::Extraction,
+                        format!("its lines add up to {} but it prints Total Payable {}", money(sum, &ev_cur), money(total, &ev_cur))),
+                    None => ctx.add("invoice_does_not_add_up", Verdict::Review, Control::Extraction, "its line amounts overflow"),
                 }
             }
         }
         if let Some(po) = self.master.pos.get(&p.po_ref) {
-            let problems = check_lines_against_po(po, &ev.item_lines, &ev_cur, pol.line_price_tolerance_bp);
+            let problems = check_lines_against_po(po, items, &ev_cur, pol.line_price_tolerance_bp);
             if !problems.is_empty() {
                 ctx.add("charge_not_on_po", Verdict::Review, Control::Extraction,
                     format!("charge not covered by {}: {}", po.po_ref, problems.join("; ")));

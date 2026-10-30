@@ -7,6 +7,7 @@ pub mod auth;
 pub mod decisions;
 pub mod engine;
 pub mod ledger;
+pub mod lines;
 pub mod master;
 pub mod master_change;
 pub mod master_store;

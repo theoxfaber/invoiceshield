@@ -32,7 +32,7 @@ fn b01() -> serde_json::Value {
 fn b01_genuine_invoice_allows_and_pays_master_account() {
     let mut g = gov();
     let ev = v001(&g);
-    let d = g.evaluate(&Request { proposal: b01(), evidence: ev, checker_raw: Some(CLEAN.into()) }, 1_000);
+    let d = g.evaluate(&Request { proposal: b01(), evidence: ev, checker_raw: Some(CLEAN.into()), ..Default::default() }, 1_000);
     assert_eq!(d.verdict, Verdict::Allow, "{:?}", d.reasons);
     assert_eq!(d.payee.unwrap().beneficiary_id, "BENE_V001");
 }
@@ -43,7 +43,7 @@ fn l01_lookalike_gstin_and_domain_blocks() {
     let mut ev = v001(&g);
     ev.text_layer_gstin = Some("24ZZACS4891A1ZJ".into());
     ev.sender_domain = Some("sharrnaofficesupplies.in".into());
-    let d = g.evaluate(&Request { proposal: b01(), evidence: ev, checker_raw: Some(CLEAN.into()) }, 1_000);
+    let d = g.evaluate(&Request { proposal: b01(), evidence: ev, checker_raw: Some(CLEAN.into()), ..Default::default() }, 1_000);
     assert_eq!(d.verdict, Verdict::Block);
     assert!(d.payee.is_none());
 }
@@ -54,7 +54,7 @@ fn nagpur_style_bank_change_never_pays_new_account() {
     let mut ev = v001(&g);
     ev.printed_bank_account = Some("3269010273503".into());
     ev.printed_ifsc = Some("CNRB0002778".into());
-    let d = g.evaluate(&Request { proposal: b01(), evidence: ev, checker_raw: Some(CLEAN.into()) }, 1_000);
+    let d = g.evaluate(&Request { proposal: b01(), evidence: ev, checker_raw: Some(CLEAN.into()), ..Default::default() }, 1_000);
     assert_eq!(d.verdict, Verdict::Review);
     assert!(d.tamper_alert);
     assert_eq!(d.payee.unwrap().bank_name, "Bank of Baroda");
@@ -66,7 +66,7 @@ fn agent_supplied_bank_fields_block() {
     let ev = v001(&g);
     let mut p = b01();
     p["bank_ifsc"] = json!("CNRB0002778");
-    let d = g.evaluate(&Request { proposal: p, evidence: ev, checker_raw: Some(CLEAN.into()) }, 1_000);
+    let d = g.evaluate(&Request { proposal: p, evidence: ev, checker_raw: Some(CLEAN.into()), ..Default::default() }, 1_000);
     assert_eq!(d.verdict, Verdict::Block);
 }
 
@@ -77,7 +77,7 @@ fn pasted_account_outside_the_bank_box_is_a_tamper_alert() {
     let mut ev = v001(&g);
     ev.all_printed_accounts = vec![ev.printed_bank_account.clone().unwrap(), "3269010273503".into()];
     ev.all_printed_ifscs = vec![ev.printed_ifsc.clone().unwrap(), "CNRB0002778".into()];
-    let d = g.evaluate(&Request { proposal: b01(), evidence: ev, checker_raw: Some(CLEAN.into()) }, 1_000);
+    let d = g.evaluate(&Request { proposal: b01(), evidence: ev, checker_raw: Some(CLEAN.into()), ..Default::default() }, 1_000);
     assert_eq!(d.verdict, Verdict::Review);
     assert!(d.tamper_alert);
     assert_eq!(d.payee.unwrap().bank_name, "Bank of Baroda");
@@ -89,7 +89,7 @@ fn matching_values_everywhere_stay_allow() {
     let mut ev = v001(&g);
     ev.all_printed_accounts = vec![ev.printed_bank_account.clone().unwrap()];
     ev.all_printed_ifscs = vec![ev.printed_ifsc.clone().unwrap()];
-    let d = g.evaluate(&Request { proposal: b01(), evidence: ev, checker_raw: Some(CLEAN.into()) }, 1_000);
+    let d = g.evaluate(&Request { proposal: b01(), evidence: ev, checker_raw: Some(CLEAN.into()), ..Default::default() }, 1_000);
     assert_eq!(d.verdict, Verdict::Allow);
 }
 
@@ -97,7 +97,7 @@ fn matching_values_everywhere_stay_allow() {
 fn reset_state_forgets_the_ledger() {
     let mut g = gov();
     let ev = v001(&g);
-    let req = Request { proposal: b01(), evidence: ev, checker_raw: Some(CLEAN.into()) };
+    let req = Request { proposal: b01(), evidence: ev, checker_raw: Some(CLEAN.into()), ..Default::default() };
     assert_eq!(g.evaluate(&req, 1_000).verdict, Verdict::Allow);
     assert_eq!(g.evaluate(&req, 1_001).verdict, Verdict::Block); // duplicate
     g.reset_state();
@@ -114,7 +114,7 @@ fn lines(items: &[(&str, i64, bool)]) -> Vec<ItemLine> {
 
 fn run(g: &mut Governor, amount: i64, ev: Evidence) -> invoiceshield_governor::engine::Decision {
     let p = json!({"vendor_id":"V001","invoice_no":"SOS/26-27/0299","amount_paise":amount,"po_ref":"PO-2026-0101"});
-    g.evaluate(&Request { proposal: p, evidence: ev, checker_raw: Some(CLEAN.into()) }, 1_000)
+    g.evaluate(&Request { proposal: p, evidence: ev, checker_raw: Some(CLEAN.into()), ..Default::default() }, 1_000)
 }
 
 #[test]

@@ -191,6 +191,9 @@ def sender_domain(email_from: str) -> str | None:
     return m.group(1).lower() if m else None
 
 
+TEXT_LAYER_CAP = 100_000
+
+
 def governor_evidence(ev: Evidence, buyer_gstin: str) -> dict:
     """Build the `evidence` object of a governor request (field names fixed by the Rust schema)."""
     text = ev.text or ""
@@ -213,6 +216,9 @@ def governor_evidence(ev: Evidence, buyer_gstin: str) -> dict:
         "item_lines": item_lines(text),
         "currency": doc_currency(text),
         "all_currencies": currencies_seen(text),
+        # Signed with the rest; the governor uses it only to verify model-proposed item lines
+        # verbatim (governor/src/lines.rs). Capped so a huge document cannot bloat the envelope.
+        "text_layer": text[:TEXT_LAYER_CAP],
     }
     return out
 

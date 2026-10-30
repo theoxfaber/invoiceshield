@@ -222,10 +222,17 @@ impl TrustVerifier {
             Some(serde_json::Value::String(s)) => Some(s),
             Some(_) => return Err(rej("request_unparseable", Verdict::Review, "checker_raw must be a string")),
         };
+        // Model-proposed item lines are untrusted input like the proposal; the engine verifies them
+        // against the signed text layer (lines.rs). Malformed → REVIEW, as for any bad field.
+        let proposed_item_lines = match obj.remove("proposed_item_lines") {
+            None | Some(serde_json::Value::Null) => None,
+            Some(v) => Some(serde_json::from_value::<Vec<crate::engine::ItemLine>>(v)
+                .map_err(|e| rej("request_unparseable", Verdict::Review, format!("proposed_item_lines: {e}")))?),
+        };
         if let Some(k) = obj.keys().next() {
             return Err(rej("request_unparseable", Verdict::Review, format!("unknown field {k:?}")));
         }
-        Ok(Request { proposal, evidence: ev, checker_raw })
+        Ok(Request { proposal, evidence: ev, checker_raw, proposed_item_lines })
     }
 }
 

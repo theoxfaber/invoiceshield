@@ -34,7 +34,7 @@ fn tax(d: &str, a: i64) -> ItemLine {
 }
 
 fn eval(g: &mut Governor, p: serde_json::Value, ev: Evidence) -> Decision {
-    g.evaluate(&Request { proposal: p, evidence: ev, checker_raw: Some(CLEAN.into()) }, 1_000)
+    g.evaluate(&Request { proposal: p, evidence: ev, checker_raw: Some(CLEAN.into()), ..Default::default() }, 1_000)
 }
 fn has(d: &Decision, rule: &str) -> bool {
     d.reasons.iter().any(|r| r.rule == rule)
@@ -146,9 +146,9 @@ fn split_window_never_adds_dollars_to_rupees() {
     let mut ev = ev_for(&g, "V003");
     ev.currency = Some("USD".into());
     // $900 then $900 within 7 days: 1,800 > 1,190 → second is REVIEW (window), in USD terms
-    let d1 = g.evaluate(&Request { proposal: json!({"vendor_id":"V003","invoice_no":"W-1","amount_paise":900_00,"currency":"USD","po_ref":"PO-2026-0301"}), evidence: ev.clone(), checker_raw: Some(CLEAN.into()) }, 1_000);
+    let d1 = g.evaluate(&Request { proposal: json!({"vendor_id":"V003","invoice_no":"W-1","amount_paise":900_00,"currency":"USD","po_ref":"PO-2026-0301"}), evidence: ev.clone(), checker_raw: Some(CLEAN.into()), ..Default::default() }, 1_000);
     assert_eq!(d1.verdict, Verdict::Allow, "{:?}", d1.reasons);
-    let d2 = g.evaluate(&Request { proposal: json!({"vendor_id":"V003","invoice_no":"W-2","amount_paise":900_00,"currency":"USD","po_ref":"PO-2026-0301"}), evidence: ev, checker_raw: Some(CLEAN.into()) }, 2_000);
+    let d2 = g.evaluate(&Request { proposal: json!({"vendor_id":"V003","invoice_no":"W-2","amount_paise":900_00,"currency":"USD","po_ref":"PO-2026-0301"}), evidence: ev, checker_raw: Some(CLEAN.into()), ..Default::default() }, 2_000);
     assert!(has(&d2, "vendor_window_exceeded"), "{:?}", d2.reasons);
 }
 

@@ -39,7 +39,7 @@ fn ev(gstin: &str, domain: &str) -> Evidence {
     Evidence { text_layer_gstin: Some(gstin.into()), sender_domain: Some(domain.into()), has_text_layer: true, ..Default::default() }
 }
 fn req(proposal: serde_json::Value, evidence: Evidence, checker: &str) -> Request {
-    Request { proposal, evidence, checker_raw: Some(checker.into()) }
+    Request { proposal, evidence, checker_raw: Some(checker.into()), ..Default::default() }
 }
 fn v001_ev() -> Evidence { ev("24ZZACS0001A1Z5", "sharmaoffice.in.test") }
 fn prop(vendor: &str, inv: &str, rupees: i64, po: &str) -> serde_json::Value {
@@ -194,7 +194,7 @@ fn checker_fault_table_never_allows_a_benign_invoice() {
     }
     // Missing checker report (timeout) also fails closed.
     let mut g = Governor::new(master());
-    let r = Request { proposal: prop("V001", "S", 1_000, "PO-2026-0101"), evidence: v001_ev(), checker_raw: None };
+    let r = Request { proposal: prop("V001", "S", 1_000, "PO-2026-0101"), evidence: v001_ev(), checker_raw: None, ..Default::default() };
     assert_eq!(g.evaluate(&r, 0).verdict, Verdict::Review);
 }
 
