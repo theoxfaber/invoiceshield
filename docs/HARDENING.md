@@ -12,10 +12,10 @@ Coordination: each workstream works in its own git worktree on its own branch, r
 | 1 | ifsc() normalizer, bounded decisions map, auth on /v1/audit/verify | main | IN PROGRESS (Phase 1 agent, 2026-10-30 18:10 IST) |
 | 2 | Governor (or signed extraction service) owns evidence; Ed25519-signed evidence verified by governor | hardening/trust | IN PROGRESS (wt-trust, started 18:10 IST) |
 | 2 | Hostile-input parsing: sandboxed extractor with CPU/mem/time limits; fuzz tests | hardening/trust | IN PROGRESS (wt-trust, started 18:10 IST) |
-| 3 | SQLite (WAL) ledger, audit log, decisions; decision + ledger in one txn | hardening/state | IN PROGRESS (hardening/state, wt-state) |
-| 3 | Idempotency keys on /v1/actions; restart/crash-recovery test; concurrent identical requests → one payment | hardening/state | IN PROGRESS (hardening/state, wt-state) |
-| 3 | External anchoring: periodic signed head hash | hardening/state | IN PROGRESS (hardening/state, wt-state) |
-| 3 | DB uniqueness constraint instead of in-process mutex (documented choice) | hardening/state | IN PROGRESS (hardening/state, wt-state) |
+| 3 | SQLite (WAL) ledger, audit log, decisions; decision + ledger in one txn | hardening/state | DONE (hardening/state, merged to main 2026-10-30 ~19:10 IST; BUILD_LOG "Phase 3 hardening") |
+| 3 | Idempotency keys on /v1/actions; restart/crash-recovery test; concurrent identical requests → one payment | hardening/state | DONE (hardening/state, merged to main 2026-10-30 ~19:10 IST; BUILD_LOG "Phase 3 hardening") |
+| 3 | External anchoring: periodic signed head hash | hardening/state | DONE (hardening/state, merged to main 2026-10-30 ~19:10 IST; BUILD_LOG "Phase 3 hardening") |
+| 3 | DB uniqueness constraint instead of in-process mutex (documented choice) | hardening/state | DONE (hardening/state, merged to main 2026-10-30 ~19:10 IST; BUILD_LOG "Phase 3 hardening") |
 | 4 | Per-identity auth (operator/agent/approver keys), maker-checker on identities, master_change wired with callback, 2 approvers, cooling-off | hardening/security | TODO |
 | 4 | TLS option, rate limiting, secrets via env/file, cargo audit / pip-audit / Dependabot | hardening/security | TODO |
 | 4 | docs/THREAT_MODEL.md: attacker-controls-X scenarios and what the gate still guarantees | hardening/security | TODO |
