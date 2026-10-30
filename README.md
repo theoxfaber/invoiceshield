@@ -45,6 +45,7 @@ The gate never takes a payee from a document, so the attack moves to the vendor 
 ## Components
 - `governor/`: Rust gate (payee from master, PO ownership and balance, approval threshold and cap, duplicate key with Unicode normalisation and IRN, rolling 7-day per-vendor split detection, amount rules (proposal = printed total, lines add up, every charge is on the PO), issuer binding on GSTIN and sender domain, bank-detail-change tamper alert, OCR-read evidence → REVIEW, escalate-only checker merge, hash-chained audit, maker-checker vendor bank change).
 - `governor-server` (Axum): `/v1/actions`, `/v1/decisions/{id}`, operator-only `/resolve`, `/v1/audit/verify`.
+- Durable state: SQLite (WAL) ledger, audit chain, decisions and `Idempotency-Key`s, one transaction per decision; a DB UNIQUE index makes a second live payment of the same invoice impossible across processes; Ed25519-signed audit-head anchors; `governor backup|restore|verify|anchor|keygen` CLI. Set `GOVERNOR_DB` (default `governor.db`, in-memory in eval mode). See [`docs/DURABLE_STATE.md`](docs/DURABLE_STATE.md).
 - `structural/`: GSTIN mod-36 checksum and PAN binding.
 - `providers/`: Muse Spark Open (Baseten, default) and Muse Glimmer 30B (NIM) clients, cached by request hash; strict JSON parsing (any parse failure = REVIEW).
 - `dataset/fixtures/`: fictional vendor master. All names, GSTINs, accounts and domains are made up; any match with a real business, account or domain is coincidental.

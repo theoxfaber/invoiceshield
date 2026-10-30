@@ -114,11 +114,19 @@ fn unique_index_refuses_second_live_entry() {
     let c = s.conn();
     c.execute("INSERT INTO decisions (decision_id, verdict, body, ts) VALUES ('x1','allow','{}',0)", []).unwrap();
     let dup = c.execute(
-        "INSERT INTO ledger (decision_id, vendor_id, invoice_key, amount_paise, irn, po_ref, status, ts, entry)
-         SELECT 'x1', vendor_id, invoice_key, amount_paise, NULL, po_ref, 'paid', 1, entry FROM ledger WHERE decision_id = ?1",
+        "INSERT INTO ledger (decision_id, vendor_id, invoice_key, amount_paise, currency, irn, po_ref, status, ts, entry)
+         SELECT 'x1', vendor_id, invoice_key, amount_paise, currency, NULL, po_ref, 'paid', 1, entry FROM ledger WHERE decision_id = ?1",
         [&d.decision_id],
     );
     assert!(dup.is_err(), "a second live ledger row for the same invoice must be impossible");
+    // The key includes currency: the same number and amount in another currency is a different payment.
+    c.execute("INSERT INTO decisions (decision_id, verdict, body, ts) VALUES ('x2','allow','{}',0)", []).unwrap();
+    c.execute(
+        "INSERT INTO ledger (decision_id, vendor_id, invoice_key, amount_paise, currency, irn, po_ref, status, ts, entry)
+         SELECT 'x2', vendor_id, invoice_key, amount_paise, 'USD', NULL, po_ref, 'paid', 1, entry FROM ledger WHERE decision_id = ?1",
+        [&d.decision_id],
+    )
+    .unwrap();
     // A paid entry cannot be flipped or edited.
     assert!(c.execute("UPDATE ledger SET status = 'rejected' WHERE decision_id = ?1", [&d.decision_id]).is_err());
     assert!(c.execute("UPDATE audit SET payload = '{}' WHERE seq = 0", []).is_err());

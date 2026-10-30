@@ -158,7 +158,10 @@ async fn eval_reset(State(s): State<Shared>, h: HeaderMap) -> impl IntoResponse 
     }
 }
 
-async fn audit_verify(State(s): State<Shared>) -> impl IntoResponse {
+async fn audit_verify(State(s): State<Shared>, h: HeaderMap) -> impl IntoResponse {
+    if !authorized(&h, &s.key) {
+        return StatusCode::UNAUTHORIZED.into_response();
+    }
     let anchors = s.anchors.clone();
     let r = with_store(&s, move |st| -> Result<serde_json::Value, String> {
         let records = st.audit_records().map_err(|e| e.to_string())?;

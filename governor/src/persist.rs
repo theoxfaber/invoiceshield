@@ -42,6 +42,7 @@ CREATE TABLE ledger (
     vendor_id    TEXT NOT NULL,
     invoice_key  TEXT NOT NULL,
     amount_paise INTEGER NOT NULL CHECK (amount_paise > 0),
+    currency     TEXT NOT NULL DEFAULT 'INR',
     irn          TEXT,
     po_ref       TEXT NOT NULL,
     status       TEXT NOT NULL CHECK (status IN ('paid','pending','rejected')),
@@ -49,12 +50,12 @@ CREATE TABLE ledger (
     entry        TEXT NOT NULL
 );
 -- The duplicate-payment guarantee. Rejected entries do not count, exactly like ledger.rs.
-CREATE UNIQUE INDEX ledger_live_dedupe ON ledger(vendor_id, invoice_key, amount_paise) WHERE status <> 'rejected';
+CREATE UNIQUE INDEX ledger_live_dedupe ON ledger(vendor_id, invoice_key, amount_paise, currency) WHERE status <> 'rejected';
 CREATE UNIQUE INDEX ledger_live_irn ON ledger(irn) WHERE irn IS NOT NULL AND status <> 'rejected';
 -- Only a pending entry may change, and only its status.
 CREATE TRIGGER ledger_update_guard BEFORE UPDATE ON ledger
 WHEN OLD.status <> 'pending' OR NEW.vendor_id <> OLD.vendor_id OR NEW.invoice_key <> OLD.invoice_key
-  OR NEW.amount_paise <> OLD.amount_paise OR NEW.decision_id <> OLD.decision_id
+  OR NEW.amount_paise <> OLD.amount_paise OR NEW.currency <> OLD.currency OR NEW.decision_id <> OLD.decision_id
 BEGIN SELECT RAISE(ABORT, 'ledger: only a pending entry can be resolved'); END;
 CREATE TABLE audit (
     seq       INTEGER PRIMARY KEY,
@@ -244,12 +245,16 @@ pub fn audit_head(c: &Connection) -> Result<Option<(u64, String, u64)>> {
 }
 
 fn insert_ledger(tx: &Transaction, e: &Entry) -> rusqlite::Result<usize> {
+    let v = serde_json::to_value(e).expect("entry json");
+    // Currency is read from the serialised entry so this works whether or not `Entry` carries
+    // a currency field (INR-only entries have none and are INR).
+    let currency = v.get("currency").and_then(|c| c.as_str()).unwrap_or("INR").to_ascii_uppercase();
     tx.execute(
-        "INSERT INTO ledger (decision_id, vendor_id, invoice_key, amount_paise, irn, po_ref, status, ts, entry)
-         VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9)",
+        "INSERT INTO ledger (decision_id, vendor_id, invoice_key, amount_paise, currency, irn, po_ref, status, ts, entry)
+         VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10)",
         params![
-            e.decision_id, e.vendor_id, e.invoice_key, e.amount_paise, e.irn, e.po_ref,
-            status_str(e.status), e.ts, serde_json::to_string(e).expect("entry json")
+            e.decision_id, e.vendor_id, e.invoice_key, e.amount_paise, currency, e.irn, e.po_ref,
+            status_str(e.status), e.ts, v.to_string()
         ],
     )
 }

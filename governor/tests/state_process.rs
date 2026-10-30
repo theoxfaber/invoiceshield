@@ -101,6 +101,12 @@ async fn server_restart_keeps_state_and_blocks_duplicate() {
     assert!(r.contains("duplicate_invoice"));
     let (_, r) = http(s.port, "GET", "/v1/audit/verify", "", &[]).await.unwrap();
     let v = json_body(&r);
+    let mut raw = std::net::TcpStream::connect(("127.0.0.1", s.port)).unwrap();
+    use std::io::{Read, Write};
+    raw.write_all(b"GET /v1/audit/verify HTTP/1.1\r\nHost: x\r\nConnection: close\r\n\r\n").unwrap();
+    let mut unauth = String::new();
+    raw.read_to_string(&mut unauth).unwrap();
+    assert!(unauth.starts_with("HTTP/1.1 401"), "verify needs the API key: {unauth}");
     assert_eq!(v["records"], 2);
     assert!(v["first_broken"].is_null());
 }
