@@ -1,6 +1,7 @@
 //! InvoiceShield governor: a fail-closed pre-payment gate for AI accounts-payable agents.
 //! The model proposes; this code decides. Payee always from the vendor master.
 pub mod audit;
+pub mod decisions;
 pub mod engine;
 pub mod ledger;
 pub mod master;

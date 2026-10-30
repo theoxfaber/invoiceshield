@@ -3,6 +3,7 @@
 //! Env: GOVERNOR_API_KEY (required), GOVERNOR_MASTER (path to master.json),
 //! GOVERNOR_PORT (default 8080), GOVERNOR_EVAL_CLOCK=1 to honour the `x-eval-now`
 //! header (unix seconds) for split-payment eval cases. Off by default.
+//! GOVERNOR_DECISIONS_CAP: how many recent decisions GET /v1/decisions/:id keeps (default 10000).
 use axum::{
     extract::{Path, State},
     http::{HeaderMap, StatusCode},
@@ -10,15 +11,16 @@ use axum::{
     routing::{get, post},
     Json, Router,
 };
-use invoiceshield_governor::{Decision, Governor, Master};
+use invoiceshield_governor::decisions::DecisionStore;
+use invoiceshield_governor::{Governor, Master};
 use serde::Deserialize;
-use std::{collections::HashMap, sync::Arc, time::{SystemTime, UNIX_EPOCH}};
+use std::{sync::Arc, time::{SystemTime, UNIX_EPOCH}};
 use subtle::ConstantTimeEq;
 use tokio::sync::Mutex;
 
 struct App {
     gov: Governor,
-    decisions: HashMap<String, Decision>,
+    decisions: DecisionStore,
 }
 
 #[derive(Clone)]
@@ -51,7 +53,7 @@ async fn actions(State(s): State<Shared>, h: HeaderMap, body: String) -> impl In
     // racing each other cannot both pass the duplicate check.
     let mut app = s.app.lock().await;
     let d = app.gov.evaluate_json(&body, t);
-    app.decisions.insert(d.decision_id.clone(), d.clone());
+    app.decisions.insert(d.clone());
     (StatusCode::OK, Json(d)).into_response()
 }
 
@@ -101,10 +103,13 @@ async fn eval_reset(State(s): State<Shared>, h: HeaderMap) -> impl IntoResponse 
     Json(serde_json::json!({"reset": true})).into_response()
 }
 
-async fn audit_verify(State(s): State<Shared>) -> impl IntoResponse {
+async fn audit_verify(State(s): State<Shared>, h: HeaderMap) -> impl IntoResponse {
+    if !authorized(&h, &s.key) {
+        return StatusCode::UNAUTHORIZED.into_response();
+    }
     let app = s.app.lock().await;
     let n = app.gov.audit.records.len();
-    Json(serde_json::json!({"records": n, "first_broken": app.gov.audit.verify()}))
+    Json(serde_json::json!({"records": n, "first_broken": app.gov.audit.verify()})).into_response()
 }
 
 #[tokio::main]
@@ -116,8 +121,18 @@ async fn main() {
     }
     let path = std::env::var("GOVERNOR_MASTER").unwrap_or_else(|_| "../dataset/fixtures/master.json".into());
     let master = Master::from_json(&std::fs::read_to_string(&path).expect("read master")).expect("parse master");
+    let cap = match std::env::var("GOVERNOR_DECISIONS_CAP") {
+        Err(_) => 10_000,
+        Ok(v) => match v.parse::<usize>() {
+            Ok(n) if n > 0 => n,
+            _ => {
+                eprintln!("GOVERNOR_DECISIONS_CAP must be a positive integer");
+                std::process::exit(2);
+            }
+        },
+    };
     let shared = Shared {
-        app: Arc::new(Mutex::new(App { gov: Governor::new(master), decisions: HashMap::new() })),
+        app: Arc::new(Mutex::new(App { gov: Governor::new(master), decisions: DecisionStore::new(cap) })),
         key: Arc::new(key),
         eval_clock: std::env::var("GOVERNOR_EVAL_CLOCK").as_deref() == Ok("1"),
     };
