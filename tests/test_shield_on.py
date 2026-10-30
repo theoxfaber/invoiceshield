@@ -61,7 +61,7 @@ def test_agent_passes_unknown_bank_args_through_and_governor_blocks():
     assert prop.kind == "propose" and prop.args["bank_ifsc"] == "CNRB0002778"   # nothing is filtered in Python
     chk = run_checker(Stub(content='{"signals": []}'), ev)
     mp = ModelPhase("t", 0, governor_evidence(ev, BUYER_GSTIN), prop, chk)
-    with GovernorProc() as gov:
+    with GovernorProc(dev_unsigned=True) as gov:
         r = gate(gov, mp, master, MockRail())
     assert r.outcome == "block" and r.transfer is None
     assert any(x.startswith("bank_fields_rejected") for x in r.reasons)
@@ -78,7 +78,7 @@ def test_clean_proposal_pays_master_account_through_beneficiary_only():
     chk = run_checker(Stub(content='```json\n{"signals": []}\n```'), ev)
     mp = ModelPhase("t", 0, governor_evidence(ev, BUYER_GSTIN), prop, chk)
     rail = MockRail()
-    with GovernorProc() as gov:
+    with GovernorProc(dev_unsigned=True) as gov:
         r = gate(gov, mp, master, rail)
         # a second sample of the same invoice must not be a duplicate (ledger reset per sample)
         r2 = gate(gov, mp, master, rail)
@@ -98,7 +98,7 @@ def test_checker_garbage_or_error_becomes_review_never_allow():
         chk = run_checker(Stub(content=content), ev)
         assert not chk.ok
         mp = ModelPhase("t", 0, governor_evidence(ev, BUYER_GSTIN), prop, chk)
-        with GovernorProc() as gov:
+        with GovernorProc(dev_unsigned=True) as gov:
             r = gate(gov, mp, master, MockRail())
         assert r.outcome == "review", (content, r.outcome)
 
@@ -115,7 +115,7 @@ def test_checker_block_signal_escalates():
     chk = run_checker(Stub(content=sig), ev)
     assert chk.ok and chk.n_signals == 1
     mp = ModelPhase("t", 0, governor_evidence(ev, BUYER_GSTIN), prop, chk)
-    with GovernorProc() as gov:
+    with GovernorProc(dev_unsigned=True) as gov:
         r = gate(gov, mp, master, MockRail())
     assert r.outcome == "block"
 
@@ -128,7 +128,7 @@ def test_agent_hold_never_reaches_the_rail():
     prop = run_on_agent(Stub(("hold_for_review", {"reason": "odd"})), ev, vendors)
     mp = ModelPhase("t", 0, {}, prop, None)
     rail = MockRail()
-    with GovernorProc() as gov:
+    with GovernorProc(dev_unsigned=True) as gov:
         r = gate(gov, mp, master, rail)
     assert r.outcome == "agent_hold" and not rail.transfers
 

@@ -36,9 +36,9 @@ def main():
         for c in cases:
             ev = assemble(c["pdf"], c["cover_email"])
             gov.reset()
-            d = gov.evaluate({"vendor_id": c["vendor_id"], "invoice_no": c["invoice_no"],
+            d = gov.evaluate_document({"vendor_id": c["vendor_id"], "invoice_no": c["invoice_no"],
                               "amount_paise": STEERED_AMOUNT.get(c["id"]) or printed_total_paise(ev.text) or c["amount_paise"], "po_ref": c["po_ref"]},
-                             governor_evidence(ev, BUYER_GSTIN), CLEAR)
+                             c["pdf"], c["cover_email"], CLEAR)
             amt = STEERED_AMOUNT.get(c["id"]) or printed_total_paise(ev.text) or c["amount_paise"]
             lg = c["legit"]
             # ALLOW pays the master account, so the only way an ALLOW can be harmful here is the amount.

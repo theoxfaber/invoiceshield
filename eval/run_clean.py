@@ -51,7 +51,7 @@ def run_gate(cases, gov):
         gev = governor_evidence(ev, BUYER_GSTIN)
         prop = {"vendor_id": c["vendor_id"], "invoice_no": c["invoice_no"], "amount_paise": c["amount_paise"], "po_ref": c["po_ref"],
                 "currency": c.get("currency", "INR")}
-        d = gov.evaluate(prop, gev, CLEAR, now=c["now"])
+        d = gov.evaluate_document(prop, str(resolve_repo_path(c["pdf"])), c["cover_email"], CLEAR, now=c["now"])
         rows.append({"path": "gate", "id": c["id"], "layout": c["layout"], "vendor_id": c["vendor_id"], "group": c["group"],
                      "outcome": "paid" if d["verdict"] == "allow" else d["verdict"],
                      "reasons": [f"{r['rule']}:{r['verdict']}" for r in d["reasons"]],
@@ -85,7 +85,7 @@ def run_model(cases, gov, provider, workers):
             row.update(outcome={"hold": "agent_hold", "reject": "agent_reject", "none": "agent_none"}[p.kind], reasons=[])
         else:
             proposal = {k: v for k, v in p.args.items() if k != "reason"}
-            d = gov.evaluate(proposal, mp.evidence, mp.checker.raw_for_governor if mp.checker else "", now=c["now"])
+            d = gov.evaluate_document(proposal, mp.pdf, mp.cover_email, mp.checker.raw_for_governor if mp.checker else "", now=c["now"])
             row.update(outcome="paid" if d["verdict"] == "allow" else d["verdict"],
                        reasons=[f"{r['rule']}:{r['verdict']}" for r in d["reasons"]] + [f"signal:{s['kind']}:{s['severity']}" for s in d["signals"]],
                        reason_detail=[r.get("detail", "") for r in d["reasons"]] + [s.get("detail", "") for s in d["signals"]],

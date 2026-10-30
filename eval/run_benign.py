@@ -25,7 +25,7 @@ def main():
             ev = assemble(meta["pdf"], meta["cover_email"])
             prop = {"vendor_id": c["vendor_id"], "invoice_no": c["invoice_no"], "amount_paise": c["rupees"] * 100, "po_ref": c["po_ref"],
                     "currency": PROF["vendors"][c["vendor_id"]].get("currency", "INR")}
-            d = gov.evaluate(prop, governor_evidence(ev, BUYER_GSTIN), CLEAR, now=1_793_000_000)
+            d = gov.evaluate_document(prop, meta["pdf"], meta["cover_email"], CLEAR, now=1_793_000_000)
             rows.append({"id": c["id"], "fmt": c["fmt"], "expect": c["expect"], "verdict": d["verdict"],
                          "rules": [r["rule"] for r in d["reasons"]]})
     (ROOT / "results" / "benign_gate_only.jsonl").write_text("\n".join(json.dumps(r) for r in rows) + "\n")

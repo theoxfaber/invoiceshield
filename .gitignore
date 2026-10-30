@@ -21,3 +21,7 @@ eval/variants/
 *.db-wal
 *.db-shm
 *.anchors.jsonl
+
+# Extractor signing keys (never commit private keys; tests and the demo use in-memory keys)
+secrets/
+*.pem

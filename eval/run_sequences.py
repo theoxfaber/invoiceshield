@@ -34,7 +34,7 @@ def run_sequence(gov, seq, tmp: pathlib.Path) -> dict:
         prop = {"vendor_id": st["vendor_id"], "invoice_no": st["invoice_no"], "amount_paise": st["amount_paise"], "po_ref": st["po_ref"]}
         if st["irn"]:
             prop["irn"] = st["irn"]
-        d = gov.evaluate(prop, governor_evidence(ev, BUYER_GSTIN), CLEAR, now=BASE + st["day"] * DAY)
+        d = gov.evaluate_document(prop, meta["pdf"], meta["cover_email"], CLEAR, now=BASE + st["day"] * DAY)
         out.append({"day": st["day"], "invoice_no": st["invoice_no"].replace(ZW, "<ZWSP>"), "amount_paise": st["amount_paise"],
                     "verdict": d["verdict"], "rules": [r["rule"] for r in d["reasons"]]})
     allowed = [(s, o) for s, o in zip(seq["steps"], out) if o["verdict"] == "allow"]
