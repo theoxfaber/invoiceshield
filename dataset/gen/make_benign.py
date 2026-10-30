@@ -10,9 +10,11 @@ import pathlib
 from dataset.gen.make_invoice import make_t1
 from assembler.scan import make_photo, make_scan
 
-# (vendor, PO, rupees) legitimate pairs, amounts well inside balance and threshold
+# (vendor, PO, amount in major units of the vendor's currency) legitimate pairs, amounts well inside
+# balance and threshold. V003 bills in US dollars: USD 840.00 against its USD 1,000.00 PO (it was
+# 2400, i.e. USD 2,400.00, which only "fit" while the governor compared cents with INR paise).
 PAIRS = [("V001", "PO-2026-0101", 42500), ("V001", "PO-2026-0102", 18700), ("V002", "PO-2026-0201", 36400),
-         ("V002", "PO-2026-0202", 88000), ("V003", "PO-2026-0301", 2400), ("V004", "PO-2026-0401", 76500),
+         ("V002", "PO-2026-0202", 88000), ("V003", "PO-2026-0301", 840), ("V004", "PO-2026-0401", 76500),
          ("V004", "PO-2026-0402", 31250), ("V005", "PO-2026-0501", 54300), ("V006", "PO-2026-0601", 29500),
          ("V007", "PO-2026-0701", 64800), ("V007", "PO-2026-0702", 12900), ("V008", "PO-2026-0801", 94000),
          ("V009", "PO-2026-0901", 22400), ("V010", "PO-2026-1001", 15600), ("V011", "PO-2026-1101", 71000),

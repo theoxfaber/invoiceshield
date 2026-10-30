@@ -125,8 +125,60 @@ def governor_evidence(ev: Evidence, buyer_gstin: str) -> dict:
         "all_printed_ifscs": _uniq(IFSC_RE.findall(upper)),
         "printed_total_paise": printed_total_paise(text),
         "item_lines": item_lines(text),
+        "currency": doc_currency(text),
+        "all_currencies": currencies_seen(text),
     }
     return out
+
+
+# --- Currency ------------------------------------------------------------------------------------
+# Every marker maps to an ISO 4217 code. The governor compares the document's currency with the
+# proposal's and the PO's, so a dollar invoice can never be read as paise against a rupee PO.
+_CUR_MARKERS = [
+    ("INR", r"₹|\bRs\.?(?![A-Za-z])|\bINR\b|\bRupees?\b"),
+    ("USD", r"US\$|\bUSD\b|\bUS\s+dollars?\b|(?<![A-Za-z])\$"),
+    ("EUR", r"€|\bEUR\b|\beuros?\b"),
+    ("GBP", r"£|\bGBP\b|\bpounds?\s+sterling\b"),
+    ("AED", r"\bAED\b|\bdirhams?\b"),
+    ("SGD", r"S\$|\bSGD\b"),
+]
+_CUR_RES = [(c, re.compile(rx, re.I)) for c, rx in _CUR_MARKERS]
+# Where a document states the currency of its amounts outright.
+_CUR_HEADER_RE = re.compile(r"(?:Amount|Total\s+Payable)[^\n]{0,12}?(₹|Rs\.?|INR|USD|US\$|\$|EUR|€|GBP|£|AED|SGD|S\$)", re.I)
+
+
+def _code(marker: str) -> str | None:
+    for code, rx in _CUR_RES:
+        if rx.fullmatch(marker.strip()) or rx.match(marker.strip()):
+            return code
+    return None
+
+
+def currencies_seen(text: str) -> list[str]:
+    """Every currency with a marker anywhere in the document text (sorted, unique)."""
+    text = text or ""
+    # "US$" also contains "$" and "S$" patterns; strip the longer markers first so each counts once.
+    seen = set()
+    for code, rx in _CUR_RES:
+        if code == "SGD":
+            if re.search(r"(?<![U])S\$|\bSGD\b", text):
+                seen.add(code)
+            continue
+        if rx.search(text):
+            seen.add(code)
+    return sorted(seen)
+
+
+def doc_currency(text: str) -> str | None:
+    """The currency the document's amounts are in: the amount-column / total header when it names
+    one, else the only currency marked anywhere, else None (the governor then assumes INR)."""
+    m = _CUR_HEADER_RE.search(text or "")
+    if m:
+        c = _code(m.group(1))
+        if c:
+            return c
+    seen = currencies_seen(text)
+    return seen[0] if len(seen) == 1 else None
 
 
 TOTAL_RE = re.compile(r"Total\s+Payable\s*[:\-]?\s*(?:INR|USD|US\$|\$|Rs\.?|₹)?\s*([\d,]+(?:\.\d{1,2})?)", re.I)
@@ -143,6 +195,8 @@ def printed_total_paise(text: str) -> int | None:
 
 AMOUNT_ONLY_RE = re.compile(r"^(?:INR|USD|US\$|\$|Rs\.?|₹)?\s*(-?[\d,]+\.\d{2})$")
 AMOUNT_TAIL_RE = re.compile(r"^(.*\S)\s+(?:INR|USD|US\$|\$|Rs\.?|₹)?\s*(-?[\d,]+\.\d{2})$")
+HSN_CELL_RE = re.compile(r"^\d{4,8}$")
+QTY_CELL_RE = re.compile(r"^(?:(\d{1,6})\s*[x×]\s*(?:INR|USD|US\$|\$|Rs\.?|₹)?\s*([\d,]+\.\d{2})|1\s+lot)$", re.I)
 TAX_RE = re.compile(r"\b(CGST|SGST|IGST|UTGST|GST|CESS)\b", re.I)
 
 
@@ -172,15 +226,21 @@ def item_lines(text: str) -> list[dict]:
     hdr = next((i for i, l in enumerate(body[:6]) if l.lower().startswith("amount")), None)
     if hdr is not None:
         body = body[hdr + 1:]
-    rows, desc, tail = [], [], None
+    rows, desc, tail, qty = [], [], None, None
 
     def close(amount):
-        nonlocal desc, tail
-        rows.append((" ".join(desc), amount))
-        desc, tail = [], None
+        nonlocal desc, tail, qty
+        rows.append((" ".join(desc), amount, qty))
+        desc, tail, qty = [], None, None
 
     for l in body:
         if l.lower().startswith("amount"):
+            continue
+        if desc and HSN_CELL_RE.match(l):  # HSN/SAC cell of the open row
+            continue
+        m = QTY_CELL_RE.match(l)
+        if desc and m:  # "12 x 126.52" or "1 lot": quantity/rate cell of the open row
+            qty = (int(m.group(1)), _paise(m.group(2))) if m.group(1) else (1, None)
             continue
         m = AMOUNT_ONLY_RE.match(l)
         if m:
@@ -193,11 +253,18 @@ def item_lines(text: str) -> list[dict]:
                 desc.append(m.group(1))
                 tail = _paise(m.group(2))
             else:
-                rows.append((m.group(1), _paise(m.group(2))))
+                rows.append((m.group(1), _paise(m.group(2)), None))
             continue
         if desc and tail is not None:
             close(tail)
         desc.append(l)
     if desc and tail is not None:
         close(tail)
-    return [{"description": d, "amount_paise": a, "is_tax": bool(TAX_RE.search(d))} for d, a in rows]
+    out = []
+    for d, a, q in rows:
+        row = {"description": d, "amount_paise": a, "is_tax": bool(TAX_RE.search(d))}
+        if q is not None:
+            row["qty"] = q[0]
+            row["unit_price_minor"] = q[1] if q[1] is not None else a
+        out.append(row)
+    return out

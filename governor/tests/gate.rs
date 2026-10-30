@@ -1,5 +1,5 @@
 use invoiceshield_governor::engine::{Evidence, Governor, Request};
-use invoiceshield_governor::master::{Master, Policy, PurchaseOrder, Vendor};
+use invoiceshield_governor::master::{Master, Policy, PoLine, PurchaseOrder, Vendor};
 use invoiceshield_governor::{merge, parse_checker_signals, Severity, Signal, Verdict};
 use proptest::prelude::*;
 use serde_json::json;
@@ -15,7 +15,11 @@ fn vendor(id: &str, name: &str, gstin: &str, acct: &str, ifsc: &str, domain: &st
     }
 }
 fn po(po_ref: &str, owner: &str, cat: &str, rupees: i64) -> PurchaseOrder {
-    PurchaseOrder { po_ref: po_ref.into(), owner_vendor_id: owner.into(), category: cat.into(), open_balance_paise: rupees * 100, contracted_items: vec![cat.into()] }
+    PurchaseOrder {
+        po_ref: po_ref.into(), owner_vendor_id: owner.into(), category: cat.into(), currency: "INR".into(),
+        open_balance_paise: rupees * 100,
+        lines: vec![PoLine { item: cat.into(), aliases: vec![], qty: 1, unit_price_minor: rupees * 100, currency: None, unit: "lot".into() }],
+    }
 }
 fn master() -> Master {
     let mut m = Master { policy: Policy::default(), ..Default::default() };

@@ -109,7 +109,7 @@ fn reset_state_forgets_the_ledger() {
 use invoiceshield_governor::engine::ItemLine;
 
 fn lines(items: &[(&str, i64, bool)]) -> Vec<ItemLine> {
-    items.iter().map(|(d, a, t)| ItemLine { description: (*d).into(), amount_paise: *a, is_tax: *t }).collect()
+    items.iter().map(|(d, a, t)| ItemLine { description: (*d).into(), amount_paise: *a, is_tax: *t, qty: None, unit_price_minor: None }).collect()
 }
 
 fn run(g: &mut Governor, amount: i64, ev: Evidence) -> invoiceshield_governor::engine::Decision {

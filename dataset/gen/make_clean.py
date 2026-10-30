@@ -50,6 +50,13 @@ VENDORS = {v["vendor_id"]: v for v in MASTER["vendors"]}
 POS = {p["po_ref"]: p for p in MASTER["pos"]}
 THRESH = MASTER["policy"]["approval_threshold_paise"]
 BUYER = PROF["buyer"]
+FX = PROF["fx"]["USD_INR"]
+
+
+def _bal(po) -> int:
+    """PO open balance in INR-equivalent paise (the scale the amount draws are made on)."""
+    b = po["open_balance_paise"]
+    return int(round(b * FX)) if po.get("currency", "INR") == "USD" else b
 
 # Item wording per contracted term: the term itself always appears (the PO match), with detail.
 DETAIL = {
@@ -88,7 +95,7 @@ REMARKS = ["Payment terms: 30 days from invoice date.", "Subject to Vadodara jur
 
 def _term(po) -> str:
     """The contracted term an item line names (the PO's own category when it is a contracted item)."""
-    items = po["contracted_items"]
+    items = [l["item"] for l in po["lines"]]
     return po["category"] if po["category"] in items else items[-1]
 
 
@@ -138,7 +145,7 @@ def _plan(seed: int = SEED) -> list[dict]:
     # Four part-payment sequences: three monthly invoices against one PO, total inside its balance.
     seqs = [("V008", "PO-2026-0801"), ("V002", "PO-2026-0202"), ("V004", "PO-2026-0401"), ("V005", "PO-2026-0501")]
     for g, (vid, po) in enumerate(seqs):
-        bal = POS[po]["open_balance_paise"]
+        bal = _bal(POS[po])
         cap = min(THRESH - 1, bal // 3)
         for k in range(3):
             specs.append({"vendor_id": vid, "po_ref": po, "group": f"SEQ{g+1}", "seq_index": k, "month": 8 + k,
@@ -152,7 +159,7 @@ def _plan(seed: int = SEED) -> list[dict]:
     rng.shuffle(order)
     for po in order:
         vid = POS[po]["owner_vendor_id"]
-        bal = POS[po]["open_balance_paise"]
+        bal = _bal(POS[po])
         hi = min(THRESH - 1, bal)
         specs.append({"vendor_id": vid, "po_ref": po, "group": None, "seq_index": 0, "month": 10,
                       "target_paise": rng.randint(max(50_000, hi // 20), hi)})
@@ -169,6 +176,12 @@ def _build_lines(rng, spec, po, usd: bool, same_state: bool) -> tuple[list[tuple
         tax_mode = "rcm"  # goods transport agency billing under reverse charge: no GST on the invoice
     rate = 0 if tax_mode in ("none", "rcm") else rng.choice([5, 12, 18, 18, 18])
     target = spec["target_paise"]
+    if usd:
+        # Draws are made on the INR-paise scale (so every other invoice keeps its RNG stream);
+        # a dollar invoice bills the same value in cents at the eval rate. Before Oct 30 the paise
+        # figure was printed as dollars (USD 55,600 against a USD 1,000 PO), which only passed
+        # because the governor did not model currency.
+        target = int(round(target / FX))
     taxable = int(target * 100 / (100 + rate))
     # split taxable across items
     cuts = sorted(rng.sample(range(1, 100), n_items - 1)) if n_items > 1 else []
@@ -367,7 +380,9 @@ def build(out_dir: pathlib.Path = OUT, seed: int = SEED) -> list[dict]:
     for m in cases:
         po = POS[m["po_ref"]]
         assert po["owner_vendor_id"] == m["vendor_id"]
-        assert 0 < m["amount_paise"] < THRESH, m
+        limit = THRESH if m["currency"] == "INR" else MASTER["policy"]["currency_limits"][m["currency"]]["approval_threshold_minor"]
+        assert 0 < m["amount_paise"] < limit, m
+        assert m["currency"] == po.get("currency", "INR"), m
         key = m["po_ref"] if m["group"] else m["id"]
         used[key] = used.get(key, 0) + m["amount_paise"]
         assert used[key] <= po["open_balance_paise"], (m["id"], used[key])

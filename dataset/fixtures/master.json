@@ -175,157 +175,318 @@
       "po_ref": "PO-2026-0101",
       "owner_vendor_id": "V001",
       "category": "Stationery",
+      "currency": "INR",
       "open_balance_paise": 8000000,
-      "contracted_items": [
-        "Stationery",
-        "Stationery & consumables"
+      "lines": [
+        {
+          "item": "Stationery",
+          "qty": 1,
+          "unit_price_minor": 8000000,
+          "unit": "lot"
+        },
+        {
+          "item": "Stationery & consumables",
+          "qty": 1,
+          "unit_price_minor": 8000000,
+          "unit": "lot"
+        }
       ]
     },
     {
       "po_ref": "PO-2026-0102",
       "owner_vendor_id": "V001",
       "category": "Printer consumables",
+      "currency": "INR",
       "open_balance_paise": 6000000,
-      "contracted_items": [
-        "Printer consumables",
-        "Stationery & consumables"
+      "lines": [
+        {
+          "item": "Printer consumables",
+          "qty": 1,
+          "unit_price_minor": 6000000,
+          "unit": "lot"
+        },
+        {
+          "item": "Stationery & consumables",
+          "qty": 1,
+          "unit_price_minor": 6000000,
+          "unit": "lot"
+        }
       ]
     },
     {
       "po_ref": "PO-2026-0201",
       "owner_vendor_id": "V002",
       "category": "Freight",
+      "currency": "INR",
       "open_balance_paise": 5000000,
-      "contracted_items": [
-        "Freight",
-        "Freight & logistics"
+      "lines": [
+        {
+          "item": "Freight",
+          "qty": 1,
+          "unit_price_minor": 5000000,
+          "unit": "lot"
+        },
+        {
+          "item": "Freight & logistics",
+          "qty": 1,
+          "unit_price_minor": 5000000,
+          "unit": "lot"
+        }
       ]
     },
     {
       "po_ref": "PO-2026-0202",
       "owner_vendor_id": "V002",
       "category": "Freight (annual)",
+      "currency": "INR",
       "open_balance_paise": 32000000,
-      "contracted_items": [
-        "Freight & logistics",
-        "Freight (annual)"
+      "lines": [
+        {
+          "item": "Freight & logistics",
+          "qty": 1,
+          "unit_price_minor": 32000000,
+          "unit": "lot"
+        },
+        {
+          "item": "Freight (annual)",
+          "qty": 1,
+          "unit_price_minor": 32000000,
+          "unit": "lot"
+        }
       ]
     },
     {
       "po_ref": "PO-2026-0301",
       "owner_vendor_id": "V003",
       "category": "SaaS",
-      "open_balance_paise": 8400000,
-      "contracted_items": [
-        "SaaS",
-        "SaaS licences"
+      "currency": "USD",
+      "open_balance_paise": 100000,
+      "lines": [
+        {
+          "item": "SaaS",
+          "qty": 1,
+          "unit_price_minor": 100000,
+          "unit": "lot"
+        },
+        {
+          "item": "SaaS licences",
+          "qty": 1,
+          "unit_price_minor": 100000,
+          "unit": "lot"
+        }
       ]
     },
     {
       "po_ref": "PO-2026-0401",
       "owner_vendor_id": "V004",
       "category": "Fabrication",
+      "currency": "INR",
       "open_balance_paise": 21000000,
-      "contracted_items": [
-        "Fabrication",
-        "Fabrication & machining"
+      "lines": [
+        {
+          "item": "Fabrication",
+          "qty": 1,
+          "unit_price_minor": 21000000,
+          "unit": "lot"
+        },
+        {
+          "item": "Fabrication & machining",
+          "qty": 1,
+          "unit_price_minor": 21000000,
+          "unit": "lot"
+        }
       ]
     },
     {
       "po_ref": "PO-2026-0402",
       "owner_vendor_id": "V004",
       "category": "Machining",
+      "currency": "INR",
       "open_balance_paise": 6500000,
-      "contracted_items": [
-        "Fabrication & machining",
-        "Machining"
+      "lines": [
+        {
+          "item": "Fabrication & machining",
+          "qty": 1,
+          "unit_price_minor": 6500000,
+          "unit": "lot"
+        },
+        {
+          "item": "Machining",
+          "qty": 1,
+          "unit_price_minor": 6500000,
+          "unit": "lot"
+        }
       ]
     },
     {
       "po_ref": "PO-2026-0501",
       "owner_vendor_id": "V005",
       "category": "Canteen catering",
+      "currency": "INR",
       "open_balance_paise": 12000000,
-      "contracted_items": [
-        "Canteen catering"
+      "lines": [
+        {
+          "item": "Canteen catering",
+          "qty": 1,
+          "unit_price_minor": 12000000,
+          "unit": "lot"
+        }
       ]
     },
     {
       "po_ref": "PO-2026-0601",
       "owner_vendor_id": "V006",
       "category": "IT services",
+      "currency": "INR",
       "open_balance_paise": 9000000,
-      "contracted_items": [
-        "IT services",
-        "IT services (AMC)"
+      "lines": [
+        {
+          "item": "IT services",
+          "qty": 1,
+          "unit_price_minor": 9000000,
+          "unit": "lot"
+        },
+        {
+          "item": "IT services (AMC)",
+          "qty": 1,
+          "unit_price_minor": 9000000,
+          "unit": "lot"
+        }
       ]
     },
     {
       "po_ref": "PO-2026-0701",
       "owner_vendor_id": "V007",
       "category": "Packaging (corrugated)",
+      "currency": "INR",
       "open_balance_paise": 15000000,
-      "contracted_items": [
-        "Packaging",
-        "Packaging (corrugated)"
+      "lines": [
+        {
+          "item": "Packaging",
+          "qty": 1,
+          "unit_price_minor": 15000000,
+          "unit": "lot"
+        },
+        {
+          "item": "Packaging (corrugated)",
+          "qty": 1,
+          "unit_price_minor": 15000000,
+          "unit": "lot"
+        }
       ]
     },
     {
       "po_ref": "PO-2026-0702",
       "owner_vendor_id": "V007",
       "category": "Packaging (shrink wrap)",
+      "currency": "INR",
       "open_balance_paise": 4000000,
-      "contracted_items": [
-        "Packaging",
-        "Packaging (shrink wrap)"
+      "lines": [
+        {
+          "item": "Packaging",
+          "qty": 1,
+          "unit_price_minor": 4000000,
+          "unit": "lot"
+        },
+        {
+          "item": "Packaging (shrink wrap)",
+          "qty": 1,
+          "unit_price_minor": 4000000,
+          "unit": "lot"
+        }
       ]
     },
     {
       "po_ref": "PO-2026-0801",
       "owner_vendor_id": "V008",
       "category": "Electrical works",
+      "currency": "INR",
       "open_balance_paise": 50000000,
-      "contracted_items": [
-        "Electrical works"
+      "lines": [
+        {
+          "item": "Electrical works",
+          "qty": 1,
+          "unit_price_minor": 50000000,
+          "unit": "lot"
+        }
       ]
     },
     {
       "po_ref": "PO-2026-0901",
       "owner_vendor_id": "V009",
       "category": "Stationery",
+      "currency": "INR",
       "open_balance_paise": 7500000,
-      "contracted_items": [
-        "Stationery",
-        "Stationery & office furniture"
+      "lines": [
+        {
+          "item": "Stationery",
+          "qty": 1,
+          "unit_price_minor": 7500000,
+          "unit": "lot"
+        },
+        {
+          "item": "Stationery & office furniture",
+          "qty": 1,
+          "unit_price_minor": 7500000,
+          "unit": "lot"
+        }
       ]
     },
     {
       "po_ref": "PO-2026-1001",
       "owner_vendor_id": "V010",
       "category": "IT hardware",
+      "currency": "INR",
       "open_balance_paise": 3000000,
-      "contracted_items": [
-        "IT hardware",
-        "IT hardware supply"
+      "lines": [
+        {
+          "item": "IT hardware",
+          "qty": 1,
+          "unit_price_minor": 3000000,
+          "unit": "lot"
+        },
+        {
+          "item": "IT hardware supply",
+          "qty": 1,
+          "unit_price_minor": 3000000,
+          "unit": "lot"
+        }
       ]
     },
     {
       "po_ref": "PO-2026-1101",
       "owner_vendor_id": "V011",
       "category": "Civil maintenance",
+      "currency": "INR",
       "open_balance_paise": 20000000,
-      "contracted_items": [
-        "Civil maintenance"
+      "lines": [
+        {
+          "item": "Civil maintenance",
+          "qty": 1,
+          "unit_price_minor": 20000000,
+          "unit": "lot"
+        }
       ]
     },
     {
       "po_ref": "PO-2026-1201",
       "owner_vendor_id": "V012",
       "category": "Packaging (cartons)",
+      "currency": "INR",
       "open_balance_paise": 9000000,
-      "contracted_items": [
-        "Packaging",
-        "Packaging (cartons)"
+      "lines": [
+        {
+          "item": "Packaging",
+          "qty": 1,
+          "unit_price_minor": 9000000,
+          "unit": "lot"
+        },
+        {
+          "item": "Packaging (cartons)",
+          "qty": 1,
+          "unit_price_minor": 9000000,
+          "unit": "lot"
+        }
       ]
     }
   ],
@@ -333,6 +494,13 @@
     "approval_threshold_paise": 10000000,
     "payout_cap_paise": 50000000,
     "po_tolerance_bp": 200,
-    "window_secs": 604800
+    "window_secs": 604800,
+    "currency_limits": {
+      "USD": {
+        "approval_threshold_minor": 119000,
+        "payout_cap_minor": 595200
+      }
+    },
+    "line_price_tolerance_bp": 0
   }
 }

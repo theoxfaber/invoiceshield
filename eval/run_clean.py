@@ -49,14 +49,15 @@ def run_gate(cases, gov):
         prev = c["group"]
         ev = assemble(str(resolve_repo_path(c["pdf"])), c["cover_email"])
         gev = governor_evidence(ev, BUYER_GSTIN)
-        prop = {"vendor_id": c["vendor_id"], "invoice_no": c["invoice_no"], "amount_paise": c["amount_paise"], "po_ref": c["po_ref"]}
+        prop = {"vendor_id": c["vendor_id"], "invoice_no": c["invoice_no"], "amount_paise": c["amount_paise"], "po_ref": c["po_ref"],
+                "currency": c.get("currency", "INR")}
         d = gov.evaluate(prop, gev, CLEAR, now=c["now"])
         rows.append({"path": "gate", "id": c["id"], "layout": c["layout"], "vendor_id": c["vendor_id"], "group": c["group"],
                      "outcome": "paid" if d["verdict"] == "allow" else d["verdict"],
                      "reasons": [f"{r['rule']}:{r['verdict']}" for r in d["reasons"]],
                      "reason_detail": [r.get("detail", "") for r in d["reasons"]],
                      "tamper_alert": d["tamper_alert"],
-                     "extracted": {k: gev[k] for k in ("printed_bank_account", "all_printed_accounts", "all_printed_ifscs", "printed_total_paise")},
+                     "extracted": {k: gev.get(k) for k in ("printed_bank_account", "all_printed_accounts", "all_printed_ifscs", "printed_total_paise", "currency", "all_currencies")},
                      "n_item_lines": len(gev["item_lines"])})
     return rows
 

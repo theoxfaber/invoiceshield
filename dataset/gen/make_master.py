@@ -22,6 +22,7 @@ from structural.gstin import validate, with_check_char
 ROOT = Path(__file__).resolve().parents[2]
 OUT = ROOT / "dataset" / "fixtures"
 rng = random.Random(2026_10_26)
+USD_INR = 84.00  # eval exchange rate (also written to profiles.json)
 
 
 def acct(n_digits: int) -> str:
@@ -118,9 +119,17 @@ def build():
         profiles[vid] = {"template": tpl, "invoice_no_example": inv, "address": addr, "phone": phone,
                          "state_code": state, "currency": "USD" if vid == "V003" else "INR"}
     vcat = {v["vendor_id"]: v["category"] for v in vendors}
-    pos = [{"po_ref": p, "owner_vendor_id": o, "category": c, "open_balance_paise": bal * 100,
-            "contracted_items": sorted({c, vcat[o]})}
-           for p, o, c, _tot, bal in POS]
+    # Currency: V003's PO is raised in US dollars (USD 3,000 total / 1,000 open); every other PO in
+    # rupees. Balances are in minor units of the PO currency (paise, cents).
+    # Lines: the fixture POs are lump-sum value lines, one per contracted item (unit "lot",
+    # qty 1, unit price = the open balance), because the fictional invoices were generated against
+    # PO categories, not rate contracts. Rate lines (qty x unit price) are exercised in the tests.
+    def _po(p, o, c, bal):
+        cur = "USD" if o == "V003" else "INR"
+        minor = round(bal / USD_INR * 100) if cur == "USD" else bal * 100
+        return {"po_ref": p, "owner_vendor_id": o, "category": c, "currency": cur, "open_balance_paise": minor,
+                "lines": [{"item": it, "qty": 1, "unit_price_minor": minor, "unit": "lot"} for it in sorted({c, vcat[o]})]}
+    pos = [_po(p, o, c, bal) for p, o, c, _tot, bal in POS]
     po_totals = {p: tot * 100 for p, _o, _c, tot, _b in POS}
 
     # Attacker / non-master entities (never in master.json).
@@ -139,13 +148,16 @@ def build():
         "L05": {"domain": "bhavaniprecisions.in"},
     }
     policy = {"approval_threshold_paise": 100000_00, "payout_cap_paise": 500000_00,
-              "po_tolerance_bp": 200, "window_secs": 7 * 24 * 3600}
+              "po_tolerance_bp": 200, "window_secs": 7 * 24 * 3600,
+              # USD limits = the INR ones at USD_INR, rounded down to whole dollars (never looser).
+              "currency_limits": {"USD": {"approval_threshold_minor": 1190_00, "payout_cap_minor": 5952_00}},
+              "line_price_tolerance_bp": 0}
     OUT.mkdir(parents=True, exist_ok=True)
     (OUT / "master.json").write_text(json.dumps({"vendors": vendors, "pos": pos, "policy": policy}, indent=2, ensure_ascii=False) + "\n")
     (OUT / "profiles.json").write_text(json.dumps({
         "_note": "Fictional fixture. Any match with a real business, account or domain is coincidental.",
         "buyer": BUYER, "vendors": profiles, "po_totals_paise": po_totals,
-        "fx": {"USD_INR": 84.00}, "attackers": attackers,
+        "fx": {"USD_INR": USD_INR}, "attackers": attackers,
     }, indent=2, ensure_ascii=False) + "\n")
 
 

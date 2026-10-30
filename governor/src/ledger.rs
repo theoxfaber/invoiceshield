@@ -16,10 +16,18 @@ pub struct Entry {
     pub vendor_id: String,
     pub invoice_key: String,
     pub irn: Option<String>,
+    /// Minor units of `currency` (the name is kept from the INR-only schema).
     pub amount_paise: i64,
+    /// ISO 4217 code of the amount. Sums never mix currencies.
+    #[serde(default = "inr")]
+    pub currency: String,
     pub po_ref: String,
     pub status: EntryStatus,
     pub ts: i64,
+}
+
+fn inr() -> String {
+    "INR".into()
 }
 
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]
@@ -46,17 +54,17 @@ impl Ledger {
         self.live().find(|e| e.irn.as_deref() == Some(irn))
     }
 
-    /// Sum of paid + pending for a vendor in (now - window, now].
-    pub fn window_sum(&self, vendor_id: &str, now: i64, window_secs: i64) -> i64 {
+    /// Sum of paid + pending for a vendor in one currency in (now - window, now].
+    pub fn window_sum(&self, vendor_id: &str, currency: &str, now: i64, window_secs: i64) -> i64 {
         self.live()
-            .filter(|e| e.vendor_id == vendor_id && e.ts > now - window_secs && e.ts <= now)
+            .filter(|e| e.vendor_id == vendor_id && e.currency == currency && e.ts > now - window_secs && e.ts <= now)
             .map(|e| e.amount_paise)
             .sum()
     }
 
-    /// Amount already committed (paid + pending) against a PO.
-    pub fn po_committed(&self, po_ref: &str) -> i64 {
-        self.live().filter(|e| e.po_ref == po_ref).map(|e| e.amount_paise).sum()
+    /// Amount already committed (paid + pending) against a PO, in the PO's currency.
+    pub fn po_committed(&self, po_ref: &str, currency: &str) -> i64 {
+        self.live().filter(|e| e.po_ref == po_ref && e.currency == currency).map(|e| e.amount_paise).sum()
     }
 
     pub fn set_status(&mut self, decision_id: &str, status: EntryStatus) -> bool {
