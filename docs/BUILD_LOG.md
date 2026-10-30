@@ -167,3 +167,7 @@ Planning documents (threat model, eval plan, demo script) were written before ki
 ### Fri Oct 30, 08:20 IST: rules frozen (build loop)
 - Rust toolchain is gone again (no cargo/cc), so the round-off tweak can't be tested. Decision: leave the engine unchanged and report round-off holds (2–4 of 60 clean) as a known false-positive source. See DECISIONS.md.
 - Next: generate the non-K rows of the frozen held-out set and run once (Fri night/Sat); no rule edits after.
+
+### Fri Oct 30, 17:20 IST: checkpoint (build loop)
+- Reviewed state: rules frozen, clean-FP results saved in eval/results/. Held-out generator (63 non-K rows from eval-plan §3 + threat model) not yet started; no code change this chunk.
+- Next: write dataset/gen/make_heldout.py for the non-K rows, commit the manifest hash before running once.
