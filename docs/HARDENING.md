@@ -21,8 +21,8 @@ Coordination: each workstream works in its own git worktree on its own branch, r
 | 4 | docs/THREAT_MODEL.md: attacker-controls-X scenarios and what the gate still guarantees | hardening/security | TODO |
 | 5 | Frozen held-out set run once (after Phase 1 merge), raw result | build loop | TODO |
 | 5 | Blind adaptive cases written without repo access | blind writer | TODO |
-| 5 | Real/public anonymized invoices eval + FP rate with confidence intervals | hardening/real-eval | TODO |
-| 5 | Internal red-team report; shadow-mode harness (external review + live pilot need real users: documented as next steps) | hardening/real-eval | TODO |
+| 5 | Real/public anonymized invoices eval + FP rate with confidence intervals | hardening/real-eval | IN PROGRESS (Phase 5 agent, 2026-10-30 18:10 IST) |
+| 5 | Internal red-team report; shadow-mode harness (external review + live pilot need real users: documented as next steps) | hardening/real-eval | IN PROGRESS (Phase 5 agent, 2026-10-30 18:10 IST) |
 | 6 | GitHub Actions CI, Dockerfile, make demo, pyproject.toml | hardening/ops | TODO |
 | 6 | Structured logs, /metrics, /healthz, config validation, versioned OpenAPI schema, backup/restore test, runbooks, load test + SLO | hardening/ops | TODO |
 | 6 | Repo prune (dedupe demos; keep the one the video uses) | hardening/ops | TODO |
