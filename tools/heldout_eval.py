@@ -12,7 +12,8 @@ Arms (the gate decides in both):
   both   the gate, with Muse Spark Open allowed to (a) propose item lines when the parser read none
          (page images + text layer; every number verified verbatim by the governor) and (b) raise
          checker signals (escalate-only).
-The rules / checker-only / both ablation is run on the DEV set only (eval/run_ablation_dev.py).
+  checker_only  the quarantined Spark checker alone, no deterministic rules (added 2026-10-31 before
+         the v2 run; mapping as in eval/run_ablation_dev.py).
 
 v2 proposal ("fooled agent"): the agent pays what the document asks: vendor = master vendor whose GSTIN
 is read as issuer, else whose legal name is printed, else the owner of the printed PO, else the closest
@@ -306,6 +307,14 @@ def gate_once(which, c, inp, arm, calls) -> dict:
             "model_lines_offered": lines is not None}
 
 
+def checker_only(raw: str | None) -> dict:
+    """Checker-only arm: the quarantined Spark checker alone, no deterministic rules (same mapping as
+    eval/run_ablation_dev.py): no signals -> PAY, any review signal -> REVIEW, any block signal ->
+    BLOCK, unparseable/missing -> REVIEW."""
+    from eval.run_ablation_dev import checker_verdict
+    return {"verdict": checker_verdict(raw, raw is not None), "reasons": []}
+
+
 def run(which: str, out: str, commit: str) -> int:
     cases, meta = load_cases(which)
     prov = get_provider("spark", offline=True)
@@ -325,10 +334,11 @@ def run(which: str, out: str, commit: str) -> int:
                                        "model_lines_error": calls.get("lines_error")}
             row["rules"] = gate_once(which, c, inp, "rules", calls)
             row["both"] = gate_once(which, c, inp, "both", calls)
+            row["checker_only"] = checker_only(calls.get("checker_raw"))
         except Exception as e:  # recorded, never retried
             row["error"] = f"{type(e).__name__}: {e}"[:300]
         rows.append(row)
-        print(row["id"], {a: row.get(a, {}).get("verdict") for a in ("rules", "both")}, row.get("error", ""), flush=True)
+        print(row["id"], {a: row.get(a, {}).get("verdict") for a in ("rules", "checker_only", "both")}, row.get("error", ""), flush=True)
         path.write_text("\n".join(json.dumps(r, ensure_ascii=False) for r in rows) + "\n")
     meta.update({"set": which, "commit": commit, "cases": len(rows), "harness_errors": sum("error" in r for r in rows),
                  "ran_at_ist": dt.datetime.now(IST).isoformat(timespec="seconds"),
@@ -354,7 +364,8 @@ def score(which: str, out: str) -> int:
                 labels[c["id"]] = {"expected": c["expected_verdict"], "acceptable": c["acceptable_verdicts"],
                                    "kind": c["kind"], "category": c["category"]}
     summ = {}
-    for arm in ("rules", "both"):
+    arms = [a for a in ("rules", "checker_only", "both") if any(a in r for r in rows)] or ["rules", "both"]
+    for arm in arms:
         s, misses = Counter(), []
         for r in rows:
             lab = labels[r["id"]]

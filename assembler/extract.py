@@ -399,6 +399,143 @@ def _paise(s: str) -> int:
 
 
 def item_lines(text: str) -> list[dict]:
+    """Item lines: the original 'Description ... Total Payable' parser first; when it reads nothing,
+    the column-header table parser (`header_table_lines`), which accepts its rows only if they and
+    the summary rows add up exactly to the printed total."""
+    return _desc_amount_lines(text) or header_table_lines(text)
+
+
+# --- Column-header table parser (2026-10-31, after the v1 post-fix re-run) ------------------------
+# Written to read a common Indian GST layout (Sl | Description | HSN/SAC | Qty | UoM | Rate | GST% |
+# Taxable Value, then a summary block of tax heads, round-off and a grand total) without knowing
+# the template. Tuned on the already-seen v1 blind set and the dev/clean sets only (labelled so in
+# docs/DECISIONS.md). Fail-closed by arithmetic: any row or summary entry it cannot place makes the
+# lines miss the printed total, and then it returns nothing, so the governor REVIEWs
+# `line_items_unreadable` (or a model proposal is verified instead). Nothing it skips can be paid:
+# the payment is the printed total, which must equal the sum of what it read.
+_SERIAL_HDR = {"sl", "sl.", "sl no", "sl. no.", "sl.no.", "s.no", "s.no.", "s no", "sr", "sr.", "sr. no.", "sr no", "#", "no", "no."}
+_HDR_WORDS = re.compile(r"^(?:sl\.?(?:\s*no\.?)?|s\.?\s*no\.?|sr\.?(?:\s*no\.?)?|#|no\.?|description(?: of goods(?:/services)?)?|particulars|item(?: description)?|"
+                        r"hsn(?:/sac)?|sac|hsn/sac code|qty\.?|quantity|uom|unit|units|rate|unit price|price|rate \(.*\)|gst ?%|tax ?%|gst rate|"
+                        r"disc\.?|discount|taxable value|taxable amount|amount|value|total|line total|net amount)$", re.I)
+_CELLISH = re.compile(r"^(?:-?[\d,]+(?:\.\d+)?\s*%?|(?:INR|USD|US\$|\$|Rs\.?|₹)\s*-?[\d,]+\.\d{2})$")
+_SUBTOTAL = re.compile(r"^(?:taxable\s+(?:total|value|amount)|sub\s*-?\s*total|total\s+taxable(?:\s+value)?|total\s+before\s+tax)\b", re.I)
+_TABLE_END = re.compile(r"^(?:tax\s+summary|taxable\s+total|sub\s*-?\s*total|total\b|grand\s+total|amount\s+in\s+words|bank\s+details|"
+                        r"terms\b|declaration\b|for\s+\S)", re.I)
+
+
+def _money(cell: str) -> int | None:
+    m = AMOUNT_ONLY_RE.match(cell.strip())
+    return _paise(m.group(1)) if m else None
+
+
+def header_table_lines(text: str) -> list[dict]:
+    lines = [l.strip() for l in (text or "").splitlines() if l.strip()]
+    total = printed_total_paise(text or "")
+    if total is None:
+        return []
+    # header: a run of header cells containing a description column and ending in an amount column
+    start = None
+    for i, l in enumerate(lines):
+        if re.match(r"^(?:description|particulars|item description)\b", l, re.I) and _HDR_WORDS.match(l):
+            j = i
+            while j > 0 and _HDR_WORDS.match(lines[j - 1]) and i - j < 2:
+                j -= 1
+            k = i + 1
+            while k < len(lines) and _HDR_WORDS.match(lines[k]) and not lines[k].isdigit():
+                k += 1
+            start = (j, i, k)
+            break
+    if start is None:
+        return []
+    j, di, k = start
+    header = [h.lower() for h in lines[j:k]]
+    pre = header[: di - j]
+    if any(h not in _SERIAL_HDR for h in pre) or len(pre) > 1:
+        return []
+    serial = bool(pre)
+    after = header[di - j + 1:]
+    if not after or not re.search(r"amount|value|total", after[-1]):
+        return []
+    qcol = next((n for n, h in enumerate(after) if h.startswith(("qty", "quantity"))), None)
+    rcol = next((n for n, h in enumerate(after) if h.startswith(("rate", "unit price", "price"))), None)
+    hdr_set = set(header)
+
+    rows, i, n_expected = [], k, 1
+    while i < len(lines):
+        l = lines[i]
+        if _TABLE_END.match(l) and not (serial and l == str(n_expected)):
+            break
+        if serial:
+            if l != str(n_expected):
+                i += 1  # notes, page breaks, repeated header cells: skipped (the sum check catches a skipped charge)
+                continue
+            i += 1
+        elif l.lower() in hdr_set:
+            i += 1
+            continue
+        desc = []
+        while i < len(lines) and not _CELLISH.match(lines[i]) and not _TABLE_END.match(lines[i]):
+            desc.append(lines[i])
+            i += 1
+            if len(desc) > 4:
+                return []
+        if not desc or i + len(after) > len(lines):
+            return []
+        cells = lines[i:i + len(after)]
+        i += len(after)
+        amount = _money(cells[-1])
+        if amount is None:
+            return []
+        row = {"description": " ".join(desc), "amount_paise": amount, "is_tax": bool(TAX_RE.search(" ".join(desc)))}
+        if qcol is not None and rcol is not None and re.fullmatch(r"\d{1,7}", cells[qcol].replace(",", "")):
+            rate = _money(cells[rcol])
+            if rate is not None:
+                row["qty"] = int(cells[qcol].replace(",", ""))
+                row["unit_price_minor"] = rate
+        rows.append(row)
+        n_expected += 1
+        if not serial:
+            # without a serial column, anything that is not another row's description ends the table
+            pass
+    if not rows:
+        return []
+    # summary block: from the subtotal label (if any) to the label that carries the printed total
+    tail = lines[i:]
+    sub = next((n for n, l in enumerate(tail) if _SUBTOTAL.match(l)), None)
+    if sub is not None:
+        tail = tail[sub:]
+    extra, n, done = [], 0, False
+    while n < len(tail):
+        l = tail[n]
+        nxt = tail[n + 1] if n + 1 < len(tail) else ""
+        m_tail = AMOUNT_TAIL_RE.match(l)
+        if m_tail and not AMOUNT_ONLY_RE.match(l):
+            label, amt = m_tail.group(1), _paise(m_tail.group(2))
+            n += 1
+        elif _money(nxt) is not None and _money(l) is None:
+            label, amt = l, _money(nxt)
+            n += 2
+        else:
+            return []  # an unpaired line inside the summary block: cannot place it
+        if amt == total and re.search(r"total|payable|due", label, re.I) and not _SUBTOTAL.match(label):
+            done = True
+            break
+        if _SUBTOTAL.match(label):
+            if amt != sum(r["amount_paise"] for r in rows):
+                return []
+            continue
+        extra.append({"description": label.rstrip(":").strip(), "amount_paise": amt, "is_tax": bool(TAX_RE.search(label))})
+        if len(extra) > 12:
+            return []
+    if not done:
+        return []
+    out = rows + extra
+    if sum(r["amount_paise"] for r in out) != total:
+        return []
+    return out
+
+
+def _desc_amount_lines(text: str) -> list[dict]:
     """Rows of the item table: everything between the 'Description ... Amount' header and 'Total Payable'.
 
     The amount column closes a row. A row is a description followed by any other cells (HSN code,

@@ -244,6 +244,28 @@ fn line_whose_quantity_times_rate_is_not_its_amount_is_review() {
 }
 
 #[test]
+fn discounted_rate_line_bills_less_and_fits_but_rate_and_quantity_still_bind() {
+    // 2026-10-31: a printed line discount (amount below qty x rate) is not over-billing.
+    let mut g = gov_with(po_with(vec![rate("IT services", 10, 4_000_00)]));
+    let mut l = qline("IT services - support visits", 2, 4_000_00);
+    l.amount_paise = 7_840_00; // 2 x 4,000.00 less 2% discount
+    let d = run_po(&mut g, vec![l]);
+    assert_eq!(d.verdict, Verdict::Allow, "{:?}", d.reasons);
+    // discounted, but the printed rate is above the PO rate -> still REVIEW
+    let mut g = gov_with(po_with(vec![rate("IT services", 10, 4_000_00)]));
+    let mut l = qline("IT services - support visits", 2, 4_500_00);
+    l.amount_paise = 7_900_00;
+    let d = run_po(&mut g, vec![l]);
+    assert_eq!(d.verdict, Verdict::Review, "{:?}", d.reasons);
+    // discounted, but more units than the PO line holds -> still REVIEW
+    let mut g = gov_with(po_with(vec![rate("IT services", 10, 4_000_00)]));
+    let mut l = qline("IT services - support visits", 11, 4_000_00);
+    l.amount_paise = 40_000_00;
+    let d = run_po(&mut g, vec![l]);
+    assert_eq!(d.verdict, Verdict::Review, "{:?}", d.reasons);
+}
+
+#[test]
 fn lump_sum_line_caps_the_total_billed_against_it() {
     let mut g = gov_with(po_with(vec![lump("Cleaning", 30_000_00)]));
     let d = run_po(&mut g, vec![line("Cleaning - floors", 20_000_00), line("Cleaning: windows", 9_000_00)]);
