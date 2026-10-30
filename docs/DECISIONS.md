@@ -170,3 +170,6 @@ main `55fb679` is the frozen commit for the one v2 run (all arms). No gate, extr
 
 ## Sat Oct 31, 2026: SAM 3.1 never ran; claims removed
 SAM 3.1 was in the Oct 26 plan for document region masks. It was never run (no GPU access; see the Oct 27 go/no-go), so the Oct 26 "Models" entry above is superseded on that point: the shipped stack uses tesseract OCR for scans and Muse Spark Open (default) / Muse Glimmer 30B for every model call. README and docs no longer mention SAM as part of the system.
+
+## Sat Oct 31, 2026: no MCP proxy; claim reworded
+No MCP wrapper is built. The README states the governor is an HTTP service, not an MCP server; no document claims MCP support. Revisit only as a post-event next step.
