@@ -62,6 +62,46 @@ def run_gate(cases, gov):
     return rows
 
 
+def _both_calls(provider, c):
+    """Model inputs for the `both` arm: Spark line proposals (only when the parser read none) and the
+    quarantined Spark checker. Same functions the held-out harness uses."""
+    import hashlib
+    from assembler.evidence import Evidence as AsmEvidence
+    from checker.checker import run_checker
+    from extractor.line_proposer import needs_model_lines, propose_lines, render_pages
+    pdf = resolve_repo_path(c["pdf"]).read_bytes()
+    ev = assemble(str(resolve_repo_path(c["pdf"])), c["cover_email"])
+    gev = governor_evidence(ev, BUYER_GSTIN)
+    lines = None
+    if needs_model_lines(gev):
+        lp = propose_lines(provider, gev.get("text_layer", "") or "", images=render_pages(pdf))
+        lines = lp.lines if lp.ok else None
+    asm = AsmEvidence(pdf_sha256=hashlib.sha256(pdf).hexdigest(), pages=1, text=gev.get("text_layer", "") or "")
+    chk = run_checker(provider, asm, sample=0, reasoning="low").raw_for_governor
+    return lines, chk, len(gev["item_lines"])
+
+
+def run_both(cases, gov, provider, workers):
+    """Gate + model arm (as in tools/heldout_eval.py `both`): the genuine proposal, Spark line proposals
+    verified by the governor when the parser read nothing, Spark checker signals (escalate-only)."""
+    with ThreadPoolExecutor(workers) as ex:
+        calls = list(ex.map(lambda c: _both_calls(provider, c), cases))
+    rows, prev = [], None
+    for c, (lines, chk, n_parsed) in zip(cases, calls):
+        if _fresh(c, prev):
+            gov.reset()
+        prev = c["group"]
+        prop = {"vendor_id": c["vendor_id"], "invoice_no": c["invoice_no"], "amount_paise": c["amount_paise"], "po_ref": c["po_ref"],
+                "currency": c.get("currency", "INR")}
+        d = gov.evaluate_document(prop, str(resolve_repo_path(c["pdf"])), c["cover_email"], chk if chk is not None else "",
+                                  now=c["now"], proposed_item_lines=lines)
+        rows.append({"path": "both", "id": c["id"], "layout": c["layout"], "vendor_id": c["vendor_id"], "group": c["group"],
+                     "outcome": "paid" if d["verdict"] == "allow" else d["verdict"],
+                     "reasons": [f"{r['rule']}:{r['verdict']}" for r in d["reasons"]] + [f"signal:{s['kind']}:{s['severity']}" for s in d["signals"]],
+                     "n_item_lines": n_parsed, "model_lines_offered": lines is not None})
+    return rows
+
+
 def run_model(cases, gov, provider, workers):
     master = load_master()
     vendors = {v["vendor_id"]: v for v in master["vendors"]}
@@ -102,6 +142,7 @@ def summary(rows):
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--model", action="store_true")
+    ap.add_argument("--both", action="store_true", help="also run the gate + model arm (line proposals + checker)")
     ap.add_argument("--offline", action="store_true")
     ap.add_argument("--provider", default="spark")
     ap.add_argument("--workers", type=int, default=6)
@@ -117,12 +158,16 @@ def main():
             from providers.llm import get_provider
             provider = get_provider(a.provider, offline=a.offline, timeout_s=200.0)
             rows += run_model(cases, gov, provider, a.workers)
+        if a.both:
+            from providers.llm import get_provider
+            provider = get_provider(a.provider, offline=a.offline, timeout_s=200.0)
+            rows += run_both(cases, gov, provider, a.workers)
     date = dt.datetime.now(dt.timezone(dt.timedelta(hours=5, minutes=30))).date().isoformat()
     suffix = "" if a.seed == SEED else f"_seed{a.seed}"
     out = ROOT / "results" / (a.out or f"clean_fp_{date}{suffix}.jsonl")
     out.write_text("\n".join(json.dumps(r, ensure_ascii=False) for r in rows) + "\n")
     print("wrote", out.relative_to(ROOT.parent))
-    for path in ("gate", "model"):
+    for path in ("gate", "model", "both"):
         rs = [r for r in rows if r["path"] == path]
         if not rs:
             continue
