@@ -70,10 +70,28 @@ fn inter_state_with_cgst_sgst_reviews_and_with_igst_passes() {
 }
 
 #[test]
-fn no_buyer_gstin_no_tax_rule() {
+fn no_buyer_gstin_reviews_tax_type_unverifiable() {
     let mut g = Governor::new(master(None));
     let d = eval(&mut g, "V1", "A-1", 50_000_00, "PO-1", ev(GJ, &["IGST"]), 1_000);
-    assert_eq!(d.verdict, Verdict::Allow);
+    assert_eq!(d.verdict, Verdict::Review);
+    assert!(rules(&d).contains(&"tax_type_unverifiable".into()));
+    // no GST charged: nothing to check
+    let mut g = Governor::new(master(None));
+    let d = eval(&mut g, "V1", "A-2", 50_000_00, "PO-1", ev(GJ, &[]), 1_000);
+    assert_eq!(d.verdict, Verdict::Allow, "{:?}", d.reasons);
+}
+
+fn doc_ev(inv: &str, date: &str, total: i64) -> Evidence {
+    use invoiceshield_governor::engine::ItemLine;
+    let mut e = ev(GJ, &["CGST", "SGST"]);
+    e.text_layer = Some(doc(inv, date));
+    e.printed_total_paise = Some(total);
+    e.item_lines = vec![
+        ItemLine { description: "Goods supplied".into(), amount_paise: total - 2 * (total * 9 / 118), qty: None, unit_price_minor: None, is_tax: false },
+        ItemLine { description: "CGST".into(), amount_paise: total * 9 / 118, qty: None, unit_price_minor: None, is_tax: true },
+        ItemLine { description: "SGST".into(), amount_paise: total * 9 / 118, qty: None, unit_price_minor: None, is_tax: true },
+    ];
+    e
 }
 
 fn doc(inv: &str, date: &str) -> String {
@@ -83,11 +101,10 @@ fn doc(inv: &str, date: &str) -> String {
 #[test]
 fn same_document_under_a_bumped_number_reviews() {
     let mut g = Governor::new(master(Some(BUYER)));
-    let mut e1 = ev(GJ, &["CGST", "SGST"]);
-    e1.text_layer = Some(doc("VO/26/1101", "2026-10-12"));
-    assert_eq!(eval(&mut g, "V1", "VO/26/1101", 50_000_00, "PO-1", e1, 1_000).verdict, Verdict::Allow);
-    let mut e2 = ev(GJ, &["CGST", "SGST"]);
-    e2.text_layer = Some(doc("VO/26/1102", "2026-10-12"));
+    let e1 = doc_ev("VO/26/1101", "2026-10-12", 50_000_00);
+    let d1 = eval(&mut g, "V1", "VO/26/1101", 50_000_00, "PO-1", e1, 1_000);
+    assert_eq!(d1.verdict, Verdict::Allow, "{:?}", d1.reasons);
+    let e2 = doc_ev("VO/26/1102", "2026-10-12", 50_000_00);
     let d = eval(&mut g, "V1", "VO/26/1102", 50_000_00, "PO-1", e2, 2_000);
     assert_eq!(d.verdict, Verdict::Review, "{:?}", d.reasons);
     assert!(rules(&d).contains(&"near_duplicate_content".into()));
@@ -96,12 +113,8 @@ fn same_document_under_a_bumped_number_reviews() {
 #[test]
 fn next_month_same_amount_is_not_a_content_duplicate() {
     let mut g = Governor::new(master(Some(BUYER)));
-    let mut e1 = ev(GJ, &["CGST", "SGST"]);
-    e1.text_layer = Some(doc("VO/26/1101", "2026-09-12"));
-    eval(&mut g, "V1", "VO/26/1101", 50_000_00, "PO-1", e1, 1_000);
-    let mut e2 = ev(GJ, &["CGST", "SGST"]);
-    e2.text_layer = Some(doc("VO/26/1102", "2026-10-12"));
-    let d = eval(&mut g, "V1", "VO/26/1102", 30_000_00, "PO-1", e2, 40 * 86_400);
+    eval(&mut g, "V1", "VO/26/1101", 50_000_00, "PO-1", doc_ev("VO/26/1101", "2026-09-12", 50_000_00), 1_000);
+    let d = eval(&mut g, "V1", "VO/26/1102", 30_000_00, "PO-1", doc_ev("VO/26/1102", "2026-10-12", 30_000_00), 40 * 86_400);
     assert!(!rules(&d).contains(&"near_duplicate_content".into()), "{:?}", d.reasons);
 }
 

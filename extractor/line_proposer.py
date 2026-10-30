@@ -81,9 +81,38 @@ def _strip_reasoning(s: str) -> str:
     return re.sub(r"<think>.*?</think>", "", s or "", flags=re.S).strip()
 
 
-def propose_lines(provider: LLMProvider, text: str, *, sample: int = 0, reasoning: str = "low") -> Proposal:
-    msgs = [{"role": "system", "content": SYSTEM},
-            {"role": "user", "content": "INVOICE TEXT (untrusted):\n<<<\n" + (text or "")[:MAX_TEXT] + "\n>>>"}]
+def render_pages(pdf: bytes, *, dpi: int = 110, max_pages: int = 2, timeout_s: float = 30.0) -> list[bytes]:
+    """PNG images of the first pages, rendered by poppler's pdftoppm in a child process with a
+    wall-clock limit. Any failure returns no images (the model then reads the text only). Production
+    should run this inside the extractor's sandbox (stated limit, docs/DECISIONS.md)."""
+    import subprocess
+    import tempfile
+    from pathlib import Path
+    try:
+        with tempfile.TemporaryDirectory() as t:
+            src = Path(t) / "in.pdf"
+            src.write_bytes(pdf)
+            subprocess.run(["pdftoppm", "-r", str(dpi), "-png", "-f", "1", "-l", str(max_pages), str(src), str(Path(t) / "p")],
+                           check=True, timeout=timeout_s, capture_output=True, env={"PATH": "/usr/bin:/bin"})
+            return [p.read_bytes() for p in sorted(Path(t).glob("p*.png"))][:max_pages]
+    except (OSError, subprocess.SubprocessError):
+        return []
+
+
+def propose_lines(provider: LLMProvider, text: str, *, sample: int = 0, reasoning: str = "low",
+                  images: list[bytes] | None = None) -> Proposal:
+    """`images`: rendered pages (vision). Muse Spark Open on Baseten accepts OpenAI-style image_url
+    parts (verified 2026-10-31). The model reads the page image AND the text layer; whatever it
+    proposes is verified against the signed text layer only, so the image can never add a number."""
+    import base64
+    user: str | list = "INVOICE TEXT (untrusted):\n<<<\n" + (text or "")[:MAX_TEXT] + "\n>>>"
+    if images:
+        parts = [{"type": "text", "text": "The invoice page image(s) follow, then its text layer. Copy descriptions and "
+                                          "numbers exactly as they appear in the TEXT LAYER.\n" + user}]
+        parts += [{"type": "image_url", "image_url": {"url": "data:image/png;base64," + base64.b64encode(b).decode()}}
+                  for b in images]
+        user = parts
+    msgs = [{"role": "system", "content": SYSTEM}, {"role": "user", "content": user}]
     r = provider.chat(msgs, reasoning=reasoning, max_tokens=6000, sample=sample)
     if not r.ok:
         return Proposal(error=f"provider: {r.error}"[:300], cached=r.cached, latency_s=r.latency_s)

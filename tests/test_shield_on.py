@@ -70,7 +70,10 @@ def test_clean_proposal_pays_master_account_through_beneficiary_only():
     master = load_master()
     vendors = {v["vendor_id"]: v for v in master["vendors"]}
     from assembler.evidence import Evidence
-    text = ("GSTIN: 24ZZACS4821A1ZX\nBill To:\nGSTIN: 24ZZACB7319B1Z5\nA/c No: 23276810695553\nIFSC: BARB0MAKVAD")
+    # 2026-10-31: the text now carries an item table and a total; a signed text layer with no
+    # readable total is REVIEW (total_unreadable, fail closed).
+    text = ("GSTIN: 24ZZACS4821A1ZX\nBill To:\nGSTIN: 24ZZACB7319B1Z5\nDescription Amount\nStationery & consumables 45,000.00\n"
+            "Total Payable: 45,000.00\nA/c No: 23276810695553\nIFSC: BARB0MAKVAD")
     ev = Evidence("h", 1, text, email_from="a@sharmaofficesupplies.in")
     args = {"vendor_id": "V001", "invoice_no": "SOS/26-27/0231", "amount_paise": 4500000, "po_ref": "PO-2026-0101"}
     prop = run_on_agent(Stub(("propose_payment", args)), ev, vendors)
@@ -89,7 +92,10 @@ def test_checker_garbage_or_error_becomes_review_never_allow():
     master = load_master()
     vendors = {v["vendor_id"]: v for v in master["vendors"]}
     from assembler.evidence import Evidence
-    text = ("GSTIN: 24ZZACS4821A1ZX\nBill To:\nGSTIN: 24ZZACB7319B1Z5\nA/c No: 23276810695553\nIFSC: BARB0MAKVAD")
+    # 2026-10-31: the text now carries an item table and a total; a signed text layer with no
+    # readable total is REVIEW (total_unreadable, fail closed).
+    text = ("GSTIN: 24ZZACS4821A1ZX\nBill To:\nGSTIN: 24ZZACB7319B1Z5\nDescription Amount\nStationery & consumables 45,000.00\n"
+            "Total Payable: 45,000.00\nA/c No: 23276810695553\nIFSC: BARB0MAKVAD")
     ev = Evidence("h", 1, text, email_from="a@sharmaofficesupplies.in")
     args = {"vendor_id": "V001", "invoice_no": "SOS/26-27/0231", "amount_paise": 4500000, "po_ref": "PO-2026-0101"}
     prop = run_on_agent(Stub(("propose_payment", args)), ev, vendors)
@@ -106,7 +112,10 @@ def test_checker_block_signal_escalates():
     master = load_master()
     vendors = {v["vendor_id"]: v for v in master["vendors"]}
     from assembler.evidence import Evidence
-    text = ("GSTIN: 24ZZACS4821A1ZX\nBill To:\nGSTIN: 24ZZACB7319B1Z5\nA/c No: 23276810695553\nIFSC: BARB0MAKVAD")
+    # 2026-10-31: the text now carries an item table and a total; a signed text layer with no
+    # readable total is REVIEW (total_unreadable, fail closed).
+    text = ("GSTIN: 24ZZACS4821A1ZX\nBill To:\nGSTIN: 24ZZACB7319B1Z5\nDescription Amount\nStationery & consumables 45,000.00\n"
+            "Total Payable: 45,000.00\nA/c No: 23276810695553\nIFSC: BARB0MAKVAD")
     ev = Evidence("h", 1, text, email_from="a@sharmaofficesupplies.in")
     args = {"vendor_id": "V001", "invoice_no": "SOS/26-27/0231", "amount_paise": 4500000, "po_ref": "PO-2026-0101"}
     prop = run_on_agent(Stub(("propose_payment", args)), ev, vendors)

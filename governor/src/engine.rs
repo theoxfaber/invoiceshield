@@ -372,11 +372,13 @@ impl Governor {
         // Intra-state supply is CGST+SGST (or UTGST); inter-state is IGST. States are the first two
         // digits of the vendor's master GSTIN and the buyer's own GSTIN from policy. Stated limits:
         // place of supply other than the buyer's state, SEZ supplies and exports are not modelled.
-        if let (Some(vg), Some(bg)) = (vendor.gstin.as_deref(), pol.buyer_gstin.as_deref()) {
-            let (vs, bs) = (state_code(vg), state_code(bg));
+        // Binding rule (second review, 2026-10-31): when the document charges GST and the buyer's own
+        // GSTIN is not configured (or either state code is unreadable), the rule cannot be checked, so
+        // it REVIEWs (`tax_type_unverifiable`) instead of passing silently.
+        if let Some(vg) = vendor.gstin.as_deref() {
             let mut heads: Vec<String> = req.evidence.tax_kinds.iter().map(|k| k.to_ascii_uppercase()).collect();
-            let lines_src = if req.evidence.item_lines.is_empty() { req.proposed_item_lines.as_deref().unwrap_or(&[]) } else { &req.evidence.item_lines[..] };
-            // proposed lines only count once verified (step 10a); the extractor's heads suffice here.
+            let lines_src: &[ItemLine] = if req.evidence.item_lines.is_empty() { req.proposed_item_lines.as_deref().unwrap_or(&[]) } else { &req.evidence.item_lines[..] };
+            // proposed lines only count once verified (same check as step 10a)
             if !req.evidence.item_lines.is_empty() || lines::verify_proposed(lines_src, req.evidence.text_layer.as_deref(), req.evidence.printed_total_paise).is_ok() {
                 for l in lines_src.iter().filter(|l| l.is_tax) {
                     let d = lines::fold(&l.description);
@@ -389,13 +391,15 @@ impl Governor {
             heads.dedup();
             let intra_heads = heads.iter().any(|h| h == "CGST" || h == "SGST" || h == "UTGST");
             let igst = heads.iter().any(|h| h == "IGST");
-            if let (Some(vs), Some(bs)) = (vs, bs) {
-                if vs == bs && igst {
-                    ctx.add("tax_type_mismatch", Verdict::Review, Control::Extraction,
-                        format!("vendor and buyer are both in state {vs} (intra-state) but the invoice charges IGST; it should be CGST+SGST"));
-                } else if vs != bs && intra_heads {
-                    ctx.add("tax_type_mismatch", Verdict::Review, Control::Extraction,
-                        format!("vendor (state {vs}) and buyer (state {bs}) are in different states but the invoice charges CGST/SGST; it should be IGST"));
+            if intra_heads || igst {
+                match (state_code(vg), pol.buyer_gstin.as_deref().and_then(state_code)) {
+                    (Some(vs), Some(bs)) if vs == bs && igst => ctx.add("tax_type_mismatch", Verdict::Review, Control::Extraction,
+                        format!("vendor and buyer are both in state {vs} (intra-state) but the invoice charges IGST; it should be CGST+SGST")),
+                    (Some(vs), Some(bs)) if vs != bs && intra_heads => ctx.add("tax_type_mismatch", Verdict::Review, Control::Extraction,
+                        format!("vendor (state {vs}) and buyer (state {bs}) are in different states but the invoice charges CGST/SGST; it should be IGST")),
+                    (Some(_), Some(_)) => {}
+                    _ => ctx.add("tax_type_unverifiable", Verdict::Review, Control::Structural,
+                        "the invoice charges GST but the buyer's GSTIN is not configured (policy.buyer_gstin), so IGST vs CGST/SGST cannot be checked"),
                 }
             }
         }
@@ -442,6 +446,11 @@ impl Governor {
                 _ => ctx.add("line_items_unreadable", Verdict::Review, Control::Extraction,
                     "the document has a text layer and a printed total, but no item lines could be read; a human must check what is being charged"),
             }
+        }
+        // A signed text layer with no readable total: nothing to hold the proposal to. Fail closed.
+        if ev.has_text_layer && ev.printed_total_paise.is_none() && ev.text_layer.as_deref().is_some_and(|t| !t.trim().is_empty()) {
+            ctx.add("total_unreadable", Verdict::Review, Control::Extraction,
+                "the document has a text layer but no total could be read; a human must check the amount");
         }
         let items: &[ItemLine] = if ev.item_lines.is_empty() { &model_lines } else { &ev.item_lines };
         if let Some(total) = ev.printed_total_paise {

@@ -19,3 +19,11 @@ def test_credit_note_title():
     assert document_kind("  Credit Note No. CN/19\n") == "credit_note"
     assert document_kind("TAX INVOICE\nRef: credit note CN/1 adjusted") == "invoice"
     assert document_kind("") == "invoice"
+
+
+def test_labelled_total_fallback():
+    from assembler.extract import printed_total_paise
+    assert printed_total_paise("GRAND TOTAL\n₹ 57,230.00") == 57_230_00
+    assert printed_total_paise("Balance Due: Rs. 1,23,456.78") == 1_23_456_78
+    assert printed_total_paise("Total Payable: 100.00\nGrand Total 200.00") == 100_00  # Total Payable wins
+    assert printed_total_paise("Grand Total 18% 4,000.00") is None  # a digit before the amount: not read
