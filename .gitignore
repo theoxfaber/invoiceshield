@@ -16,3 +16,8 @@ eval/variants/
 /BUILD_LOG.md
 /DECISIONS.md
 /REVIEW_BACKLOG.md
+# Governor state (Phase 3): never commit a live DB, its WAL/SHM, anchors or keys
+*.db
+*.db-wal
+*.db-shm
+*.anchors.jsonl

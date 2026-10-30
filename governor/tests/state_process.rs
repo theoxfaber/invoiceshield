@@ -29,26 +29,36 @@ fn free_port() -> u16 {
 }
 
 fn start(db: &Path, extra: &[(&str, &str)]) -> Server {
-    let port = free_port();
-    let mut cmd = Command::new(env!("CARGO_BIN_EXE_governor-server"));
-    cmd.env_clear()
-        .env("GOVERNOR_API_KEY", KEY)
-        .env("GOVERNOR_MASTER", master_path())
-        .env("GOVERNOR_PORT", port.to_string())
-        .env("GOVERNOR_DB", db)
-        .stdout(Stdio::null())
-        .stderr(Stdio::null());
-    for (k, v) in extra {
-        cmd.env(k, v);
+    // free_port() can race with other tests/processes grabbing the same port; if the server
+    // exits (bind failed) before it answers, try again on a new port.
+    for _attempt in 0..5 {
+        let port = free_port();
+        let mut cmd = Command::new(env!("CARGO_BIN_EXE_governor-server"));
+        cmd.env_clear()
+            .env("GOVERNOR_API_KEY", KEY)
+            .env("GOVERNOR_MASTER", master_path())
+            .env("GOVERNOR_PORT", port.to_string())
+            .env("GOVERNOR_DB", db)
+            .stdout(Stdio::null())
+            .stderr(Stdio::null());
+        for (k, v) in extra {
+            cmd.env(k, v);
+        }
+        let child = cmd.spawn().expect("spawn governor-server");
+        let mut s = Server { child, port };
+        let t0 = Instant::now();
+        loop {
+            if let Ok(Some(_)) = s.child.try_wait() {
+                break; // exited early (port taken); retry
+            }
+            if std::net::TcpStream::connect(("127.0.0.1", port)).is_ok() {
+                return s;
+            }
+            assert!(t0.elapsed() < Duration::from_secs(30), "server did not start");
+            std::thread::sleep(Duration::from_millis(50));
+        }
     }
-    let child = cmd.spawn().expect("spawn governor-server");
-    let s = Server { child, port };
-    let t0 = Instant::now();
-    while std::net::TcpStream::connect(("127.0.0.1", port)).is_err() {
-        assert!(t0.elapsed() < Duration::from_secs(20), "server did not start");
-        std::thread::sleep(Duration::from_millis(50));
-    }
-    s
+    panic!("server did not start after 5 attempts");
 }
 
 /// Minimal HTTP/1.1 client (no extra dependency). Returns (status, headers+body text).

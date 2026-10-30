@@ -384,6 +384,7 @@ fn audit_verify_requires_the_api_key() {
     let master = concat!(env!("CARGO_MANIFEST_DIR"), "/../dataset/fixtures/master.json");
     let mut child = std::process::Command::new(env!("CARGO_BIN_EXE_governor-server"))
         .env("GOVERNOR_API_KEY", key).env("GOVERNOR_MASTER", master).env("GOVERNOR_PORT", port.to_string())
+        .env("GOVERNOR_DB", ":memory:") // Phase 3: keep this test from creating governor.db in the crate dir
         .env_remove("GOVERNOR_EVAL_CLOCK").stderr(std::process::Stdio::null()).spawn().unwrap();
     let mut up = false;
     for _ in 0..100 {
