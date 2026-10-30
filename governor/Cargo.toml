@@ -17,7 +17,7 @@ subtle = "2"
 # Phase 3 (durable state): SQLite with the C library compiled in, online backup API.
 rusqlite = { version = "0.32", features = ["bundled", "backup"] }
 # Phase 3 (anchoring): Ed25519 signatures over the audit chain head.
-ed25519-dalek = "2"
+ed25519-dalek = "3"
 getrandom = "0.2"
 # Phase 2 (trust boundary): signed extractor envelopes carry base64 signatures.
 base64 = "0.22"
