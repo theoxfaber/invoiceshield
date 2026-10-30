@@ -1,0 +1,4 @@
+# Demo pages are build outputs with embedded replay data (see ui/build_demo*.py); keep them out of language stats
+ui/demo.html linguist-generated=true
+ui/demo-v2.html linguist-generated=true
+ui/demo-v3.html linguist-generated=true
