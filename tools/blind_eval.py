@@ -167,7 +167,7 @@ def selftest() -> int:
     fx = json.loads((REPO / "dataset" / "fixtures" / "master.json").read_text())
     v = next(x for x in fx["vendors"] if x["vendor_id"] == "V001")
     manifest = json.loads((REPO / "eval" / "riskset" / "manifest.json").read_text())
-    b01 = next(c for c in (manifest if isinstance(manifest, list) else manifest.get("cases", [])) if c.get("id") == "B01")
+    b01 = next(c for c in manifest if c.get("id") == "B01")
     case = {"id": "SELF-01", "kind": "benign", "category": "selftest", "expected_verdict": "PAY", "acceptable_verdicts": ["PAY"],
             "vendor_master": [{"vendor_id": "V001", "legal_name": v["legal_name"], "gstin": v["gstin"], "pan": v["pan"],
                                "email": "x@" + v["email_domains"][0],
@@ -177,7 +177,7 @@ def selftest() -> int:
             "payment_history": [{"vendor_id": "V001", "invoice_number": "SELF/OLD/1", "amount": 1000, "po_reference": "PO-OTHER",
                                  "invoice_date": "2026-10-01", "paid_on": "2026-10-02", "status": "PAID"}],
             "invoice": {"header": {"invoice_date": "2026-10-20", "irn": None}},
-            "expected_proposal": {"vendor_id": "V001", "invoice_number": b01["invoice_no"], "amount": b01["rupees"] if "rupees" in b01 else b01["amount_paise"] / 100,
+            "expected_proposal": {"vendor_id": "V001", "invoice_number": b01["invoice_no"], "amount": b01["amount_paise"] / 100,
                                   "currency": "INR", "po_reference": b01["po_ref"]}}
     pdf = (REPO / "eval" / "riskset" / "B01.pdf").read_bytes()
     from extractor.service import DEFAULT_BUYER_GSTIN
