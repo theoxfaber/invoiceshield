@@ -277,3 +277,15 @@ Planning documents (threat model, eval plan, demo script) were written before ki
 - Evals (EVAL_LOG.md ~22:45 IST, files `eval/results/*_r4r6.jsonl`): gate-only, sequences, ON Glimmer, ON Spark and clean (gate + model) identical row by row to the Phase 4 / `_usdagent` files; benign 24/24 with one rule-list difference on the photo case BN24 traced to OCR/render, not the rules. Red team `post-r4r6`: 49 held / 0 findings / 10 info.
 - A workspace rollback around 22:20 IST erased uncommitted run outputs and the Python/zig toolchain; the branch was restored from origin and the runs repeated. Results are now committed right after each run.
 - ~23:03 IST: blind set (/workspace/blind-cases, sha256 14a37049…2bb1 verified) run once on main 680be4d via `tools/blind_eval.py`: strict 34/60, lenient 44/60, attacks paid 4/40, benign blocked 1/20; the extractor read no item lines on the unseen template, so line rules never ran (EVAL_LOG.md). The frozen 77-case held-out set does not exist and was not generated or run.
+
+## Phase 7 product (hardening/product), Fri Oct 30 2026, ~21:55–22:45 IST
+- **Accounting adapters** (`integrations/`, mock-only, labelled `LIVE_TESTED = False` and "NOT TESTED AGAINST A LIVE …" in each module):
+  - `tally.py`: vendor master → Tally LEDGER masters (Sundry Creditors, GSTIN/state, PAN, PAYMENTDETAILS.LIST, vendor_id as ledger alias); approved payments → Payment vouchers (party Dr ISDEEMEDPOSITIVE=Yes negative amount + Agst Ref bill allocation, bank Cr), INR only; importer diffs a Tally export against the master (DTD/ENTITY refused, 20 MB cap).
+  - `zoho_books.py`: contacts (contact_type vendor, gst_no, gst_treatment, place_of_contact, vendor_id custom field; no bank details), vendorpayments (amount, date, reference_number = decision id, paid_through_account_id, bills), paginated client over httpx (refuses live use without `allow_live=True`), books-vs-gate reconciliation.
+  - `ledger_source.py`: approved payments from the governor DB, read-only. `common.py`: integer money formatting, master diff.
+  - Fixtures: `tests/fixtures/integrations/` (synthetic). Tests: `tests/test_integrations.py` (32).
+- **Review UI**: `GET /v1/reviews` (`governor/src/review_queue.rs`), static approver page `/v1/ui/review` (`governor/ui/review.{html,js,css}`, embedded with `include_str!`). Tests: lib unit test (queue contents, self-approval refused, resolved items drop out) and `governor/tests/review_ui.rs` (2 process tests: CSP/no-inline-script/no-innerHTML, roles 401/403, reason codes + payee in the queue, operator and agent cannot resolve, approver identity recorded, 409 on double resolve).
+- **Payment rail**: `integrations/payment_rail.py` interface + sandbox stub (no network, no money).
+- **docs/COMPLIANCE.md**: DPDP Act 2023 notes, what is stored where (from the code), proposed retention schedule, audit-chain vs erasure conflict; "not legal advice", no legal sign-off claimed.
+- OpenAPI 1.1.0: `/v1/reviews`, `/v1/ui/review{,.js,.css}`, `PendingReview` schema.
+- No gate verdict logic or eval set touched.

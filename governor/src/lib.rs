@@ -13,6 +13,7 @@ pub mod master_store;
 pub mod normalize;
 pub mod persist;
 pub mod ratelimit;
+pub mod review_queue;
 pub mod secrets;
 pub mod security;
 pub mod tls;

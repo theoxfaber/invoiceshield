@@ -7,6 +7,8 @@
 //!   approver POST /v1/decisions/:id/resolve, /v1/master-changes/:id/approve (checker; never the
 //!            identity that proposed / entered the item)
 //!   any      GET /v1/decisions/:id, GET /v1/audit/verify
+//!   approver|operator GET /v1/reviews (pending REVIEW queue). GET /v1/ui/review is the static
+//!            approver page (no auth to load; it calls the API with the approver's key).
 //!   GOVERNOR_IDENTITIES[_FILE] (hashed keys), or the legacy GOVERNOR_API_KEY[_FILE] (agent) and
 //!   GOVERNOR_OPERATOR_KEY[_FILE] (operator+approver). TLS: GOVERNOR_TLS_CERT_FILE/KEY_FILE.
 //!   Rate limits: GOVERNOR_RATE_LIMIT_* (security.rs).
@@ -46,6 +48,7 @@ use invoiceshield_governor::auth::{bearer, Identity, KeyRing, Role};
 use invoiceshield_governor::master_store::{CallbackReport, McError, McResult, NewDetails};
 use invoiceshield_governor::persist::{ActionOutcome, Fault, ResolveOutcome, Store};
 use invoiceshield_governor::ratelimit::{Check, Limits};
+use invoiceshield_governor::review_queue;
 use invoiceshield_governor::TrustVerifier;
 use invoiceshield_governor::{config::Config, observability};
 use serde::Deserialize;
@@ -181,6 +184,46 @@ async fn actions(State(s): State<Shared>, Extension(id): Extension<Identity>, h:
         }
         None => err(StatusCode::SERVICE_UNAVAILABLE, "state_unavailable"),
     }
+}
+
+#[derive(Deserialize)]
+#[serde(deny_unknown_fields)]
+struct ReviewQuery {
+    #[serde(default)]
+    limit: Option<usize>,
+}
+
+/// Phase 7: pending REVIEW decisions, oldest first, for the approver page (read-only).
+/// Approver or operator role; the resolve call itself stays approver-only with maker-checker.
+async fn list_reviews(
+    State(s): State<Shared>,
+    Extension(who): Extension<Identity>,
+    axum::extract::Query(q): axum::extract::Query<ReviewQuery>,
+) -> impl IntoResponse {
+    if let Some(r) = require(&who, &[Role::Approver, Role::Operator]) {
+        return r;
+    }
+    let limit = q.limit.unwrap_or(review_queue::MAX_LIST);
+    match with_store(&s, move |st| st.pending_reviews(limit)).await {
+        Some(Ok(v)) => Json(serde_json::json!({"identity": who.name, "count": v.len(), "reviews": v})).into_response(),
+        _ => err(StatusCode::SERVICE_UNAVAILABLE, "state_unavailable"),
+    }
+}
+
+/// The static approver page (governor/ui/review.*). No secrets in it; it asks for the
+/// approver's key and calls the API above. Strict CSP: same-origin script/style/fetch only.
+fn ui_asset(body: &'static str, ctype: &'static str) -> axum::response::Response {
+    (
+        [
+            ("content-type", ctype),
+            ("content-security-policy", "default-src 'none'; script-src 'self'; style-src 'self'; connect-src 'self'; img-src 'self'; form-action 'none'; frame-ancestors 'none'; base-uri 'none'"),
+            ("x-content-type-options", "nosniff"),
+            ("referrer-policy", "no-referrer"),
+            ("cache-control", "no-store"),
+        ],
+        body,
+    )
+        .into_response()
 }
 
 async fn get_decision(State(s): State<Shared>, Path(id): Path<String>) -> impl IntoResponse {
@@ -479,6 +522,7 @@ async fn main() {
     // handler then checks its role. /health and the ops routes stay outside it.
     let api = Router::new()
         .route("/v1/actions", post(actions))
+        .route("/v1/reviews", get(list_reviews))
         .route("/v1/decisions/:id", get(get_decision))
         .route("/v1/decisions/:id/resolve", post(resolve))
         .route("/v1/audit/verify", get(audit_verify))
@@ -491,6 +535,9 @@ async fn main() {
         .route_layer(axum::middleware::from_fn_with_state(shared.clone(), guard));
     let app = Router::new()
         .route("/health", get(|| async { "ok" }))
+        .route("/v1/ui/review", get(|| async { ui_asset(include_str!("../../ui/review.html"), "text/html; charset=utf-8") }))
+        .route("/v1/ui/review.js", get(|| async { ui_asset(include_str!("../../ui/review.js"), "text/javascript; charset=utf-8") }))
+        .route("/v1/ui/review.css", get(|| async { ui_asset(include_str!("../../ui/review.css"), "text/css; charset=utf-8") }))
         .merge(api)
         .merge(observability::routes())
         .layer(axum::middleware::from_fn(observability::track))
