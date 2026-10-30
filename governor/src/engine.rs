@@ -663,7 +663,10 @@ pub fn check_lines_against_po(po: &crate::master::PurchaseOrder, items: &[ItemLi
         let qty = l.qty.unwrap_or(1);
         let unit = l.unit_price_minor.unwrap_or(if qty != 0 { l.amount_paise / qty } else { 0 });
         // qty x unit must reproduce the line amount; each unit may be rounded by at most one minor unit.
-        let exact = qty.checked_mul(unit).map(|v| (v - l.amount_paise).abs() <= qty).unwrap_or(false);
+        // A positive line amount BELOW qty x unit (a printed line discount) also fits: it bills less than
+        // the quantity at that rate, and the quantity and rate are still checked against the PO line below
+        // (2026-10-31, after a discounted genuine invoice on the already-seen v1 set; DECISIONS.md).
+        let exact = qty.checked_mul(unit).map(|v| (v - l.amount_paise).abs() <= qty || (l.amount_paise > 0 && l.amount_paise < v)).unwrap_or(false);
         if qty <= 0 || unit < 0 || !exact {
             problems.push(format!("{label} does not equal its quantity x unit price"));
             continue;
