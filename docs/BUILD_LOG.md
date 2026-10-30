@@ -269,4 +269,4 @@ Planning documents (threat model, eval plan, demo script) were written before ki
   - `tools/shadow.py`: signed path by default.
   - `eval/run_real.py`: explicit DEV unsigned path for counterfactual evidence. The rerun was identical, and `real-after.json` was refreshed.
 - Frozen held-out set not touched; no gate rule edited (rule-level ideas F3 and R4 written up as findings).
-- Tests: see the merge entry below.
+- Tests (Fri Oct 30, ~21:45 IST, after rebasing onto `main` `e28727f` with Phases 1, 2, 3, 4 and 6; CARGO_TARGET_DIR=/workspace/work/realeval-target): `cargo test --release` **133 passed**, 0 failed (7 lib unit + 12 fixture + 5 fuzz_inputs + 21 gate + 4 master_change + 22 phase1 + 19 security + 6 security_process + 15 state + 5 state_process + 17 trust). `pytest` **186 passed**, 0 failed, including test_variants, test_shadow and test_real_extraction. `ruff check .` clean. Raw third-party data stays under the gitignored `data/third_party/raw/` (0 files tracked). No raw GSTINs or account numbers are in the committed labels or results. The secrets grep of the diff is clean.
