@@ -39,6 +39,11 @@ fn start(db: &Path, extra: &[(&str, &str)]) -> Server {
             .env("GOVERNOR_MASTER", master_path())
             .env("GOVERNOR_PORT", port.to_string())
             .env("GOVERNOR_DB", db)
+            // Phase 2: these durability tests send hand-built evidence, so they use the
+            // documented test-only unsigned path (which requires the eval clock). The signed
+            // path through the server is covered by tests/test_trust_boundary.py.
+            .env("GOVERNOR_EVAL_CLOCK", "1")
+            .env("GOVERNOR_DEV_UNSIGNED_EVIDENCE", "1")
             .stdout(Stdio::null())
             .stderr(Stdio::null());
         for (k, v) in extra {
