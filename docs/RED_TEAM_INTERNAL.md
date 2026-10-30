@@ -8,6 +8,7 @@
   - `eval/results/redteam-internal-post-phase1.json`: governor built from `main` at `e636306`, with Phase 1 currency, PO lines, the `ifsc()` normaliser and audit auth.
   - `eval/results/redteam-internal-post-phase3.json`: governor built from `main` at `a07989b`, adding the Phase 3 SQLite ledger. The restart probe now runs in production mode with an on-disk `GOVERNOR_DB`.
   - `eval/results/redteam-internal-post-phase2.json`: governor rebuilt from `main` at `30a3678` (Phases 1, 2, 3 and 6) plus this branch, which does not touch `governor/` or `extractor/`. It has Phase 2 signed evidence, and the binary refuses to start without `GOVERNOR_EXTRACTOR_PUBKEY`. The run uses the real extraction service (`extractor/`) and adds 11 trust-boundary probes and a sandbox size-cap probe. An earlier file with this name was built against a stale pre-Phase-2 binary. It was discarded and never committed.
+  - `eval/results/redteam-internal-post-phase4.json`: the same harness against a governor rebuilt from `main` at `e28727f` (adds Phase 4 security), about 21:40 IST. Every probe has the same outcome as post-Phase-2; only the 401 response body text differs. The harness has no probes yet for Phase 4's own features (roles, maker-checker, rate limits, which are off in eval mode, and TLS).
 - Rerun: `python3 -m tools.redteam --tag <name>`. It needs `governor/target/release/governor-server`.
 - Runs 2026-10-30, about 19:00–19:20 IST; post-Phase-2 run about 21:10 IST. Frozen-rule policy: **nothing here changed a gate rule.** Findings are recorded below and assigned to the phase that owns the fix.
 
@@ -22,6 +23,7 @@ Outcome key:
 | post-Phase-1 governor (`main` e636306) | 34 | 7 | 4 |
 | post-Phase-3 governor (`main` a07989b) | 35 | 6 | 4 |
 | post-Phase-2 governor (`main` 30a3678, signed evidence) | 47 | 2 | 10 |
+| post-Phase-4 governor (`main` e28727f), same probes | 47 | 2 | 10 |
 
 The post-Phase-1 run has more probes, because it adds 5 currency probes.
 
@@ -109,5 +111,5 @@ Info only:
 ## Next steps
 
 1. An **external** review by someone outside the team, against `tools/redteam.py`'s list plus their own ideas.
-2. Done: rerun after Phase 2 merged (`redteam-internal-post-phase2.json`). R1–R3 and R7 now hold. R5 was re-checked after Phase 3 and holds. Rerun again after Phase 4 (TLS, rate limits, maker-checker) merges.
+2. Done: rerun after Phase 2 merged (`redteam-internal-post-phase2.json`). R1–R3 and R7 now hold. R5 was re-checked after Phase 3 and holds. Re-run on the Phase 4 governor: same outcomes (`redteam-internal-post-phase4.json`). Still to do: add probes for Phase 4 itself (role separation, maker-checker bypass, rate limits in production mode, TLS).
 3. Decide R4 and the "no readable total → REVIEW" rule (see `docs/FINDINGS_REAL_INVOICES.md` F3) together, as one rules change after the frozen held-out run.

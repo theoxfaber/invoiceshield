@@ -310,6 +310,7 @@ Also new: the shadow-mode harness `tools/shadow.py`, tested on the synthetic `to
 It is synthetic and was never run on real AP decisions. The internal red team is in `docs/RED_TEAM_INTERNAL.md`, raw in `eval/results/redteam-internal-*.json`:
 - post-Phase-3: 35 held, 6 findings, 4 info;
 - post-Phase-2: **47 held, 2 findings, 10 info** of 59 probes, run ~21:10 IST. Raw: `eval/results/redteam-internal-post-phase2.json`. Governor rebuilt from `main` at `30a3678` (Phases 1, 2, 3 and 6) plus this branch, which does not touch `governor/` or `extractor/`, with signed evidence and the sandboxed extraction service. Forged caller evidence is now REVIEW `evidence_unsigned`. Edited, foreign or zeroed signatures, envelope replay and document-hash swaps BLOCK. The sandbox refuses 1,500 pages (`too_many_pages`) and 11 MB (`file_too_large`). Internal only, not an external review;
+- post-Phase-4 (governor rebuilt from `main` `e28727f`; `eval/results/redteam-internal-post-phase4.json`, ~21:40 IST): the same 47 / 2 / 10, and every probe has the same outcome. The harness does not yet probe Phase 4's own features;
 - still open: the near-duplicate suffix re-submit (R4) and the Cyrillic-homoglyph IFSC (R6).
 
 Re-check on the Phase 2 governor (~21:15 IST):

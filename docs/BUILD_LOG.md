@@ -262,6 +262,7 @@ Planning documents (threat model, eval plan, demo script) were written before ki
   - post-Phase-1: 34 / 7 (Phase 1 fixed the currency and audit-auth findings);
   - post-Phase-3: 35 / 6 (Phase 3 fixed restart replay).
   - post-Phase-2: **47 held / 2 findings / 10 info** of 59 probes (`eval/results/redteam-internal-post-phase2.json`). The governor was rebuilt from `main` at `30a3678` (Phases 1, 2, 3 and 6) plus this branch, which does not touch `governor/` or `extractor/` and checked to refuse startup without `GOVERNOR_EXTRACTOR_PUBKEY`. Phase 2 closed the 3 forged-evidence findings (now REVIEW `evidence_unsigned`; 11 new trust probes hold) and the PDF cap (10 MB and 50 pages in the sandbox). A first post-Phase-2 file built on a stale binary was discarded.
+  - post-Phase-4 (rebased onto `main` `e28727f`, governor rebuilt): the same 47 / 2 / 10, with identical per-probe outcomes (`eval/results/redteam-internal-post-phase4.json`).
   - Open: near-duplicate suffix (R4), homoglyph IFSC (R6).
 - Phase 2 adaptations:
   - `tools/redteam.py`: dev path for rule probes; trust-boundary and sandbox probes; signed production restart probe.
