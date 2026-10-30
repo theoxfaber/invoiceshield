@@ -1,6 +1,9 @@
 """Shadow-mode harness on the synthetic sample CSV (no real AP data)."""
 import pathlib
 
+import pytest
+
+from shield.client import BIN
 from tools.shadow import classify, kappa, run
 
 REPO = pathlib.Path(__file__).resolve().parents[1]
@@ -19,6 +22,7 @@ def test_kappa_perfect_and_chance():
     assert kappa([{"human": "pay", "shield": "allow"}, {"human": "pay", "shield": "allow"}]) is None
 
 
+@pytest.mark.skipif(not BIN.exists(), reason=f"needs the governor binary at {BIN}: run `make build` (or set GOVERNOR_BIN)")
 def test_sample_csv_end_to_end():
     rep = run(REPO / "tools" / "shadow_sample.csv", REPO / "dataset" / "fixtures" / "master.json", "24ZZACB7319B1Z5")
     assert rep["rows"] == 22 and rep["valid"] == 21

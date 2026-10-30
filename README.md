@@ -30,7 +30,7 @@ It is an **HTTP service** (Axum), not an MCP server. Any agent framework that ca
 
 ## Quickstart
 
-Needs Rust (stable), a C toolchain, Python 3.11+, `tesseract-ocr` and `poppler-utils`.
+Needs Rust (stable), a C toolchain, Python 3.11+, `tesseract-ocr` and `poppler-utils`. On Debian/Ubuntu: `sudo apt-get install build-essential tesseract-ocr poppler-utils` plus Rust from rustup.
 
 ```bash
 git clone https://github.com/theoxfaber/invoiceshield && cd invoiceshield
@@ -39,7 +39,7 @@ make demo      # builds the governor, replays the recorded dev-set runs: no API 
 make test      # clippy -D warnings + cargo test + ruff + pytest
 ```
 
-`make demo` replays the shield-OFF and shield-ON runs of Muse Spark Open and Muse Glimmer from the committed model cache (`eval/cache/llm`), runs the real governor, and checks every replayed outcome against the committed rows. Then open `ui/demo-v3.html` for the replay UI. Live model runs need `BASETEN_API_KEY` (Spark) or `NVIDIA_API_KEY` (Glimmer) in the environment; never commit them.
+`make demo` and `make test` build the release governor first (about 2 minutes on a cold cache). A bare `pytest` without that binary skips the governor-backed tests with the reason `run make build`. `make demo` replays the shield-OFF and shield-ON runs of Muse Spark Open and Muse Glimmer from the committed model cache (`eval/cache/llm`), runs the real governor, and checks every replayed outcome against the committed rows. Then open `ui/demo-v3.html` for the replay UI. Live model runs need `BASETEN_API_KEY` (Spark) or `NVIDIA_API_KEY` (Glimmer) in the environment; never commit them.
 
 ## HTTP API
 
