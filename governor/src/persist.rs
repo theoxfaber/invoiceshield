@@ -23,7 +23,7 @@ use std::path::Path;
 use std::time::Duration;
 
 /// Latest schema version this binary knows. Stored in `PRAGMA user_version`.
-pub const SCHEMA_VERSION: i64 = 1;
+pub const SCHEMA_VERSION: i64 = 2;
 
 /// Versioned migrations, applied in order inside one IMMEDIATE transaction each.
 /// Never edit a released step; add a new one.
@@ -74,6 +74,55 @@ CREATE TABLE idempotency (
 );
 CREATE TABLE meta (k TEXT PRIMARY KEY, v INTEGER NOT NULL);
 INSERT INTO meta (k, v) VALUES ('next_id', 1), ('generation', 0);
+"#,
+), (
+    2,
+    r#"
+-- Phase 4 (security): who proposed each decision, maker-checker on resolutions, and the
+-- vendor bank-detail change workflow (call-back, two approvers, cooling-off).
+ALTER TABLE decisions ADD COLUMN proposed_by TEXT;
+CREATE TABLE review_resolutions (
+    decision_id TEXT PRIMARY KEY REFERENCES decisions(decision_id),
+    approver    TEXT NOT NULL,
+    approve     INTEGER NOT NULL CHECK (approve IN (0, 1)),
+    ts          INTEGER NOT NULL
+);
+-- Maker-checker in the database too: the identity that proposed a payment cannot resolve it.
+CREATE TRIGGER review_checker_not_proposer BEFORE INSERT ON review_resolutions
+WHEN NEW.approver = (SELECT proposed_by FROM decisions WHERE decision_id = NEW.decision_id)
+BEGIN SELECT RAISE(ABORT, 'maker-checker: the proposer cannot resolve its own decision'); END;
+CREATE TABLE master_changes (
+    seq          INTEGER PRIMARY KEY AUTOINCREMENT,
+    change_id    TEXT NOT NULL UNIQUE,
+    vendor_id    TEXT NOT NULL,
+    new_details  TEXT NOT NULL,
+    maker        TEXT NOT NULL,
+    requested_at INTEGER NOT NULL,
+    status       TEXT NOT NULL CHECK (status IN ('awaiting_callback','awaiting_approvals','cooling_off','applied','rejected')),
+    callback     TEXT,
+    approved_at  INTEGER,
+    effective_at INTEGER,
+    applied_at   INTEGER,
+    -- HMAC-SHA256 over the applied change under GOVERNOR_STATE_KEY (master_store.rs), so a
+    -- DB-only attacker cannot add an 'applied' row that redirects payments.
+    mac          TEXT,
+    rejected_by  TEXT,
+    reason       TEXT
+);
+-- At most one open change per vendor.
+CREATE UNIQUE INDEX master_changes_one_open ON master_changes(vendor_id) WHERE status NOT IN ('applied','rejected');
+CREATE TRIGGER master_change_final BEFORE UPDATE ON master_changes
+WHEN OLD.status IN ('applied','rejected')
+BEGIN SELECT RAISE(ABORT, 'master change is final'); END;
+CREATE TABLE master_change_approvals (
+    change_id TEXT NOT NULL REFERENCES master_changes(change_id),
+    approver  TEXT NOT NULL,
+    ts        INTEGER NOT NULL,
+    PRIMARY KEY (change_id, approver)
+);
+CREATE TRIGGER master_change_checker_not_maker BEFORE INSERT ON master_change_approvals
+WHEN NEW.approver = (SELECT maker FROM master_changes WHERE change_id = NEW.change_id)
+BEGIN SELECT RAISE(ABORT, 'maker-checker: the maker cannot approve its own change'); END;
 "#,
 )];
 
@@ -131,14 +180,35 @@ pub enum ActionOutcome {
     DbRejected(String),
 }
 
+/// Result of a REVIEW resolution attempt.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum ResolveOutcome {
+    Resolved,
+    /// Unknown decision, not a REVIEW, or already resolved.
+    NotPending,
+    /// The approver is the identity that proposed the payment.
+    SelfApproval,
+}
+
 pub struct Store {
-    conn: Connection,
+    pub(crate) conn: Connection,
     pub gov: Governor,
+    /// The vendor master as loaded from file. `gov.master` = this + every applied bank change
+    /// (rebuilt on each reload, so all processes on one DB see the same master).
+    pub(crate) base_master: Master,
+    /// Phase 4: key that MACs applied bank changes (GOVERNOR_STATE_KEY). Set with
+    /// `set_state_key`; `None` leaves applied changes unauthenticated (warned at startup).
+    pub(crate) state_key: Option<[u8; 32]>,
+    /// Phase 4: vendor phone numbers on file (trusted, from onboarding), for call-backs.
+    pub phones: std::collections::BTreeMap<String, String>,
+    /// Phase 4: seconds between a bank change's second approval and the moment payments to the
+    /// new details can be allowed. Default `master_change::DEFAULT_COOLING_OFF_SECS` (72 h).
+    pub cooling_off_secs: i64,
     /// Phase 2 provenance check (trust.rs). The server always sets it; `None` keeps the old
     /// caller-supplied-evidence path for library tests only.
     pub trust: Option<crate::trust::TrustVerifier>,
     /// `meta.generation` the in-memory `gov` reflects; -1 forces a reload.
-    generation: i64,
+    pub(crate) generation: i64,
     fault: Option<Fault>,
 }
 
@@ -277,7 +347,17 @@ impl Store {
     /// Open (creating and migrating if needed) the DB at `path`; ":memory:" for tests.
     pub fn open(path: &str, master: Master) -> Result<Self> {
         let conn = connect(path)?;
-        let mut s = Store { conn, gov: Governor::new(master), trust: None, generation: -1, fault: None };
+        let mut s = Store {
+            conn,
+            gov: Governor::new(master.clone()),
+            base_master: master,
+            state_key: None,
+            phones: Default::default(),
+            cooling_off_secs: crate::master_change::DEFAULT_COOLING_OFF_SECS,
+            trust: None,
+            generation: -1,
+            fault: None,
+        };
         s.refresh()?;
         Ok(s)
     }
@@ -297,16 +377,24 @@ impl Store {
     /// Reload the in-memory governor from the DB if another connection committed.
     pub fn refresh(&mut self) -> Result<()> {
         let tx = self.conn.transaction_with_behavior(TransactionBehavior::Deferred)?;
-        Self::sync(&tx, &mut self.gov, &mut self.generation)?;
+        Self::sync(&tx, &mut self.gov, &mut self.generation, &self.base_master, self.state_key.as_ref())?;
         tx.commit()?;
         Ok(())
     }
 
-    fn sync(tx: &Connection, gov: &mut Governor, generation: &mut i64) -> Result<()> {
+    /// Set the key that authenticates applied bank changes and rebuild the master with it.
+    pub fn set_state_key(&mut self, key: Option<[u8; 32]>) -> Result<()> {
+        self.state_key = key;
+        self.generation = -1;
+        self.refresh()
+    }
+
+    pub(crate) fn sync(tx: &Connection, gov: &mut Governor, generation: &mut i64, base: &Master, key: Option<&[u8; 32]>) -> Result<()> {
         let g = meta(tx, "generation")?;
         if g == *generation {
             return Ok(());
         }
+        gov.master = crate::master_store::effective_master(tx, base, key)?;
         gov.ledger = load_ledger(tx)?;
         gov.audit = AuditLog { records: load_audit(tx)? };
         gov.set_next_id(meta(tx, "next_id")? as u64);
@@ -316,7 +404,13 @@ impl Store {
 
     /// Evaluate one action and persist it atomically. `idem` is the Idempotency-Key header.
     pub fn act(&mut self, raw: &str, now: i64, idem: Option<&str>) -> Result<ActionOutcome> {
-        let r = self.act_inner(raw, now, idem);
+        self.act_as(raw, now, idem, None)
+    }
+
+    /// `act` recording the authenticated identity that proposed the payment (Phase 4). That
+    /// identity can never resolve the decision, and an Idempotency-Key is bound to it.
+    pub fn act_as(&mut self, raw: &str, now: i64, idem: Option<&str>, proposer: Option<&str>) -> Result<ActionOutcome> {
+        let r = self.act_inner(raw, now, idem, proposer);
         match &r {
             Ok(ActionOutcome::Fresh(_)) | Ok(ActionOutcome::Replay(_)) | Ok(ActionOutcome::KeyConflict { .. }) => {}
             // Rolled back: the in-memory copy may hold the uncommitted entry. Drop it.
@@ -325,7 +419,7 @@ impl Store {
         r
     }
 
-    fn act_inner(&mut self, raw: &str, now: i64, idem: Option<&str>) -> Result<ActionOutcome> {
+    fn act_inner(&mut self, raw: &str, now: i64, idem: Option<&str>, proposer: Option<&str>) -> Result<ActionOutcome> {
         let body_hash = sha256_hex(raw.as_bytes());
         let tx = self.conn.transaction_with_behavior(TransactionBehavior::Immediate)?;
         if let Some(key) = idem {
@@ -333,17 +427,23 @@ impl Store {
                 .query_row("SELECT body_sha256, decision_id FROM idempotency WHERE key = ?1", [key], |r| Ok((r.get(0)?, r.get(1)?)))
                 .optional()?;
             if let Some((h, did)) = prior {
-                if h != body_hash {
+                let by: Option<String> = tx.query_row("SELECT proposed_by FROM decisions WHERE decision_id = ?1", [&did], |r| r.get(0))?;
+                // A key is bound to the identity that first used it: another identity cannot read
+                // or replay someone else's decision through it.
+                let other_identity = matches!((by.as_deref(), proposer), (Some(a), Some(b)) if a != b);
+                if h != body_hash || other_identity {
                     return Ok(ActionOutcome::KeyConflict { decision_id: did });
                 }
                 let body: String = tx.query_row("SELECT body FROM decisions WHERE decision_id = ?1", [&did], |r| r.get(0))?;
                 return Ok(ActionOutcome::Replay(serde_json::from_str(&body)?));
             }
         }
-        Self::sync(&tx, &mut self.gov, &mut self.generation)?;
+        Self::sync(&tx, &mut self.gov, &mut self.generation, &self.base_master, self.state_key.as_ref())?;
         // Any failure from here on: the in-memory governor must be reloaded.
         self.generation = -1;
         let (led0, aud0) = (self.gov.ledger.entries.len(), self.gov.audit.records.len());
+        // Bank changes whose cooling-off has ended take effect before this payment is judged.
+        crate::master_store::apply_due(&tx, &mut self.gov, &self.phones, self.cooling_off_secs, now, self.state_key.as_ref())?;
         let d = match self.trust.as_mut() {
             // Freshness of signed evidence uses the real clock, never the (eval) ledger clock.
             Some(t) => {
@@ -355,8 +455,8 @@ impl Store {
 
         let write = || -> std::result::Result<(), rusqlite::Error> {
             tx.execute(
-                "INSERT INTO decisions (decision_id, verdict, body, ts) VALUES (?1, ?2, ?3, ?4)",
-                params![d.decision_id, verdict_str(d.verdict), serde_json::to_string(&d).expect("decision json"), now],
+                "INSERT INTO decisions (decision_id, verdict, body, ts, proposed_by) VALUES (?1, ?2, ?3, ?4, ?5)",
+                params![d.decision_id, verdict_str(d.verdict), serde_json::to_string(&d).expect("decision json"), now, proposer],
             )?;
             for e in &self.gov.ledger.entries[led0..] {
                 insert_ledger(&tx, e)?;
@@ -399,25 +499,41 @@ impl Store {
 
     /// Human decision on a pending REVIEW, persisted atomically with its audit record.
     pub fn resolve(&mut self, id: &str, approve: bool, approver: &str, now: i64) -> Result<bool> {
+        Ok(self.resolve_as(id, approve, approver, now)? == ResolveOutcome::Resolved)
+    }
+
+    /// Human decision on a pending REVIEW by an authenticated approver. Refused when the approver
+    /// is the identity that proposed the payment (maker-checker), checked here and by a trigger.
+    pub fn resolve_as(&mut self, id: &str, approve: bool, approver: &str, now: i64) -> Result<ResolveOutcome> {
         let r = self.resolve_inner(id, approve, approver, now);
-        if !matches!(r, Ok(true)) {
+        if !matches!(r, Ok(ResolveOutcome::Resolved)) {
             self.generation = -1;
         }
         r
     }
 
-    fn resolve_inner(&mut self, id: &str, approve: bool, approver: &str, now: i64) -> Result<bool> {
+    fn resolve_inner(&mut self, id: &str, approve: bool, approver: &str, now: i64) -> Result<ResolveOutcome> {
         let tx = self.conn.transaction_with_behavior(TransactionBehavior::Immediate)?;
-        let verdict: Option<String> = tx.query_row("SELECT verdict FROM decisions WHERE decision_id = ?1", [id], |r| r.get(0)).optional()?;
-        if verdict.as_deref() != Some("review") {
-            return Ok(false);
+        let row: Option<(String, Option<String>)> = tx
+            .query_row("SELECT verdict, proposed_by FROM decisions WHERE decision_id = ?1", [id], |r| Ok((r.get(0)?, r.get(1)?)))
+            .optional()?;
+        let Some((verdict, proposed_by)) = row else { return Ok(ResolveOutcome::NotPending) };
+        if verdict != "review" {
+            return Ok(ResolveOutcome::NotPending);
         }
-        Self::sync(&tx, &mut self.gov, &mut self.generation)?;
+        if proposed_by.as_deref() == Some(approver) {
+            return Ok(ResolveOutcome::SelfApproval);
+        }
+        Self::sync(&tx, &mut self.gov, &mut self.generation, &self.base_master, self.state_key.as_ref())?;
         self.generation = -1;
         let aud0 = self.gov.audit.records.len();
         if !self.gov.resolve_review(id, approve, approver, now) {
-            return Ok(false);
+            return Ok(ResolveOutcome::NotPending);
         }
+        tx.execute(
+            "INSERT INTO review_resolutions (decision_id, approver, approve, ts) VALUES (?1, ?2, ?3, ?4)",
+            params![id, approver, approve as i64, now],
+        )?;
         let e = self.gov.ledger.entries.iter().find(|e| e.decision_id == id).cloned().expect("resolved entry");
         let n = tx.execute(
             "UPDATE ledger SET status = ?1, entry = ?2 WHERE decision_id = ?3",
@@ -432,17 +548,21 @@ impl Store {
         let g = bump_generation(&tx)?;
         tx.commit()?;
         self.generation = g;
-        Ok(true)
+        Ok(ResolveOutcome::Resolved)
     }
 
     /// Eval-only: forget everything (the server exposes it only with GOVERNOR_EVAL_CLOCK=1).
     pub fn reset(&mut self) -> Result<()> {
         let tx = self.conn.transaction_with_behavior(TransactionBehavior::Immediate)?;
-        tx.execute_batch("DELETE FROM idempotency; DELETE FROM ledger; DELETE FROM audit; DELETE FROM decisions; UPDATE meta SET v = 1 WHERE k = 'next_id';")?;
+        tx.execute_batch(
+            "DELETE FROM idempotency; DELETE FROM ledger; DELETE FROM review_resolutions; DELETE FROM master_change_approvals;
+             DELETE FROM master_changes; DELETE FROM audit; DELETE FROM decisions; UPDATE meta SET v = 1 WHERE k = 'next_id';",
+        )?;
         bump_generation(&tx)?;
         tx.commit()?;
         self.generation = -1;
         self.gov.reset_state();
+        self.gov.master = self.base_master.clone();
         self.refresh()
     }
 

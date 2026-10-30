@@ -6,6 +6,8 @@
 //!   governor anchor  --db governor.db --anchors F            sign the current head now
 //!                    (key from GOVERNOR_ANCHOR_KEY / GOVERNOR_ANCHOR_KEY_FILE)
 //!   governor keygen                                          new Ed25519 seed + pubkey
+//!   governor new-key --name NAME --role agent|operator|approver[,..]
+//!                    new random API key (printed once) + its GOVERNOR_IDENTITIES entry (hash only)
 //!
 //! Exit codes: 0 ok, 1 verification failed, 2 usage or I/O error.
 use invoiceshield_governor::{anchor, persist};
@@ -13,7 +15,7 @@ use std::path::Path;
 use std::time::{SystemTime, UNIX_EPOCH};
 
 fn usage() -> ! {
-    eprintln!("usage: governor <backup|restore|verify|anchor|keygen> [--db PATH] [--out PATH] [--from PATH] [--anchors PATH] [--pubkey HEX] [--force]");
+    eprintln!("usage: governor <backup|restore|verify|anchor|keygen|new-key> [--name N --role R] [--db PATH] [--out PATH] [--from PATH] [--anchors PATH] [--pubkey HEX] [--force]");
     std::process::exit(2)
 }
 
@@ -92,6 +94,25 @@ fn main() {
             println!("GOVERNOR_ANCHOR_KEY={}", hex::encode(k.to_bytes()));
             println!("GOVERNOR_ANCHOR_PUBKEY={}", hex::encode(k.verifying_key().to_bytes()));
             eprintln!("store the key in a secrets manager or a 0600 file (GOVERNOR_ANCHOR_KEY_FILE); never commit it");
+        }
+        "new-key" => {
+            let name = need(&args, "--name");
+            let roles: Vec<String> = need(&args, "--role").split(',').map(|r| r.trim().to_lowercase()).collect();
+            let entry = serde_json::json!({"name": name, "roles": roles, "key_sha256": "0".repeat(64)});
+            // Validate name/roles exactly as the server will.
+            let check = serde_json::json!([entry]).to_string();
+            if let Err(e) = invoiceshield_governor::auth::KeyRing::from_lookup(&|k| match k {
+                "GOVERNOR_IDENTITIES" => Some(check.clone()),
+                "GOVERNOR_API_KEY" if !roles.iter().any(|r| r == "agent") => Some("placeholder-agent-key-for-validation".into()),
+                _ => None,
+            }) {
+                die(e.join("; "));
+            }
+            let key = invoiceshield_governor::auth::new_key();
+            let entry = serde_json::json!({"name": name, "roles": roles, "key_sha256": invoiceshield_governor::auth::hash_key_hex(&key)});
+            println!("key={key}");
+            println!("identity={entry}");
+            eprintln!("give the key to {name} only (it is not stored anywhere); add the identity line to GOVERNOR_IDENTITIES_FILE");
         }
         _ => usage(),
     }

@@ -15,16 +15,26 @@ InvoiceShield's payment gate never takes a payee account from an invoice or emai
 
 | Step | Status |
 |---|---|
-| Call-back must be to the number on file, and must confirm the same account + IFSC | **Implemented** in `governor/src/master_change.rs::apply_bank_change`, tested |
-| Two distinct approvers, maker excluded, duplicates/case variants of one name count once | **Implemented**, tested (`governor/tests/master_change.rs`) |
-| Cooling-off period (default 72 h), refused with the time remaining | **Implemented**, tested |
-| Hash-chained audit entry with before/after, maker, approvers, call-back | **Implemented**, tested (chain verifies) |
-| Exposed on the HTTP server (`governor-server`) | **Not yet**: library function only |
-| Approver IDs bound to authenticated operator identities (separate keys per approver) | **Design only**: IDs are plain strings in the library |
-| Numbers on file stored in the master | **Design only**: passed in as a separate trusted map; the master schema has no phone field yet |
+| Call-back must be to the number on file, and must confirm the same account + IFSC | **Implemented** in `governor/src/master_change.rs::apply_bank_change` and the HTTP workflow (`master_store.rs`), tested |
+| Two distinct approvers, maker excluded, duplicates/case variants of one name count once | **Implemented**, tested (`governor/tests/master_change.rs`, `tests/security.rs`); also a DB trigger refuses the maker as approver |
+| Cooling-off period (default 72 h, `GOVERNOR_MASTER_CHANGE_COOLING_OFF_SECS`), counted from the **second approval** | **Implemented** (Phase 4), eval-clock aware, tested |
+| Hash-chained audit entry for every step (requested, call-back verified/refused, approved, cooling-off, applied/rejected) | **Implemented**, tested (chain verifies) |
+| Exposed on the HTTP server (`governor-server`) | **Implemented** (Phase 4): `POST /v1/master-changes`, `GET /v1/master-changes/:id`, `POST .../callback`, `.../approve`, `.../reject` |
+| Approver IDs bound to authenticated identities (separate keys per approver) | **Implemented** (Phase 4): maker = the operator identity, call-back by an operator/approver identity other than the maker, approvals by approver identities; never a name from the request body |
+| Numbers on file | **Implemented as a separate trusted file** `GOVERNOR_VENDOR_PHONES` (`{vendor_id: phone}`); the master schema still has no phone field |
+| Persistence across restarts | **Implemented** (Phase 4): SQLite schema v2 (`master_changes`, `master_change_approvals`); applied changes are replayed on top of the master file at every load and carry an HMAC under `GOVERNOR_STATE_KEY` so a DB-only edit cannot redirect a vendor |
 | First payment after a change forced to REVIEW; notify the vendor's old contact | **Design only** |
-| Persistence of the change across restarts | **Not yet** (master and audit log are in memory; see review backlog item 7) |
 
-The four tests: `needs_two_distinct_approvers_not_the_maker`, `callback_must_go_to_number_already_on_file`, `cooling_off_then_applied_and_audited`, `callback_confirming_other_details_is_refused`. Run with `cd governor && cargo test --test master_change`.
+### HTTP flow (Phase 4)
 
-This is a control a human process runs; the code only makes the "two people, a call-back and a wait" rule impossible to skip in software. It does not detect an insider who controls both approver identities, or a vendor's own phone line being hijacked (residual limit R2 in the threat model covers an insider edit to the master).
+```
+operator  POST /v1/master-changes            {vendor_id, new_account, new_ifsc, new_bank_name, new_beneficiary_id}  -> awaiting_callback
+op/appr   POST /v1/master-changes/MC-000001/callback  {number_dialled, confirmed_account, confirmed_ifsc}          -> awaiting_approvals
+approver  POST /v1/master-changes/MC-000001/approve   (x2, distinct, neither the maker)                           -> cooling_off (effective_at)
+          ... first payment request or workflow call at/after effective_at applies it                           -> applied
+op/appr   POST /v1/master-changes/MC-000001/reject    {reason}   (any time before applied)                      -> rejected
+```
+
+Until `effective_at` the master still holds the old details, so an invoice printing the new account stays a tamper REVIEW and no payment to the new details can be ALLOW. A call-back to any other number is refused (change stays open); a call-back in which the vendor confirms different details rejects the change. One open change per vendor.
+
+This is a control a human process runs; the code only makes the "two people, a call-back and a wait" rule impossible to skip in software. It does not detect an insider who controls both approver identities, or a vendor's own phone line being hijacked (see docs/THREAT_MODEL.md, scenarios 4 and 6).

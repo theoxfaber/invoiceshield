@@ -6,8 +6,17 @@
 //!
 //! | Variable | Required | Rule |
 //! |---|---|---|
-//! | `GOVERNOR_API_KEY` | yes | >= 16 chars, no whitespace |
-//! | `GOVERNOR_OPERATOR_KEY` | no | if set: >= 16 chars, no whitespace, differs from the API key |
+//! | `GOVERNOR_IDENTITIES` / `_FILE` | one agent identity is required, from here or `GOVERNOR_API_KEY` | JSON `[{name, roles, key_sha256}]`; roles agent / operator / approver; agent never combined; unique names and keys (Phase 4, auth.rs) |
+//! | `GOVERNOR_API_KEY` / `_FILE` | see above | legacy agent key: >= 16 chars, no whitespace |
+//! | `GOVERNOR_OPERATOR_KEY` / `_FILE` | no | legacy operator (+ approver) key: >= 16 chars, no whitespace, differs from every other key |
+//! | `GOVERNOR_TLS_CERT_FILE` + `GOVERNOR_TLS_KEY_FILE` | no (plain HTTP) | both or neither; PEM chain + key that load as a rustls pair (Phase 4) |
+//! | `GOVERNOR_RATE_LIMIT_RPS` / `_BURST`, `_IP_RPS` / `_IP_BURST`, `GOVERNOR_AUTH_FAIL_PER_MIN` / `_BURST` | no (100/200, 200/400, 30/10; off in eval mode) | non-negative numbers; 0 = off (Phase 4) |
+//! | `GOVERNOR_VENDOR_PHONES` | no (call-backs refused) | JSON file `{vendor_id: phone on file}` (Phase 4) |
+//! | `GOVERNOR_MASTER_CHANGE_COOLING_OFF_SECS` | no (259200 = 72 h) | non-negative integer (Phase 4) |
+//! | `GOVERNOR_STATE_KEY` / `_FILE` | no (warned) | 64 hex chars: HMAC key for applied bank changes (Phase 4) |
+//!
+//! Every secret accepts `X` or `X_FILE`, not both. Phase 4 settings are parsed by
+//! `security::SecurityConfig` and reported here with the rest.
 //! | `GOVERNOR_MASTER` | no (default `../dataset/fixtures/master.json`) | readable file that parses as a vendor master |
 //! | `GOVERNOR_PORT` | no (default 8080) | integer 1-65535 |
 //! | `GOVERNOR_BIND` | no (default `127.0.0.1`) | an IP address; `0.0.0.0` only inside a container |
@@ -24,13 +33,15 @@
 //! `GOVERNOR_DB` and the anchor key are validated where they are opened (server.rs / anchor.rs),
 //! also with exit status 2.
 use crate::master::Master;
+use crate::security::SecurityConfig;
 use crate::trust::TrustConfig;
 use std::net::{IpAddr, SocketAddr};
 
 /// Validated settings. Secrets are kept out of `Debug`.
 pub struct Config {
-    pub api_key: String,
-    pub operator_key: Option<String>,
+    /// Phase 4: identities (hashed keys + roles), rate limits, TLS, call-back numbers,
+    /// cooling-off, state MAC key. Replaces the single api/operator key fields.
+    pub security: SecurityConfig,
     pub master_path: String,
     pub master: Master,
     pub port: u16,
@@ -43,11 +54,7 @@ pub struct Config {
 impl std::fmt::Debug for Config {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("Config")
-            .field("api_key", &"<redacted>")
-            .field(
-                "operator_key",
-                &self.operator_key.as_ref().map(|_| "<redacted>"),
-            )
+            .field("security", &self.security)
             .field("master_path", &self.master_path)
             .field("port", &self.port)
             .field("bind", &self.bind)
@@ -92,33 +99,6 @@ impl Config {
     pub fn from_lookup(get: impl Fn(&str) -> Option<String>) -> Result<Config, Vec<String>> {
         let mut errs = Vec::new();
 
-        let api_key = get("GOVERNOR_API_KEY").unwrap_or_default();
-        if api_key.is_empty() {
-            errs.push("GOVERNOR_API_KEY is required".into());
-        } else if api_key.len() < 16 {
-            errs.push(format!(
-                "GOVERNOR_API_KEY must be at least 16 characters (got {})",
-                api_key.len()
-            ));
-        } else if api_key.chars().any(char::is_whitespace) {
-            errs.push("GOVERNOR_API_KEY must not contain whitespace".into());
-        }
-
-        let operator_key = get("GOVERNOR_OPERATOR_KEY").filter(|s| !s.is_empty());
-        if let Some(op) = &operator_key {
-            if op.len() < 16 {
-                errs.push(format!(
-                    "GOVERNOR_OPERATOR_KEY must be at least 16 characters when set (got {})",
-                    op.len()
-                ));
-            } else if op.chars().any(char::is_whitespace) {
-                errs.push("GOVERNOR_OPERATOR_KEY must not contain whitespace".into());
-            }
-            if *op == api_key {
-                errs.push("GOVERNOR_OPERATOR_KEY must differ from GOVERNOR_API_KEY (the agent must not hold the operator key)".into());
-            }
-        }
-
         let port = match get("GOVERNOR_PORT").filter(|s| !s.is_empty()) {
             None => 8080,
             Some(p) => match p.parse::<u16>() {
@@ -150,6 +130,14 @@ impl Config {
                     "GOVERNOR_EVAL_CLOCK must be 0 or 1 (got {other:?})"
                 ));
                 false
+            }
+        };
+
+        let security = match SecurityConfig::from_lookup(&get, eval_clock) {
+            Ok(c) => Some(c),
+            Err(e) => {
+                errs.extend(e);
+                None
             }
         };
 
@@ -252,10 +240,9 @@ impl Config {
             },
         };
 
-        match (errs.is_empty(), master) {
-            (true, Some(master)) => Ok(Config {
-                api_key,
-                operator_key,
+        match (errs.is_empty(), master, security) {
+            (true, Some(master), Some(security)) => Ok(Config {
+                security,
                 master_path,
                 master,
                 port,
@@ -329,6 +316,7 @@ mod tests {
             ("GOVERNOR_DEV_UNSIGNED_EVIDENCE", "maybe"),
         ])
         .unwrap_err();
+        // 11 non-key errors, the two short legacy keys, and "no agent identity" (none valid).
         assert_eq!(errs.len(), 14, "{errs:#?}");
     }
 
@@ -343,14 +331,19 @@ mod tests {
             ("GOVERNOR_MASTER", &mp),
         ])
         .unwrap_err();
-        assert!(errs[0].contains("must differ"), "{errs:?}");
+        assert!(
+            errs.iter()
+                .any(|e| e.contains("same key as another identity")),
+            "{errs:?}"
+        );
     }
 
     #[test]
     fn missing_api_key_is_reported() {
         let mp = master_path();
         let errs = cfg(&[("GOVERNOR_EXTRACTOR_PUBKEY", PK), ("GOVERNOR_MASTER", &mp)]).unwrap_err();
-        assert_eq!(errs, vec!["GOVERNOR_API_KEY is required".to_string()]);
+        assert_eq!(errs.len(), 1, "{errs:?}");
+        assert!(errs[0].starts_with("no agent identity"), "{errs:?}");
     }
 
     #[test]

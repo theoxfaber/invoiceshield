@@ -15,9 +15,16 @@ info:
     200 with a REVIEW decision (`request_unparseable`), so an agent that ignores status codes still
     cannot pay. Only authentication failures are HTTP errors (401).
 
-    Scope note: this file describes the server on main as of 2026-10-30 (Phases 1, 2, 3 and 6):
+    Scope note: this file describes the server on main as of 2026-10-30 (Phases 1, 2, 3, 4 and 6):
     signed extractor evidence (`signed_evidence` + `proposal.document_sha256`, see governor/src/trust.rs),
-    SQLite state with `Idempotency-Key`. Phase 4 (per-identity auth) will extend it.
+    SQLite state with `Idempotency-Key`, per-identity keys with roles (Phase 4).
+
+    Identities and roles (Phase 4, docs/THREAT_MODEL.md): every `/v1` call carries
+    `Authorization: Bearer <key>`; the key maps to one identity with roles `agent` (proposes),
+    `operator` (enters vendor bank changes, records call-backs) and/or `approver` (resolves REVIEWs,
+    approves bank changes). The agent role is never combined with another. Wrong role → 403;
+    over a rate limit → 429 with `Retry-After`. The identity that proposed a payment cannot resolve
+    it; the identity that entered a bank change cannot confirm its call-back or approve it.
     Synthetic data only. No financial or compliance claims.
   license:
     name: MIT
@@ -73,6 +80,8 @@ paths:
         "400":
           description: Malformed Idempotency-Key header
         "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { description: "The identity does not hold the agent role" }
+        "429": { $ref: "#/components/responses/RateLimited" }
         "409":
           description: Idempotency-Key already used with a different body (error idempotency_key_reused_with_different_body, with the original decision_id), or the database's UNIQUE index refused a second live ledger entry (duplicate_rejected_by_database, paid false)
         "500":
@@ -96,10 +105,10 @@ paths:
   /v1/decisions/{id}/resolve:
     post:
       tags: [operator]
-      summary: Human resolution of a REVIEW decision (operator key only)
-      description: Reachable only with GOVERNOR_OPERATOR_KEY, never with the agent key. The agent's tool has no route to it.
+      summary: Human resolution of a REVIEW decision (approver role; never the proposer)
+      description: Approver role only (an agent identity can never hold it). The approver recorded is the authenticated identity. 403 maker_checker_proposer_cannot_resolve when the caller proposed the payment.
       security:
-        - operatorKey: []
+        - approverKey: []
       parameters:
         - $ref: "#/components/parameters/DecisionId"
       requestBody:
@@ -109,10 +118,10 @@ paths:
             schema:
               type: object
               additionalProperties: false
-              required: [approve, approver]
+              required: [approve]
               properties:
                 approve: { type: boolean }
-                approver: { type: string, description: "Identity of the human approver (recorded in the audit log)" }
+                approver: { type: string, description: "Optional, for older clients; must equal the authenticated identity name (400 otherwise). The recorded approver is always the identity." }
       responses:
         "200":
           description: Resolution recorded
@@ -123,7 +132,11 @@ paths:
                 properties:
                   decision_id: { type: string }
                   approved: { type: boolean }
+                  approver: { type: string }
+        "400": { description: "approver_must_match_authenticated_identity" }
         "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { description: "Not an approver, or the approver proposed this payment (maker_checker_proposer_cannot_resolve)" }
+        "429": { $ref: "#/components/responses/RateLimited" }
         "409": { description: "Decision is not a pending REVIEW (unknown, already resolved, ALLOW or BLOCK)" }
         "422": { description: "Body does not match the schema" }
   /v1/audit/verify:
@@ -155,6 +168,112 @@ paths:
               schema: { type: object, properties: { reset: { type: boolean } } }
         "401": { $ref: "#/components/responses/Unauthorized" }
         "404": { description: "Eval mode is off" }
+  /v1/master-changes:
+    post:
+      tags: [operator]
+      summary: Enter new bank details for a vendor (operator = maker)
+      description: Starts a change in `awaiting_callback`. The master keeps the old details until the change is applied after the call-back, two approvals and the cooling-off. One open change per vendor.
+      security:
+        - operatorKey: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              required: [vendor_id, new_account, new_ifsc, new_bank_name, new_beneficiary_id]
+              properties:
+                vendor_id: { type: string }
+                new_account: { type: string, description: "6-18 digits" }
+                new_ifsc: { type: string, description: "11 alphanumeric characters" }
+                new_bank_name: { type: string }
+                new_beneficiary_id: { type: string }
+      responses:
+        "200": { description: "Change created", content: { application/json: { schema: { $ref: "#/components/schemas/MasterChange" } } } }
+        "400": { description: "invalid_body" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { description: "Not an operator" }
+        "409": { description: "open_change_exists" }
+        "422": { description: "unknown_vendor or invalid_details" }
+        "429": { $ref: "#/components/responses/RateLimited" }
+  /v1/master-changes/{id}:
+    get:
+      tags: [operator]
+      summary: Status of a bank-detail change (operator or approver)
+      security:
+        - operatorKey: []
+        - approverKey: []
+      parameters:
+        - { in: path, name: id, required: true, schema: { type: string } }
+      responses:
+        "200": { description: "The change", content: { application/json: { schema: { $ref: "#/components/schemas/MasterChange" } } } }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { description: "Agent identities cannot read the workflow" }
+        "404": { description: "Unknown change" }
+  /v1/master-changes/{id}/callback:
+    post:
+      tags: [operator]
+      summary: Record the call-back to the vendor's number on file (operator or approver, not the maker)
+      description: number_dialled must be the vendor's number in GOVERNOR_VENDOR_PHONES (422 callback_not_to_number_on_file, change stays open); the confirmed account and IFSC must equal the request (422 callback_details_differ, change rejected). The software checks what is recorded; it cannot verify that a call took place.
+      security:
+        - operatorKey: []
+        - approverKey: []
+      parameters:
+        - { in: path, name: id, required: true, schema: { type: string } }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              required: [number_dialled, confirmed_account, confirmed_ifsc]
+              properties:
+                number_dialled: { type: string }
+                confirmed_account: { type: string }
+                confirmed_ifsc: { type: string }
+      responses:
+        "200": { description: "Now awaiting_approvals", content: { application/json: { schema: { $ref: "#/components/schemas/MasterChange" } } } }
+        "403": { description: "Wrong role, or the maker (maker_cannot_check_own_change)" }
+        "404": { description: "Unknown change" }
+        "409": { description: "wrong_state" }
+        "422": { description: "no_number_on_file, callback_not_to_number_on_file or callback_details_differ" }
+        "429": { $ref: "#/components/responses/RateLimited" }
+  /v1/master-changes/{id}/approve:
+    post:
+      tags: [operator]
+      summary: Checker approval (approver role, not the maker); the second distinct approver starts the cooling-off
+      description: After two distinct approvals the change is `cooling_off` with `effective_at` = second approval + GOVERNOR_MASTER_CHANGE_COOLING_OFF_SECS (default 72 h). It is applied inside the first write at or after `effective_at` (x-eval-now counts in eval mode).
+      security:
+        - approverKey: []
+      parameters:
+        - { in: path, name: id, required: true, schema: { type: string } }
+      responses:
+        "200": { description: "Approval recorded", content: { application/json: { schema: { $ref: "#/components/schemas/MasterChange" } } } }
+        "403": { description: "Not an approver, or the maker" }
+        "404": { description: "Unknown change" }
+        "409": { description: "wrong_state or already_approved_by_this_identity" }
+        "429": { $ref: "#/components/responses/RateLimited" }
+  /v1/master-changes/{id}/reject:
+    post:
+      tags: [operator]
+      summary: Stop an open change (operator or approver), including during the cooling-off
+      security:
+        - operatorKey: []
+        - approverKey: []
+      parameters:
+        - { in: path, name: id, required: true, schema: { type: string } }
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema: { type: object, additionalProperties: false, properties: { reason: { type: string } } }
+      responses:
+        "200": { description: "Rejected", content: { application/json: { schema: { $ref: "#/components/schemas/MasterChange" } } } }
+        "403": { description: "Agent identities cannot reject" }
+        "404": { description: "Unknown change" }
+        "409": { description: "Already applied or rejected" }
   /health:
     get:
       tags: [ops]
@@ -204,11 +323,15 @@ components:
     agentKey:
       type: http
       scheme: bearer
-      description: GOVERNOR_API_KEY (the agent's key; >= 16 chars)
+      description: An identity with role agent (GOVERNOR_IDENTITIES, or the legacy GOVERNOR_API_KEY)
     operatorKey:
       type: http
       scheme: bearer
-      description: GOVERNOR_OPERATOR_KEY (humans only; must differ from the agent key)
+      description: An identity with role operator (GOVERNOR_IDENTITIES, or the legacy GOVERNOR_OPERATOR_KEY)
+    approverKey:
+      type: http
+      scheme: bearer
+      description: An identity with role approver (GOVERNOR_IDENTITIES, or the legacy GOVERNOR_OPERATOR_KEY, which holds operator + approver)
     metricsToken:
       type: http
       scheme: bearer
@@ -222,7 +345,27 @@ components:
   responses:
     Unauthorized:
       description: Missing or wrong bearer token
+    RateLimited:
+      description: Over a per-IP, per-identity or failed-authentication rate limit; see the Retry-After header
+      headers:
+        Retry-After: { schema: { type: integer }, description: Seconds until a request may succeed }
   schemas:
+    MasterChange:
+      type: object
+      properties:
+        change_id: { type: string }
+        vendor_id: { type: string }
+        status: { type: string, enum: [awaiting_callback, awaiting_approvals, cooling_off, applied, rejected] }
+        maker: { type: string }
+        requested_at: { type: integer, format: int64 }
+        new_details: { type: object }
+        callback: { type: object, nullable: true }
+        approvals: { type: array, items: { type: string } }
+        approved_at: { type: integer, format: int64, nullable: true }
+        effective_at: { type: integer, format: int64, nullable: true }
+        applied_at: { type: integer, format: int64, nullable: true }
+        rejected_by: { type: string, nullable: true }
+        reason: { type: string, nullable: true }
     Request:
       type: object
       additionalProperties: false

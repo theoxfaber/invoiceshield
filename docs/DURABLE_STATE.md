@@ -14,6 +14,8 @@ unchanged; this layer only stores what the engine decides.
 | `GOVERNOR_ANCHOR_INTERVAL_SECS` | how often the head is anchored (only when it moved) | 60 |
 | `GOVERNOR_ANCHOR_URL` | optional `http://` URL each anchor is POSTed to (put a TLS relay in front for https) | none |
 
+Schema v2 (Phase 4) adds `decisions.proposed_by` (the authenticated identity), `review_resolutions` (with a trigger refusing the proposer as resolver), `master_changes` and `master_change_approvals` (trigger refusing the maker as approver; applied changes MAC'd with `GOVERNOR_STATE_KEY`). A v1 database migrates in place on first open (tested). See docs/THREAT_MODEL.md.
+
 `PRAGMA synchronous=FULL`, `foreign_keys=ON`, busy timeout 10 s. The schema version is
 `PRAGMA user_version`; migrations are listed in `persist.rs` and run under the write lock, so two
 processes starting together migrate once. A binary refuses a DB with a newer schema.

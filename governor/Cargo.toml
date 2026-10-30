@@ -24,11 +24,20 @@ base64 = "0.22"
 # Phase 6 (ops): structured JSON logs
 tracing = "0.1"
 tracing-subscriber = { version = "0.3", default-features = false, features = ["fmt", "json", "env-filter", "std", "ansi"] }
+# Phase 4 (security): optional TLS (rustls with the ring provider, no aws-lc/cmake), served
+# through hyper-util so the same axum Router runs over plain TCP or TLS.
+rustls = { version = "0.23", default-features = false, features = ["ring", "std", "tls12", "logging"] }
+tokio-rustls = { version = "0.26", default-features = false, features = ["ring", "tls12", "logging"] }
+hyper = { version = "1", features = ["server", "http1", "http2"] }
+hyper-util = { version = "0.1", features = ["tokio", "server-auto", "http1", "http2"] }
+tower = { version = "0.5", features = ["util"] }
 
 [dev-dependencies]
 proptest = "1"
 ed25519-dalek = { version = "2", features = ["rand_core"] }
 rand_core = { version = "0.6", features = ["getrandom"] }
+# Phase 4: self-signed test certificates for the TLS start test.
+rcgen = { version = "0.13", default-features = false, features = ["crypto", "pem", "ring"] }
 
 [[bin]]
 name = "governor-server"
