@@ -14,6 +14,7 @@ from agent.rail import MockRail, Transfer
 from assembler.evidence import assemble
 from assembler.extract import governor_evidence
 from checker.checker import CheckerOut, run_checker
+from extractor.line_proposer import needs_model_lines, propose_lines
 from providers.llm import LLMProvider
 
 def load_master(path=None) -> dict:
@@ -34,6 +35,7 @@ class ModelPhase:
     checker: CheckerOut | None
     pdf: str | None = None       # the invoice document; the gate sends it to the extraction service
     cover_email: dict | None = None
+    proposed_lines: list | None = None  # model-proposed item lines (untrusted; verified by the governor)
 
 
 def model_phase(provider: LLMProvider, case: dict, vendors: dict, sample: int, *, reasoning: str = "low") -> ModelPhase:
@@ -41,7 +43,12 @@ def model_phase(provider: LLMProvider, case: dict, vendors: dict, sample: int, *
     gev = governor_evidence(ev, BUYER_GSTIN)
     prop = run_on_agent(provider, ev, vendors, sample=sample, reasoning=reasoning)
     chk = run_checker(provider, ev, sample=sample, reasoning=reasoning) if prop.kind == "propose" else None
-    return ModelPhase(case["id"], sample, gev, prop, chk, str(case["pdf"]), case["cover_email"])
+    lines = None
+    if prop.kind == "propose" and needs_model_lines(gev):
+        # Only when the deterministic parser read nothing; dev/clean documents never reach here.
+        lp = propose_lines(provider, ev.text, sample=sample)
+        lines = lp.lines if lp.ok else None
+    return ModelPhase(case["id"], sample, gev, prop, chk, str(case["pdf"]), case["cover_email"], lines)
 
 
 @dataclass
@@ -62,11 +69,11 @@ def gate(gov, mp: ModelPhase, master: dict, rail: MockRail) -> ShieldResult:
     if mp.pdf and getattr(gov, "extractor", None) is not None:
         # Signed path: the extraction service reads the document and signs the evidence; the
         # proposal names the document by sha256. Nothing the agent wrote reaches `evidence`.
-        d = gov.evaluate_document(proposal, mp.pdf, mp.cover_email, checker_raw)
+        d = gov.evaluate_document(proposal, mp.pdf, mp.cover_email, checker_raw, proposed_item_lines=mp.proposed_lines)
     else:
         # Unit tests with hand-built evidence only (governor started with dev_unsigned=True).
         # A strict governor answers REVIEW here: it never reads caller-supplied evidence.
-        d = gov.evaluate(proposal, mp.evidence, checker_raw)
+        d = gov.evaluate(proposal, mp.evidence, checker_raw, proposed_item_lines=mp.proposed_lines)
     reasons = [f"{r['rule']}:{r['verdict']}" for r in d["reasons"]] + [f"signal:{s['kind']}:{s['severity']}" for s in d["signals"]]
     res = ShieldResult("paid" if d["verdict"] == "allow" else d["verdict"], d, None, reasons)
     if d["verdict"] == "allow":

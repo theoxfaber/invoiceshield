@@ -127,32 +127,38 @@ class GovernorProc:
         r.raise_for_status()
         return r.json()
 
-    def evaluate(self, proposal: dict, evidence: dict, checker_raw: str | None, now: int = 1_793_000_000) -> dict:
+    def evaluate(self, proposal: dict, evidence: dict, checker_raw: str | None, now: int = 1_793_000_000,
+                 proposed_item_lines: list | None = None) -> dict:
         """Old unsigned path. Only meaningful with dev_unsigned=True; a strict governor answers
         REVIEW (evidence_unsigned) because it never reads caller-supplied evidence."""
         body = {"proposal": proposal, "evidence": evidence}
         if checker_raw is not None:
             body["checker_raw"] = checker_raw
+        if proposed_item_lines is not None:
+            body["proposed_item_lines"] = proposed_item_lines
         return self.post(body, now)
 
     def evaluate_signed(self, proposal: dict, envelope: dict, checker_raw: str | None, document_sha256: str | None,
-                        now: int = 1_793_000_000) -> dict:
+                        now: int = 1_793_000_000, proposed_item_lines: list | None = None) -> dict:
         p = dict(proposal)
         if document_sha256 is not None:
             p["document_sha256"] = document_sha256
         body = {"proposal": p, "signed_evidence": envelope}
         if checker_raw is not None:
             body["checker_raw"] = checker_raw
+        if proposed_item_lines is not None:
+            # Untrusted (model output); the governor verifies it against the signed text layer.
+            body["proposed_item_lines"] = proposed_item_lines
         return self.post(body, now)
 
     def evaluate_document(self, proposal: dict, document: bytes | str | Path, cover_email: dict | None,
-                          checker_raw: str | None, now: int = 1_793_000_000) -> dict:
+                          checker_raw: str | None, now: int = 1_793_000_000, proposed_item_lines: list | None = None) -> dict:
         """Signed path end to end: document → extraction service → signed envelope → governor."""
         if self.extractor is None:
             raise RuntimeError("no extraction service (dev_unsigned governor)")
         doc = document if isinstance(document, bytes) else Path(document).read_bytes()
         env = self.extractor.extract(doc, cover_email)
-        return self.evaluate_signed(proposal, env, checker_raw, hashlib.sha256(doc).hexdigest(), now)
+        return self.evaluate_signed(proposal, env, checker_raw, hashlib.sha256(doc).hexdigest(), now, proposed_item_lines)
 
     def audit(self) -> dict:
         return self.http.get("/v1/audit/verify").json()
