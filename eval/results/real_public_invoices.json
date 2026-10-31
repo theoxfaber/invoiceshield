@@ -1,0 +1,1481 @@
+{
+ "label": "real public layouts, assumed genuine, not customer shadow mode",
+ "gate_code": "freeze-v3 (5c698b0); harness tools/real_public_eval.py",
+ "arm": "rules+model (Muse Spark Open lines + checker, escalate-only)",
+ "started_at_ist": "2026-10-31T17:32:55+05:30",
+ "finished_at_ist": "2026-10-31T17:43:54+05:30",
+ "assumption": "each invoice is assumed genuine; vendor master and PO are built from the invoice's own printed details (read by one Muse Spark Open vision call, independent of the deterministic extractor); threshold raised out of the way; the agent proposes exactly the printed payment; anything but PAY is a failure",
+ "sources": {
+  "ashg59": {
+   "dataset": "https://huggingface.co/datasets/ashg59/invoices-images",
+   "file_url": "https://huggingface.co/datasets/ashg59/invoices-images/resolve/main/{name}",
+   "license": "Apache-2.0",
+   "license_url": "https://huggingface.co/datasets/ashg59/invoices-images (card: license: apache-2.0)",
+   "kind": "scanned B2B GST tax invoice"
+  },
+  "grocery": {
+   "dataset": "https://www.kaggle.com/datasets/surajitsadhukhan/indian-grocery-tax-invoice-image-dataset",
+   "file_url": "kaggle dataset file Photos/{name}",
+   "license": "CC BY 4.0",
+   "license_url": "https://www.kaggle.com/datasets/surajitsadhukhan/indian-grocery-tax-invoice-image-dataset (License: CC BY 4.0)",
+   "attribution": "Indian Grocery Tax Invoice Image Dataset by Surajit Sadhukhan, CC BY 4.0",
+   "kind": "phone photo of wholesale grocery GST invoice"
+  }
+ },
+ "files": 43,
+ "scored": 37,
+ "excluded": 6,
+ "rates": {
+  "PAY": {
+   "k": 0,
+   "n": 37,
+   "rate": 0.0
+  },
+  "REVIEW": {
+   "k": 33,
+   "n": 37,
+   "rate": 0.8919
+  },
+  "BLOCK": {
+   "k": 4,
+   "n": 37,
+   "rate": 0.1081
+  }
+ },
+ "by_source": {
+  "ashg59": {
+   "n": 17,
+   "PAY": 0,
+   "REVIEW": 14,
+   "BLOCK": 3
+  },
+  "grocery": {
+   "n": 20,
+   "PAY": 0,
+   "REVIEW": 19,
+   "BLOCK": 1
+  }
+ },
+ "failure_reasons": {
+  "evidence_read_by_ocr": 37,
+  "issuer_gstin_unreadable": 25,
+  "total_unreadable": 21,
+  "currency_mismatch_invoice": 19,
+  "currency_ambiguous": 16,
+  "line_items_unreadable": 9,
+  "line_items_model_verified": 7,
+  "bank_details_differ_from_master": 3,
+  "tax_type_mismatch": 3,
+  "amount_differs_from_printed_total": 3,
+  "charge_not_on_po": 1,
+  "issuer_gstin_mismatch": 1
+ },
+ "over_default_threshold": 1,
+ "privacy": "raw images not committed; identifiers masked; only business invoices; file names are as published",
+ "rows": [
+  {
+   "id": "ashg59/Advance Multiserv Pvt Ltd.jpg",
+   "source": "ashg59",
+   "dataset": "https://huggingface.co/datasets/ashg59/invoices-images",
+   "file_url": "https://huggingface.co/datasets/ashg59/invoices-images/resolve/main/Advance Multiserv Pvt Ltd.jpg",
+   "license": "Apache-2.0",
+   "kind": "scanned B2B GST tax invoice",
+   "file_sha256": "12e623fb1dc57c2d3a02d9fb3e343ae2354aeabe865d9992213b225774e6a5c0",
+   "verdict": "REVIEW",
+   "deterministic_verdict": "REVIEW",
+   "reasons": [
+    "issuer_gstin_unreadable:review",
+    "evidence_read_by_ocr:review",
+    "line_items_model_verified:allow"
+   ],
+   "signals": [],
+   "evidence": {
+    "text_source": "ocr",
+    "parser_lines": 0,
+    "printed_total_read": true,
+    "issuer_gstin_read": false,
+    "issuer_gstin_matches_master": false,
+    "model_lines": 3,
+    "model_lines_error": null
+   },
+   "master_from_print": {
+    "supplier_gstin": "07*********P1ZX",
+    "bank_account": "50********0504",
+    "ifsc_printed": true,
+    "buyer_gstin_printed": true,
+    "total_printed": true,
+    "po_lines": 1
+   },
+   "over_default_threshold": false
+  },
+  {
+   "id": "ashg59/Ambay Bearing & Machinery.jpg",
+   "source": "ashg59",
+   "dataset": "https://huggingface.co/datasets/ashg59/invoices-images",
+   "file_url": "https://huggingface.co/datasets/ashg59/invoices-images/resolve/main/Ambay Bearing & Machinery.jpg",
+   "license": "Apache-2.0",
+   "kind": "scanned B2B GST tax invoice",
+   "file_sha256": "e3d0e774bc7d699622cf7f9ca5a15112b19710e481281780a0eb1b9e35a3e60e",
+   "verdict": "REVIEW",
+   "deterministic_verdict": "REVIEW",
+   "reasons": [
+    "issuer_gstin_unreadable:review",
+    "evidence_read_by_ocr:review",
+    "total_unreadable:review"
+   ],
+   "signals": [
+    "arithmetic_mismatch:review"
+   ],
+   "evidence": {
+    "text_source": "ocr",
+    "parser_lines": 0,
+    "printed_total_read": false,
+    "issuer_gstin_read": false,
+    "issuer_gstin_matches_master": false,
+    "model_lines": null,
+    "model_lines_error": null
+   },
+   "master_from_print": {
+    "supplier_gstin": "07*********Q1ZB",
+    "bank_account": "61*********0003",
+    "ifsc_printed": true,
+    "buyer_gstin_printed": true,
+    "total_printed": true,
+    "po_lines": 2
+   },
+   "over_default_threshold": false
+  },
+  {
+   "id": "ashg59/Ardee Hi Tech Pvt Ltd.jpg",
+   "source": "ashg59",
+   "dataset": "https://huggingface.co/datasets/ashg59/invoices-images",
+   "file_url": "https://huggingface.co/datasets/ashg59/invoices-images/resolve/main/Ardee Hi Tech Pvt Ltd.jpg",
+   "license": "Apache-2.0",
+   "kind": "scanned B2B GST tax invoice",
+   "file_sha256": "36c63a796de0025a8ee02849c356f24c3e75f1767b733324cf64c1baac5726a8",
+   "verdict": "BLOCK",
+   "deterministic_verdict": "REVIEW",
+   "reasons": [
+    "evidence_read_by_ocr:review",
+    "bank_details_differ_from_master:review",
+    "total_unreadable:review"
+   ],
+   "signals": [],
+   "evidence": {
+    "text_source": "ocr",
+    "parser_lines": 0,
+    "printed_total_read": false,
+    "issuer_gstin_read": true,
+    "issuer_gstin_matches_master": true,
+    "model_lines": null,
+    "model_lines_error": null
+   },
+   "master_from_print": {
+    "supplier_gstin": "37*********L1ZZ",
+    "bank_account": "91*********7074",
+    "ifsc_printed": true,
+    "buyer_gstin_printed": true,
+    "total_printed": true,
+    "po_lines": 7
+   },
+   "over_default_threshold": false
+  },
+  {
+   "id": "ashg59/Bombay Electric Store.jpg",
+   "source": "ashg59",
+   "dataset": "https://huggingface.co/datasets/ashg59/invoices-images",
+   "file_url": "https://huggingface.co/datasets/ashg59/invoices-images/resolve/main/Bombay Electric Store.jpg",
+   "license": "Apache-2.0",
+   "kind": "scanned B2B GST tax invoice",
+   "file_sha256": "27e1f4a591f0e73a6604022dcef86de429e2596137dd1251f4a9a45e5ede49c1",
+   "verdict": "REVIEW",
+   "deterministic_verdict": "REVIEW",
+   "reasons": [
+    "evidence_read_by_ocr:review",
+    "line_items_model_verified:allow"
+   ],
+   "signals": [],
+   "evidence": {
+    "text_source": "ocr",
+    "parser_lines": 0,
+    "printed_total_read": true,
+    "issuer_gstin_read": true,
+    "issuer_gstin_matches_master": true,
+    "model_lines": 3,
+    "model_lines_error": null
+   },
+   "master_from_print": {
+    "supplier_gstin": "07*********R1Z2",
+    "bank_account": null,
+    "ifsc_printed": false,
+    "buyer_gstin_printed": true,
+    "total_printed": true,
+    "po_lines": 1
+   },
+   "over_default_threshold": false
+  },
+  {
+   "id": "ashg59/Delhi Industrila Products.jpg",
+   "source": "ashg59",
+   "dataset": "https://huggingface.co/datasets/ashg59/invoices-images",
+   "file_url": "https://huggingface.co/datasets/ashg59/invoices-images/resolve/main/Delhi Industrila Products.jpg",
+   "license": "Apache-2.0",
+   "kind": "scanned B2B GST tax invoice",
+   "file_sha256": "954de27115a801d518a1d78a8678f08dcd3b3eda82965c3dfb1840bc39695f2b",
+   "verdict": "REVIEW",
+   "deterministic_verdict": "REVIEW",
+   "reasons": [
+    "evidence_read_by_ocr:review",
+    "line_items_unreadable:review"
+   ],
+   "signals": [],
+   "evidence": {
+    "text_source": "ocr",
+    "parser_lines": 0,
+    "printed_total_read": true,
+    "issuer_gstin_read": true,
+    "issuer_gstin_matches_master": true,
+    "model_lines": 3,
+    "model_lines_error": null
+   },
+   "master_from_print": {
+    "supplier_gstin": "07*********A1ZY",
+    "bank_account": null,
+    "ifsc_printed": true,
+    "buyer_gstin_printed": true,
+    "total_printed": true,
+    "po_lines": 1
+   },
+   "over_default_threshold": false
+  },
+  {
+   "id": "ashg59/Krishna Rubber Industries.jpg",
+   "source": "ashg59",
+   "dataset": "https://huggingface.co/datasets/ashg59/invoices-images",
+   "file_url": "https://huggingface.co/datasets/ashg59/invoices-images/resolve/main/Krishna Rubber Industries.jpg",
+   "license": "Apache-2.0",
+   "kind": "scanned B2B GST tax invoice",
+   "file_sha256": "24a7ad6c659e59f68ca3bc5b2b725fe059554f57cad562dae3630920506813e5",
+   "verdict": "REVIEW",
+   "deterministic_verdict": "REVIEW",
+   "reasons": [
+    "currency_ambiguous:review",
+    "currency_mismatch_invoice:review",
+    "evidence_read_by_ocr:review",
+    "line_items_model_verified:allow",
+    "charge_not_on_po:review"
+   ],
+   "signals": [],
+   "evidence": {
+    "text_source": "ocr",
+    "parser_lines": 0,
+    "printed_total_read": true,
+    "issuer_gstin_read": true,
+    "issuer_gstin_matches_master": true,
+    "model_lines": 3,
+    "model_lines_error": null
+   },
+   "master_from_print": {
+    "supplier_gstin": "24*********N1ZY",
+    "bank_account": "07*********0851",
+    "ifsc_printed": true,
+    "buyer_gstin_printed": true,
+    "total_printed": true,
+    "po_lines": 1
+   },
+   "over_default_threshold": false
+  },
+  {
+   "id": "ashg59/Numerographics.jpg",
+   "source": "ashg59",
+   "dataset": "https://huggingface.co/datasets/ashg59/invoices-images",
+   "file_url": "https://huggingface.co/datasets/ashg59/invoices-images/resolve/main/Numerographics.jpg",
+   "license": "Apache-2.0",
+   "kind": "scanned B2B GST tax invoice",
+   "file_sha256": "29e13d58ef08a2b953ae92be556d983ae3e48d2a83259d8d1d0d6d77a18f90fb",
+   "verdict": "REVIEW",
+   "deterministic_verdict": "REVIEW",
+   "reasons": [
+    "currency_ambiguous:review",
+    "currency_mismatch_invoice:review",
+    "issuer_gstin_unreadable:review",
+    "evidence_read_by_ocr:review",
+    "line_items_model_verified:allow"
+   ],
+   "signals": [],
+   "evidence": {
+    "text_source": "ocr",
+    "parser_lines": 0,
+    "printed_total_read": true,
+    "issuer_gstin_read": false,
+    "issuer_gstin_matches_master": false,
+    "model_lines": 3,
+    "model_lines_error": null
+   },
+   "master_from_print": {
+    "supplier_gstin": "07*********B1ZG",
+    "bank_account": "10*****8449",
+    "ifsc_printed": true,
+    "buyer_gstin_printed": true,
+    "total_printed": true,
+    "po_lines": 1
+   },
+   "over_default_threshold": false
+  },
+  {
+   "id": "ashg59/Rajesh Oil Trader.jpg",
+   "source": "ashg59",
+   "dataset": "https://huggingface.co/datasets/ashg59/invoices-images",
+   "file_url": "https://huggingface.co/datasets/ashg59/invoices-images/resolve/main/Rajesh Oil Trader.jpg",
+   "license": "Apache-2.0",
+   "kind": "scanned B2B GST tax invoice",
+   "file_sha256": "95a7bfae4a1d9a0ffd18595a512a8eebe811cd2d992f7eafc3d18a07993bc367",
+   "verdict": "REVIEW",
+   "deterministic_verdict": "REVIEW",
+   "reasons": [
+    "issuer_gstin_unreadable:review",
+    "evidence_read_by_ocr:review",
+    "line_items_model_verified:allow"
+   ],
+   "signals": [],
+   "evidence": {
+    "text_source": "ocr",
+    "parser_lines": 0,
+    "printed_total_read": true,
+    "issuer_gstin_read": false,
+    "issuer_gstin_matches_master": false,
+    "model_lines": 4,
+    "model_lines_error": null
+   },
+   "master_from_print": {
+    "supplier_gstin": "07*********A1ZL",
+    "bank_account": "02**********0299",
+    "ifsc_printed": true,
+    "buyer_gstin_printed": true,
+    "total_printed": true,
+    "po_lines": 1
+   },
+   "over_default_threshold": false
+  },
+  {
+   "id": "ashg59/Razorpay.jpg",
+   "source": "ashg59",
+   "dataset": "https://huggingface.co/datasets/ashg59/invoices-images",
+   "file_url": "https://huggingface.co/datasets/ashg59/invoices-images/resolve/main/Razorpay.jpg",
+   "license": "Apache-2.0",
+   "kind": "scanned B2B GST tax invoice",
+   "file_sha256": "39cee5dc32519d9c0e95d121ec0ab186b721158268269b0f7d149a5e9532489a",
+   "verdict": "BLOCK",
+   "deterministic_verdict": "REVIEW",
+   "reasons": [
+    "currency_mismatch_invoice:review",
+    "evidence_read_by_ocr:review",
+    "tax_type_mismatch:review",
+    "bank_details_differ_from_master:review",
+    "total_unreadable:review"
+   ],
+   "signals": [],
+   "evidence": {
+    "text_source": "ocr",
+    "parser_lines": 0,
+    "printed_total_read": false,
+    "issuer_gstin_read": true,
+    "issuer_gstin_matches_master": true,
+    "model_lines": null,
+    "model_lines_error": null
+   },
+   "master_from_print": {
+    "supplier_gstin": "29*********J1ZU",
+    "bank_account": "50********4291",
+    "ifsc_printed": true,
+    "buyer_gstin_printed": true,
+    "total_printed": true,
+    "po_lines": 0
+   },
+   "over_default_threshold": false
+  },
+  {
+   "id": "ashg59/Sai Automation.jpg",
+   "source": "ashg59",
+   "dataset": "https://huggingface.co/datasets/ashg59/invoices-images",
+   "file_url": "https://huggingface.co/datasets/ashg59/invoices-images/resolve/main/Sai Automation.jpg",
+   "license": "Apache-2.0",
+   "kind": "scanned B2B GST tax invoice",
+   "file_sha256": "78f28ae1b9096706deace926219c67c3971492bb92d33476387246e693dd2d3f",
+   "verdict": "REVIEW",
+   "deterministic_verdict": "REVIEW",
+   "reasons": [
+    "issuer_gstin_unreadable:review",
+    "evidence_read_by_ocr:review",
+    "line_items_unreadable:review"
+   ],
+   "signals": [],
+   "evidence": {
+    "text_source": "ocr",
+    "parser_lines": 0,
+    "printed_total_read": true,
+    "issuer_gstin_read": false,
+    "issuer_gstin_matches_master": false,
+    "model_lines": null,
+    "model_lines_error": "empty output"
+   },
+   "master_from_print": {
+    "supplier_gstin": "07*********C1ZW",
+    "bank_account": "50********9072",
+    "ifsc_printed": true,
+    "buyer_gstin_printed": true,
+    "total_printed": true,
+    "po_lines": 1
+   },
+   "over_default_threshold": false
+  },
+  {
+   "id": "ashg59/Seema Industries.jpg",
+   "source": "ashg59",
+   "dataset": "https://huggingface.co/datasets/ashg59/invoices-images",
+   "file_url": "https://huggingface.co/datasets/ashg59/invoices-images/resolve/main/Seema Industries.jpg",
+   "license": "Apache-2.0",
+   "kind": "scanned B2B GST tax invoice",
+   "file_sha256": "8e959941782c2852a34fc79baed44bf9a3874d1d0f47003822ddf771ae3deb8a",
+   "verdict": "REVIEW",
+   "deterministic_verdict": "REVIEW",
+   "reasons": [
+    "currency_ambiguous:review",
+    "currency_mismatch_invoice:review",
+    "issuer_gstin_unreadable:review",
+    "evidence_read_by_ocr:review",
+    "line_items_model_verified:allow"
+   ],
+   "signals": [],
+   "evidence": {
+    "text_source": "ocr",
+    "parser_lines": 0,
+    "printed_total_read": true,
+    "issuer_gstin_read": false,
+    "issuer_gstin_matches_master": false,
+    "model_lines": 3,
+    "model_lines_error": null
+   },
+   "master_from_print": {
+    "supplier_gstin": "07*********A1Z2",
+    "bank_account": "01********0823",
+    "ifsc_printed": true,
+    "buyer_gstin_printed": true,
+    "total_printed": true,
+    "po_lines": 1
+   },
+   "over_default_threshold": false
+  },
+  {
+   "id": "ashg59/Shiprocket.jpg",
+   "source": "ashg59",
+   "dataset": "https://huggingface.co/datasets/ashg59/invoices-images",
+   "file_url": "https://huggingface.co/datasets/ashg59/invoices-images/resolve/main/Shiprocket.jpg",
+   "license": "Apache-2.0",
+   "kind": "scanned B2B GST tax invoice",
+   "file_sha256": "ead693eaa465fad5636af2144fb3d9cc68360c574e60904381f25c6db933da12",
+   "verdict": "REVIEW",
+   "deterministic_verdict": "REVIEW",
+   "reasons": [
+    "evidence_read_by_ocr:review",
+    "line_items_unreadable:review",
+    "amount_differs_from_printed_total:review"
+   ],
+   "signals": [],
+   "evidence": {
+    "text_source": "ocr",
+    "parser_lines": 0,
+    "printed_total_read": true,
+    "issuer_gstin_read": true,
+    "issuer_gstin_matches_master": true,
+    "model_lines": 2,
+    "model_lines_error": null
+   },
+   "master_from_print": {
+    "supplier_gstin": "06*********Q1ZE",
+    "bank_account": "22**********8475",
+    "ifsc_printed": true,
+    "buyer_gstin_printed": true,
+    "total_printed": true,
+    "po_lines": 0
+   },
+   "over_default_threshold": false
+  },
+  {
+   "id": "ashg59/Shivam Bearing & Machinery Automation.jpg",
+   "source": "ashg59",
+   "dataset": "https://huggingface.co/datasets/ashg59/invoices-images",
+   "file_url": "https://huggingface.co/datasets/ashg59/invoices-images/resolve/main/Shivam Bearing & Machinery Automation.jpg",
+   "license": "Apache-2.0",
+   "kind": "scanned B2B GST tax invoice",
+   "file_sha256": "53db7b10d6dcdb7550aa47b6c6630c07e61d97d4ce471db0acd530b460212290",
+   "verdict": "REVIEW",
+   "deterministic_verdict": "REVIEW",
+   "reasons": [
+    "issuer_gstin_unreadable:review",
+    "evidence_read_by_ocr:review",
+    "line_items_unreadable:review",
+    "amount_differs_from_printed_total:review"
+   ],
+   "signals": [
+    "arithmetic_mismatch:review"
+   ],
+   "evidence": {
+    "text_source": "ocr",
+    "parser_lines": 0,
+    "printed_total_read": true,
+    "issuer_gstin_read": false,
+    "issuer_gstin_matches_master": false,
+    "model_lines": 3,
+    "model_lines_error": null
+   },
+   "master_from_print": {
+    "supplier_gstin": "07*********R1ZU",
+    "bank_account": "50********4653",
+    "ifsc_printed": true,
+    "buyer_gstin_printed": true,
+    "total_printed": true,
+    "po_lines": 1
+   },
+   "over_default_threshold": false
+  },
+  {
+   "id": "ashg59/Shri Ganesh Adhesive Pvt Ltd.jpg",
+   "source": "ashg59",
+   "dataset": "https://huggingface.co/datasets/ashg59/invoices-images",
+   "file_url": "https://huggingface.co/datasets/ashg59/invoices-images/resolve/main/Shri Ganesh Adhesive Pvt Ltd.jpg",
+   "license": "Apache-2.0",
+   "kind": "scanned B2B GST tax invoice",
+   "file_sha256": "01a8f745a74850473e72bc3564a719615e9f6ef1b4ca875a1ac6a7bcd029d093",
+   "verdict": "REVIEW",
+   "deterministic_verdict": "REVIEW",
+   "reasons": [
+    "issuer_gstin_unreadable:review",
+    "evidence_read_by_ocr:review",
+    "line_items_unreadable:review",
+    "amount_differs_from_printed_total:review"
+   ],
+   "signals": [],
+   "evidence": {
+    "text_source": "ocr",
+    "parser_lines": 0,
+    "printed_total_read": true,
+    "issuer_gstin_read": false,
+    "issuer_gstin_matches_master": false,
+    "model_lines": 2,
+    "model_lines_error": null
+   },
+   "master_from_print": {
+    "supplier_gstin": "06*********Q1ZT",
+    "bank_account": "18******0855",
+    "ifsc_printed": true,
+    "buyer_gstin_printed": true,
+    "total_printed": true,
+    "po_lines": 1
+   },
+   "over_default_threshold": false
+  },
+  {
+   "id": "ashg59/Skyland International Pvt Ltd.jpg",
+   "source": "ashg59",
+   "dataset": "https://huggingface.co/datasets/ashg59/invoices-images",
+   "file_url": "https://huggingface.co/datasets/ashg59/invoices-images/resolve/main/Skyland International Pvt Ltd.jpg",
+   "license": "Apache-2.0",
+   "kind": "scanned B2B GST tax invoice",
+   "file_sha256": "bcc02d0175c0f83c1537a94dcbc801bf1102148015c9681dccd599abd3d31683",
+   "verdict": "REVIEW",
+   "deterministic_verdict": "REVIEW",
+   "reasons": [
+    "issuer_gstin_unreadable:review",
+    "evidence_read_by_ocr:review",
+    "line_items_model_verified:allow"
+   ],
+   "signals": [],
+   "evidence": {
+    "text_source": "ocr",
+    "parser_lines": 0,
+    "printed_total_read": true,
+    "issuer_gstin_read": false,
+    "issuer_gstin_matches_master": false,
+    "model_lines": 3,
+    "model_lines_error": null
+   },
+   "master_from_print": {
+    "supplier_gstin": "07*********B1Z8",
+    "bank_account": "34******0419",
+    "ifsc_printed": true,
+    "buyer_gstin_printed": true,
+    "total_printed": true,
+    "po_lines": 1
+   },
+   "over_default_threshold": false
+  },
+  {
+   "id": "ashg59/Spangle Steel Produts.jpg",
+   "source": "ashg59",
+   "dataset": "https://huggingface.co/datasets/ashg59/invoices-images",
+   "file_url": "https://huggingface.co/datasets/ashg59/invoices-images/resolve/main/Spangle Steel Produts.jpg",
+   "license": "Apache-2.0",
+   "kind": "scanned B2B GST tax invoice",
+   "file_sha256": "51be812c2395d1fc6e0a65a047fd7ad503f25ca4f56ed3a8e20596f281574d95",
+   "verdict": "REVIEW",
+   "deterministic_verdict": "REVIEW",
+   "reasons": [
+    "currency_ambiguous:review",
+    "currency_mismatch_invoice:review",
+    "issuer_gstin_unreadable:review",
+    "evidence_read_by_ocr:review",
+    "line_items_unreadable:review"
+   ],
+   "signals": [],
+   "evidence": {
+    "text_source": "ocr",
+    "parser_lines": 0,
+    "printed_total_read": true,
+    "issuer_gstin_read": false,
+    "issuer_gstin_matches_master": false,
+    "model_lines": 5,
+    "model_lines_error": null
+   },
+   "master_from_print": {
+    "supplier_gstin": "07*********D1ZO",
+    "bank_account": "00********1216",
+    "ifsc_printed": true,
+    "buyer_gstin_printed": true,
+    "total_printed": true,
+    "po_lines": 2
+   },
+   "over_default_threshold": true
+  },
+  {
+   "id": "ashg59/Supreme Industries.jpg",
+   "source": "ashg59",
+   "dataset": "https://huggingface.co/datasets/ashg59/invoices-images",
+   "file_url": "https://huggingface.co/datasets/ashg59/invoices-images/resolve/main/Supreme Industries.jpg",
+   "license": "Apache-2.0",
+   "kind": "scanned B2B GST tax invoice",
+   "file_sha256": "8109a7b5bcfd4112d7f43d3489f9565157bc86563b7361cfec097c086ed97509",
+   "verdict": "BLOCK",
+   "deterministic_verdict": "BLOCK",
+   "reasons": [
+    "currency_ambiguous:review",
+    "currency_mismatch_invoice:review",
+    "issuer_gstin_mismatch:block",
+    "evidence_read_by_ocr:review",
+    "total_unreadable:review"
+   ],
+   "signals": [],
+   "evidence": {
+    "text_source": "ocr",
+    "parser_lines": 0,
+    "printed_total_read": false,
+    "issuer_gstin_read": true,
+    "issuer_gstin_matches_master": false,
+    "model_lines": null,
+    "model_lines_error": null
+   },
+   "master_from_print": {
+    "supplier_gstin": "07*********F1Z8",
+    "bank_account": "15**********5129",
+    "ifsc_printed": true,
+    "buyer_gstin_printed": true,
+    "total_printed": true,
+    "po_lines": 1
+   },
+   "over_default_threshold": false
+  },
+  {
+   "id": "ashg59/document_ai_sample_image_2.jpeg",
+   "source": "ashg59",
+   "dataset": "https://huggingface.co/datasets/ashg59/invoices-images",
+   "file_url": "https://huggingface.co/datasets/ashg59/invoices-images/resolve/main/document_ai_sample_image_2.jpeg",
+   "license": "Apache-2.0",
+   "kind": "scanned B2B GST tax invoice",
+   "file_sha256": "35a4fee3d26d6720d624a14da1d9a8a75a9986a266980ceaaba000d65e3f3258",
+   "excluded": true,
+   "exclusion": "model read says not a GST invoice"
+  },
+  {
+   "id": "grocery/20251117_234133.jpg",
+   "source": "grocery",
+   "dataset": "https://www.kaggle.com/datasets/surajitsadhukhan/indian-grocery-tax-invoice-image-dataset",
+   "file_url": "kaggle dataset file Photos/20251117_234133.jpg",
+   "license": "CC BY 4.0",
+   "kind": "phone photo of wholesale grocery GST invoice",
+   "file_sha256": "3f1d5c57f6e47558828cb34018a8893d95ae09c67693ce8e54ab4fec80e8a5f6",
+   "verdict": "REVIEW_HARNESS",
+   "excluded": true,
+   "exclusion": "master read failed: no json"
+  },
+  {
+   "id": "grocery/20251117_234343.jpg",
+   "source": "grocery",
+   "dataset": "https://www.kaggle.com/datasets/surajitsadhukhan/indian-grocery-tax-invoice-image-dataset",
+   "file_url": "kaggle dataset file Photos/20251117_234343.jpg",
+   "license": "CC BY 4.0",
+   "kind": "phone photo of wholesale grocery GST invoice",
+   "file_sha256": "defb102f12f3ea31b2e1a9adc8142b79bd483bcad199293dc8bea221073de38d",
+   "verdict": "BLOCK",
+   "deterministic_verdict": "REVIEW",
+   "reasons": [
+    "currency_ambiguous:review",
+    "currency_mismatch_invoice:review",
+    "issuer_gstin_unreadable:review",
+    "evidence_read_by_ocr:review",
+    "tax_type_mismatch:review",
+    "bank_details_differ_from_master:review",
+    "total_unreadable:review"
+   ],
+   "signals": [],
+   "evidence": {
+    "text_source": "ocr",
+    "parser_lines": 0,
+    "printed_total_read": false,
+    "issuer_gstin_read": false,
+    "issuer_gstin_matches_master": false,
+    "model_lines": null,
+    "model_lines_error": null
+   },
+   "master_from_print": {
+    "supplier_gstin": "19*********F1ZV",
+    "bank_account": "03****6019",
+    "ifsc_printed": true,
+    "buyer_gstin_printed": true,
+    "total_printed": true,
+    "po_lines": 0
+   },
+   "over_default_threshold": false
+  },
+  {
+   "id": "grocery/20251117_234538.jpg",
+   "source": "grocery",
+   "dataset": "https://www.kaggle.com/datasets/surajitsadhukhan/indian-grocery-tax-invoice-image-dataset",
+   "file_url": "kaggle dataset file Photos/20251117_234538.jpg",
+   "license": "CC BY 4.0",
+   "kind": "phone photo of wholesale grocery GST invoice",
+   "file_sha256": "34c1b943a771f981b7fa5f59e4d7faeb5fdcbf8739320fa74b08938f30ae0977",
+   "verdict": "REVIEW",
+   "deterministic_verdict": "REVIEW",
+   "reasons": [
+    "currency_ambiguous:review",
+    "currency_mismatch_invoice:review",
+    "issuer_gstin_unreadable:review",
+    "evidence_read_by_ocr:review",
+    "line_items_unreadable:review"
+   ],
+   "signals": [],
+   "evidence": {
+    "text_source": "ocr",
+    "parser_lines": 0,
+    "printed_total_read": true,
+    "issuer_gstin_read": false,
+    "issuer_gstin_matches_master": false,
+    "model_lines": null,
+    "model_lines_error": "empty output"
+   },
+   "master_from_print": {
+    "supplier_gstin": "19*********N1ZZ",
+    "bank_account": null,
+    "ifsc_printed": false,
+    "buyer_gstin_printed": true,
+    "total_printed": true,
+    "po_lines": 9
+   },
+   "over_default_threshold": false
+  },
+  {
+   "id": "grocery/20251117_234750.jpg",
+   "source": "grocery",
+   "dataset": "https://www.kaggle.com/datasets/surajitsadhukhan/indian-grocery-tax-invoice-image-dataset",
+   "file_url": "kaggle dataset file Photos/20251117_234750.jpg",
+   "license": "CC BY 4.0",
+   "kind": "phone photo of wholesale grocery GST invoice",
+   "file_sha256": "71ba8de4b21d5c8b01b1358ef6502c6f07c129d9c24bfd1cf7a2ca4ecda293bc",
+   "verdict": "REVIEW",
+   "deterministic_verdict": "REVIEW",
+   "reasons": [
+    "currency_ambiguous:review",
+    "currency_mismatch_invoice:review",
+    "issuer_gstin_unreadable:review",
+    "evidence_read_by_ocr:review",
+    "total_unreadable:review"
+   ],
+   "signals": [],
+   "evidence": {
+    "text_source": "ocr",
+    "parser_lines": 0,
+    "printed_total_read": false,
+    "issuer_gstin_read": false,
+    "issuer_gstin_matches_master": false,
+    "model_lines": null,
+    "model_lines_error": null
+   },
+   "master_from_print": {
+    "supplier_gstin": "19*********R1Z2",
+    "bank_account": null,
+    "ifsc_printed": false,
+    "buyer_gstin_printed": false,
+    "total_printed": true,
+    "po_lines": 2
+   },
+   "over_default_threshold": false
+  },
+  {
+   "id": "grocery/20251117_234845.jpg",
+   "source": "grocery",
+   "dataset": "https://www.kaggle.com/datasets/surajitsadhukhan/indian-grocery-tax-invoice-image-dataset",
+   "file_url": "kaggle dataset file Photos/20251117_234845.jpg",
+   "license": "CC BY 4.0",
+   "kind": "phone photo of wholesale grocery GST invoice",
+   "file_sha256": "4a049d6eced7242b762c167443feb6846cbd5ded99cab6297535056906755758",
+   "verdict": "REVIEW",
+   "deterministic_verdict": "REVIEW",
+   "reasons": [
+    "currency_mismatch_invoice:review",
+    "issuer_gstin_unreadable:review",
+    "evidence_read_by_ocr:review",
+    "total_unreadable:review"
+   ],
+   "signals": [],
+   "evidence": {
+    "text_source": "ocr",
+    "parser_lines": 0,
+    "printed_total_read": false,
+    "issuer_gstin_read": false,
+    "issuer_gstin_matches_master": false,
+    "model_lines": null,
+    "model_lines_error": null
+   },
+   "master_from_print": {
+    "supplier_gstin": "19*********F1ZZ",
+    "bank_account": null,
+    "ifsc_printed": false,
+    "buyer_gstin_printed": true,
+    "total_printed": false,
+    "po_lines": 12
+   },
+   "over_default_threshold": false
+  },
+  {
+   "id": "grocery/20251117_235050.jpg",
+   "source": "grocery",
+   "dataset": "https://www.kaggle.com/datasets/surajitsadhukhan/indian-grocery-tax-invoice-image-dataset",
+   "file_url": "kaggle dataset file Photos/20251117_235050.jpg",
+   "license": "CC BY 4.0",
+   "kind": "phone photo of wholesale grocery GST invoice",
+   "file_sha256": "d84a0545a4a42a772b0f526f920c2523412b097a9d20e74745c4e304a17102e9",
+   "verdict": "REVIEW",
+   "deterministic_verdict": "REVIEW",
+   "reasons": [
+    "evidence_read_by_ocr:review",
+    "tax_type_mismatch:review",
+    "line_items_unreadable:review"
+   ],
+   "signals": [],
+   "evidence": {
+    "text_source": "ocr",
+    "parser_lines": 0,
+    "printed_total_read": true,
+    "issuer_gstin_read": true,
+    "issuer_gstin_matches_master": true,
+    "model_lines": null,
+    "model_lines_error": "empty output"
+   },
+   "master_from_print": {
+    "supplier_gstin": "19*********R1Z2",
+    "bank_account": null,
+    "ifsc_printed": false,
+    "buyer_gstin_printed": true,
+    "total_printed": true,
+    "po_lines": 8
+   },
+   "over_default_threshold": false
+  },
+  {
+   "id": "grocery/20251117_235452.jpg",
+   "source": "grocery",
+   "dataset": "https://www.kaggle.com/datasets/surajitsadhukhan/indian-grocery-tax-invoice-image-dataset",
+   "file_url": "kaggle dataset file Photos/20251117_235452.jpg",
+   "license": "CC BY 4.0",
+   "kind": "phone photo of wholesale grocery GST invoice",
+   "file_sha256": "526166e039479083a5c821d9323525acbce76af5523f7d082ea0686c07f06f1b",
+   "verdict": "REVIEW",
+   "deterministic_verdict": "REVIEW",
+   "reasons": [
+    "evidence_read_by_ocr:review",
+    "line_items_unreadable:review"
+   ],
+   "signals": [],
+   "evidence": {
+    "text_source": "ocr",
+    "parser_lines": 0,
+    "printed_total_read": true,
+    "issuer_gstin_read": false,
+    "issuer_gstin_matches_master": false,
+    "model_lines": null,
+    "model_lines_error": "empty output"
+   },
+   "master_from_print": {
+    "supplier_gstin": null,
+    "bank_account": null,
+    "ifsc_printed": false,
+    "buyer_gstin_printed": false,
+    "total_printed": true,
+    "po_lines": 3
+   },
+   "over_default_threshold": false
+  },
+  {
+   "id": "grocery/20251117_235704.jpg",
+   "source": "grocery",
+   "dataset": "https://www.kaggle.com/datasets/surajitsadhukhan/indian-grocery-tax-invoice-image-dataset",
+   "file_url": "kaggle dataset file Photos/20251117_235704.jpg",
+   "license": "CC BY 4.0",
+   "kind": "phone photo of wholesale grocery GST invoice",
+   "file_sha256": "b28f79b32598d3ff759020613105f2bd34b23104d1f469b1056ea01edf26fa4b",
+   "verdict": "REVIEW_HARNESS",
+   "excluded": true,
+   "exclusion": "master read failed: bad json: Expecting ',' delimiter: line 1 column 1636 (char 1635)"
+  },
+  {
+   "id": "grocery/20251117_235854.jpg",
+   "source": "grocery",
+   "dataset": "https://www.kaggle.com/datasets/surajitsadhukhan/indian-grocery-tax-invoice-image-dataset",
+   "file_url": "kaggle dataset file Photos/20251117_235854.jpg",
+   "license": "CC BY 4.0",
+   "kind": "phone photo of wholesale grocery GST invoice",
+   "file_sha256": "fe3a56d6d66f4001a3426b629880cfbe2f12df2ae191d9063b95977d2a9ffa71",
+   "verdict": "REVIEW",
+   "deterministic_verdict": "REVIEW",
+   "reasons": [
+    "currency_ambiguous:review",
+    "currency_mismatch_invoice:review",
+    "issuer_gstin_unreadable:review",
+    "evidence_read_by_ocr:review",
+    "total_unreadable:review"
+   ],
+   "signals": [],
+   "evidence": {
+    "text_source": "ocr",
+    "parser_lines": 0,
+    "printed_total_read": false,
+    "issuer_gstin_read": false,
+    "issuer_gstin_matches_master": false,
+    "model_lines": null,
+    "model_lines_error": null
+   },
+   "master_from_print": {
+    "supplier_gstin": "19*********K1Z1",
+    "bank_account": null,
+    "ifsc_printed": false,
+    "buyer_gstin_printed": true,
+    "total_printed": true,
+    "po_lines": 2
+   },
+   "over_default_threshold": false
+  },
+  {
+   "id": "grocery/20251118_000018.jpg",
+   "source": "grocery",
+   "dataset": "https://www.kaggle.com/datasets/surajitsadhukhan/indian-grocery-tax-invoice-image-dataset",
+   "file_url": "kaggle dataset file Photos/20251118_000018.jpg",
+   "license": "CC BY 4.0",
+   "kind": "phone photo of wholesale grocery GST invoice",
+   "file_sha256": "b145171a4af8b5f06cfc91744fc24b75bfcf1843434bedbc8172f659e6f9907f",
+   "verdict": "REVIEW",
+   "deterministic_verdict": "REVIEW",
+   "reasons": [
+    "currency_ambiguous:review",
+    "currency_mismatch_invoice:review",
+    "evidence_read_by_ocr:review",
+    "total_unreadable:review"
+   ],
+   "signals": [],
+   "evidence": {
+    "text_source": "ocr",
+    "parser_lines": 0,
+    "printed_total_read": false,
+    "issuer_gstin_read": false,
+    "issuer_gstin_matches_master": false,
+    "model_lines": null,
+    "model_lines_error": null
+   },
+   "master_from_print": {
+    "supplier_gstin": null,
+    "bank_account": null,
+    "ifsc_printed": false,
+    "buyer_gstin_printed": false,
+    "total_printed": true,
+    "po_lines": 0
+   },
+   "over_default_threshold": false
+  },
+  {
+   "id": "grocery/20251118_000509.jpg",
+   "source": "grocery",
+   "dataset": "https://www.kaggle.com/datasets/surajitsadhukhan/indian-grocery-tax-invoice-image-dataset",
+   "file_url": "kaggle dataset file Photos/20251118_000509.jpg",
+   "license": "CC BY 4.0",
+   "kind": "phone photo of wholesale grocery GST invoice",
+   "file_sha256": "290c6eb648f0394459f987ceddfd882ccc57bb1f28e4fde8a833731e0ae9825e",
+   "verdict": "REVIEW",
+   "deterministic_verdict": "REVIEW",
+   "reasons": [
+    "currency_ambiguous:review",
+    "currency_mismatch_invoice:review",
+    "issuer_gstin_unreadable:review",
+    "evidence_read_by_ocr:review",
+    "total_unreadable:review"
+   ],
+   "signals": [],
+   "evidence": {
+    "text_source": "ocr",
+    "parser_lines": 0,
+    "printed_total_read": false,
+    "issuer_gstin_read": false,
+    "issuer_gstin_matches_master": false,
+    "model_lines": null,
+    "model_lines_error": null
+   },
+   "master_from_print": {
+    "supplier_gstin": "19*********F1ZX",
+    "bank_account": null,
+    "ifsc_printed": false,
+    "buyer_gstin_printed": true,
+    "total_printed": true,
+    "po_lines": 3
+   },
+   "over_default_threshold": false
+  },
+  {
+   "id": "grocery/20251118_000600.jpg",
+   "source": "grocery",
+   "dataset": "https://www.kaggle.com/datasets/surajitsadhukhan/indian-grocery-tax-invoice-image-dataset",
+   "file_url": "kaggle dataset file Photos/20251118_000600.jpg",
+   "license": "CC BY 4.0",
+   "kind": "phone photo of wholesale grocery GST invoice",
+   "file_sha256": "589b7b462ca0ef1790efc01613682aea706d7043d9e884c62435444e15be5c03",
+   "verdict": "REVIEW",
+   "deterministic_verdict": "REVIEW",
+   "reasons": [
+    "evidence_read_by_ocr:review",
+    "total_unreadable:review"
+   ],
+   "signals": [],
+   "evidence": {
+    "text_source": "ocr",
+    "parser_lines": 0,
+    "printed_total_read": false,
+    "issuer_gstin_read": true,
+    "issuer_gstin_matches_master": true,
+    "model_lines": null,
+    "model_lines_error": null
+   },
+   "master_from_print": {
+    "supplier_gstin": "19*********P1ZG",
+    "bank_account": null,
+    "ifsc_printed": false,
+    "buyer_gstin_printed": false,
+    "total_printed": true,
+    "po_lines": 0
+   },
+   "over_default_threshold": false
+  },
+  {
+   "id": "grocery/20251118_000655.jpg",
+   "source": "grocery",
+   "dataset": "https://www.kaggle.com/datasets/surajitsadhukhan/indian-grocery-tax-invoice-image-dataset",
+   "file_url": "kaggle dataset file Photos/20251118_000655.jpg",
+   "license": "CC BY 4.0",
+   "kind": "phone photo of wholesale grocery GST invoice",
+   "file_sha256": "39b8eb8f58aa0b050cb7ee826091ad408b79d6edfed1b8acf2ee051f94c92a00",
+   "verdict": "REVIEW",
+   "deterministic_verdict": "REVIEW",
+   "reasons": [
+    "currency_ambiguous:review",
+    "currency_mismatch_invoice:review",
+    "issuer_gstin_unreadable:review",
+    "evidence_read_by_ocr:review",
+    "total_unreadable:review"
+   ],
+   "signals": [],
+   "evidence": {
+    "text_source": "ocr",
+    "parser_lines": 0,
+    "printed_total_read": false,
+    "issuer_gstin_read": false,
+    "issuer_gstin_matches_master": false,
+    "model_lines": null,
+    "model_lines_error": null
+   },
+   "master_from_print": {
+    "supplier_gstin": "19*********R1ZD",
+    "bank_account": null,
+    "ifsc_printed": false,
+    "buyer_gstin_printed": true,
+    "total_printed": true,
+    "po_lines": 5
+   },
+   "over_default_threshold": false
+  },
+  {
+   "id": "grocery/20251118_000815.jpg",
+   "source": "grocery",
+   "dataset": "https://www.kaggle.com/datasets/surajitsadhukhan/indian-grocery-tax-invoice-image-dataset",
+   "file_url": "kaggle dataset file Photos/20251118_000815.jpg",
+   "license": "CC BY 4.0",
+   "kind": "phone photo of wholesale grocery GST invoice",
+   "file_sha256": "ad91b5704e06dd82c44c2ce43e46f8f7a4161159c614ea0de53a65d95ab9fe95",
+   "verdict": "REVIEW",
+   "deterministic_verdict": "REVIEW",
+   "reasons": [
+    "currency_ambiguous:review",
+    "currency_mismatch_invoice:review",
+    "issuer_gstin_unreadable:review",
+    "evidence_read_by_ocr:review",
+    "total_unreadable:review"
+   ],
+   "signals": [],
+   "evidence": {
+    "text_source": "ocr",
+    "parser_lines": 0,
+    "printed_total_read": false,
+    "issuer_gstin_read": false,
+    "issuer_gstin_matches_master": false,
+    "model_lines": null,
+    "model_lines_error": null
+   },
+   "master_from_print": {
+    "supplier_gstin": "19*********M1ZJ",
+    "bank_account": "92*********7947",
+    "ifsc_printed": true,
+    "buyer_gstin_printed": true,
+    "total_printed": true,
+    "po_lines": 12
+   },
+   "over_default_threshold": false
+  },
+  {
+   "id": "grocery/20251118_000917.jpg",
+   "source": "grocery",
+   "dataset": "https://www.kaggle.com/datasets/surajitsadhukhan/indian-grocery-tax-invoice-image-dataset",
+   "file_url": "kaggle dataset file Photos/20251118_000917.jpg",
+   "license": "CC BY 4.0",
+   "kind": "phone photo of wholesale grocery GST invoice",
+   "file_sha256": "2ea5e22560c9cefab4fcc2464da6e084f36aa408df8bae90fd6d0d86d5501e38",
+   "verdict": "REVIEW_HARNESS",
+   "excluded": true,
+   "exclusion": "master read failed: no json"
+  },
+  {
+   "id": "grocery/20251118_001054.jpg",
+   "source": "grocery",
+   "dataset": "https://www.kaggle.com/datasets/surajitsadhukhan/indian-grocery-tax-invoice-image-dataset",
+   "file_url": "kaggle dataset file Photos/20251118_001054.jpg",
+   "license": "CC BY 4.0",
+   "kind": "phone photo of wholesale grocery GST invoice",
+   "file_sha256": "e272b006d618dadd8d35b0e768de1385ee5cbbbedbc9a049a4ede4d541a3f93a",
+   "verdict": "REVIEW",
+   "deterministic_verdict": "REVIEW",
+   "reasons": [
+    "evidence_read_by_ocr:review",
+    "total_unreadable:review"
+   ],
+   "signals": [],
+   "evidence": {
+    "text_source": "ocr",
+    "parser_lines": 0,
+    "printed_total_read": false,
+    "issuer_gstin_read": true,
+    "issuer_gstin_matches_master": true,
+    "model_lines": null,
+    "model_lines_error": null
+   },
+   "master_from_print": {
+    "supplier_gstin": "19*********G1ZV",
+    "bank_account": null,
+    "ifsc_printed": false,
+    "buyer_gstin_printed": true,
+    "total_printed": true,
+    "po_lines": 5
+   },
+   "over_default_threshold": false
+  },
+  {
+   "id": "grocery/20251118_001232.jpg",
+   "source": "grocery",
+   "dataset": "https://www.kaggle.com/datasets/surajitsadhukhan/indian-grocery-tax-invoice-image-dataset",
+   "file_url": "kaggle dataset file Photos/20251118_001232.jpg",
+   "license": "CC BY 4.0",
+   "kind": "phone photo of wholesale grocery GST invoice",
+   "file_sha256": "d2292a8d55678b7b8508f40b00c929515fd046adf688eb6dddee2fe464089770",
+   "verdict": "REVIEW_HARNESS",
+   "excluded": true,
+   "exclusion": "master read failed: no json"
+  },
+  {
+   "id": "grocery/20251118_001329.jpg",
+   "source": "grocery",
+   "dataset": "https://www.kaggle.com/datasets/surajitsadhukhan/indian-grocery-tax-invoice-image-dataset",
+   "file_url": "kaggle dataset file Photos/20251118_001329.jpg",
+   "license": "CC BY 4.0",
+   "kind": "phone photo of wholesale grocery GST invoice",
+   "file_sha256": "57192d042c753a005f3c9426942da0a8e3551b34ea4c03591b92cc52945d50fd",
+   "verdict": "REVIEW",
+   "deterministic_verdict": "REVIEW",
+   "reasons": [
+    "issuer_gstin_unreadable:review",
+    "evidence_read_by_ocr:review",
+    "total_unreadable:review"
+   ],
+   "signals": [],
+   "evidence": {
+    "text_source": "ocr",
+    "parser_lines": 0,
+    "printed_total_read": false,
+    "issuer_gstin_read": false,
+    "issuer_gstin_matches_master": false,
+    "model_lines": null,
+    "model_lines_error": null
+   },
+   "master_from_print": {
+    "supplier_gstin": "19*********R1ZE",
+    "bank_account": "40*********0127",
+    "ifsc_printed": true,
+    "buyer_gstin_printed": true,
+    "total_printed": true,
+    "po_lines": 9
+   },
+   "over_default_threshold": false
+  },
+  {
+   "id": "grocery/20251118_001432.jpg",
+   "source": "grocery",
+   "dataset": "https://www.kaggle.com/datasets/surajitsadhukhan/indian-grocery-tax-invoice-image-dataset",
+   "file_url": "kaggle dataset file Photos/20251118_001432.jpg",
+   "license": "CC BY 4.0",
+   "kind": "phone photo of wholesale grocery GST invoice",
+   "file_sha256": "b68d57c7529769aef1a12faceb41da48a2e29aa5d1f03ebeb365b624e01a603a",
+   "verdict": "REVIEW",
+   "deterministic_verdict": "REVIEW",
+   "reasons": [
+    "currency_ambiguous:review",
+    "currency_mismatch_invoice:review",
+    "issuer_gstin_unreadable:review",
+    "evidence_read_by_ocr:review",
+    "total_unreadable:review"
+   ],
+   "signals": [],
+   "evidence": {
+    "text_source": "ocr",
+    "parser_lines": 0,
+    "printed_total_read": false,
+    "issuer_gstin_read": false,
+    "issuer_gstin_matches_master": false,
+    "model_lines": null,
+    "model_lines_error": null
+   },
+   "master_from_print": {
+    "supplier_gstin": "19*********R1ZE",
+    "bank_account": "40*********0127",
+    "ifsc_printed": true,
+    "buyer_gstin_printed": true,
+    "total_printed": true,
+    "po_lines": 8
+   },
+   "over_default_threshold": false
+  },
+  {
+   "id": "grocery/20251118_001535.jpg",
+   "source": "grocery",
+   "dataset": "https://www.kaggle.com/datasets/surajitsadhukhan/indian-grocery-tax-invoice-image-dataset",
+   "file_url": "kaggle dataset file Photos/20251118_001535.jpg",
+   "license": "CC BY 4.0",
+   "kind": "phone photo of wholesale grocery GST invoice",
+   "file_sha256": "9a0e261443bf088ccc560ce4be06975befb5ff4a92988d10f6e1a04e833f58d4",
+   "verdict": "REVIEW",
+   "deterministic_verdict": "REVIEW",
+   "reasons": [
+    "currency_ambiguous:review",
+    "currency_mismatch_invoice:review",
+    "issuer_gstin_unreadable:review",
+    "evidence_read_by_ocr:review",
+    "total_unreadable:review"
+   ],
+   "signals": [],
+   "evidence": {
+    "text_source": "ocr",
+    "parser_lines": 0,
+    "printed_total_read": false,
+    "issuer_gstin_read": false,
+    "issuer_gstin_matches_master": false,
+    "model_lines": null,
+    "model_lines_error": null
+   },
+   "master_from_print": {
+    "supplier_gstin": "19*********C1Z0",
+    "bank_account": null,
+    "ifsc_printed": false,
+    "buyer_gstin_printed": true,
+    "total_printed": true,
+    "po_lines": 9
+   },
+   "over_default_threshold": false
+  },
+  {
+   "id": "grocery/20251118_001640.jpg",
+   "source": "grocery",
+   "dataset": "https://www.kaggle.com/datasets/surajitsadhukhan/indian-grocery-tax-invoice-image-dataset",
+   "file_url": "kaggle dataset file Photos/20251118_001640.jpg",
+   "license": "CC BY 4.0",
+   "kind": "phone photo of wholesale grocery GST invoice",
+   "file_sha256": "23386e188ae56352c28b4019c26173cbd6f2df1e4eb2787bd398cb1f554ce6b0",
+   "verdict": "REVIEW",
+   "deterministic_verdict": "REVIEW",
+   "reasons": [
+    "currency_ambiguous:review",
+    "currency_mismatch_invoice:review",
+    "issuer_gstin_unreadable:review",
+    "evidence_read_by_ocr:review",
+    "total_unreadable:review"
+   ],
+   "signals": [],
+   "evidence": {
+    "text_source": "ocr",
+    "parser_lines": 0,
+    "printed_total_read": false,
+    "issuer_gstin_read": false,
+    "issuer_gstin_matches_master": false,
+    "model_lines": null,
+    "model_lines_error": null
+   },
+   "master_from_print": {
+    "supplier_gstin": "19*********C1Z0",
+    "bank_account": "39******0266",
+    "ifsc_printed": true,
+    "buyer_gstin_printed": true,
+    "total_printed": true,
+    "po_lines": 11
+   },
+   "over_default_threshold": false
+  },
+  {
+   "id": "grocery/20251118_001747.jpg",
+   "source": "grocery",
+   "dataset": "https://www.kaggle.com/datasets/surajitsadhukhan/indian-grocery-tax-invoice-image-dataset",
+   "file_url": "kaggle dataset file Photos/20251118_001747.jpg",
+   "license": "CC BY 4.0",
+   "kind": "phone photo of wholesale grocery GST invoice",
+   "file_sha256": "66abfb7c536891d3bc13ab0bc2e81af38c37718af1a30bfe102ef25124aa8bce",
+   "verdict": "REVIEW_HARNESS",
+   "excluded": true,
+   "exclusion": "master read failed: no json"
+  },
+  {
+   "id": "grocery/20251118_001854.jpg",
+   "source": "grocery",
+   "dataset": "https://www.kaggle.com/datasets/surajitsadhukhan/indian-grocery-tax-invoice-image-dataset",
+   "file_url": "kaggle dataset file Photos/20251118_001854.jpg",
+   "license": "CC BY 4.0",
+   "kind": "phone photo of wholesale grocery GST invoice",
+   "file_sha256": "68c446fc66c015be9af3c427a3fa2353f29f9edca66be91c50391b9c36f0c96b",
+   "verdict": "REVIEW",
+   "deterministic_verdict": "REVIEW",
+   "reasons": [
+    "issuer_gstin_unreadable:review",
+    "evidence_read_by_ocr:review",
+    "total_unreadable:review"
+   ],
+   "signals": [],
+   "evidence": {
+    "text_source": "ocr",
+    "parser_lines": 0,
+    "printed_total_read": false,
+    "issuer_gstin_read": false,
+    "issuer_gstin_matches_master": false,
+    "model_lines": null,
+    "model_lines_error": null
+   },
+   "master_from_print": {
+    "supplier_gstin": "19*********C1Z0",
+    "bank_account": null,
+    "ifsc_printed": false,
+    "buyer_gstin_printed": true,
+    "total_printed": false,
+    "po_lines": 17
+   },
+   "over_default_threshold": false
+  },
+  {
+   "id": "grocery/20251118_001951.jpg",
+   "source": "grocery",
+   "dataset": "https://www.kaggle.com/datasets/surajitsadhukhan/indian-grocery-tax-invoice-image-dataset",
+   "file_url": "kaggle dataset file Photos/20251118_001951.jpg",
+   "license": "CC BY 4.0",
+   "kind": "phone photo of wholesale grocery GST invoice",
+   "file_sha256": "abf63663025624364b95985be59f5077d6fc8ba94a74dfaab8d069cb1a0f05a0",
+   "verdict": "REVIEW",
+   "deterministic_verdict": "REVIEW",
+   "reasons": [
+    "issuer_gstin_unreadable:review",
+    "evidence_read_by_ocr:review",
+    "total_unreadable:review"
+   ],
+   "signals": [],
+   "evidence": {
+    "text_source": "ocr",
+    "parser_lines": 0,
+    "printed_total_read": false,
+    "issuer_gstin_read": false,
+    "issuer_gstin_matches_master": false,
+    "model_lines": null,
+    "model_lines_error": null
+   },
+   "master_from_print": {
+    "supplier_gstin": "19*********C1Z0",
+    "bank_account": "39******0266",
+    "ifsc_printed": true,
+    "buyer_gstin_printed": true,
+    "total_printed": true,
+    "po_lines": 1
+   },
+   "over_default_threshold": false
+  },
+  {
+   "id": "grocery/20251118_002050.jpg",
+   "source": "grocery",
+   "dataset": "https://www.kaggle.com/datasets/surajitsadhukhan/indian-grocery-tax-invoice-image-dataset",
+   "file_url": "kaggle dataset file Photos/20251118_002050.jpg",
+   "license": "CC BY 4.0",
+   "kind": "phone photo of wholesale grocery GST invoice",
+   "file_sha256": "a5545758ff25dfb23e75a4bd4aa3b9ddcafc52cdeeb1000e1f05834ee77851f3",
+   "verdict": "REVIEW",
+   "deterministic_verdict": "REVIEW",
+   "reasons": [
+    "currency_mismatch_invoice:review",
+    "issuer_gstin_unreadable:review",
+    "evidence_read_by_ocr:review",
+    "total_unreadable:review"
+   ],
+   "signals": [],
+   "evidence": {
+    "text_source": "ocr",
+    "parser_lines": 0,
+    "printed_total_read": false,
+    "issuer_gstin_read": false,
+    "issuer_gstin_matches_master": false,
+    "model_lines": null,
+    "model_lines_error": null
+   },
+   "master_from_print": {
+    "supplier_gstin": "19*********C1Z0",
+    "bank_account": "39******0266",
+    "ifsc_printed": true,
+    "buyer_gstin_printed": true,
+    "total_printed": true,
+    "po_lines": 4
+   },
+   "over_default_threshold": false
+  }
+ ]
+}

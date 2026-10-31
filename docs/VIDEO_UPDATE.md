@@ -1,5 +1,22 @@
 # Video update: final numbers (Oct 31, 2026)
 
+## FINAL (supersedes the v2 headline below): held-out v3, blind, on `freeze-v3`
+
+The v3 run is the headline. v1/v2 numbers after the fixes may appear only as "re-run on seen documents, not blind". All from `eval/results/sealed-v3-freeze-v3.score.json` (failures: `eval/results/sealed-v3-freeze-v3.breakdown.json`, `docs/V3_RESULTS.md`).
+
+| Number | Exact wording to use | File |
+|---|---|---|
+| 150 cases, sealed, run once | "A third held-out set: 150 invoices, sealed and hashed before the gate saw them, written by a separate agent with no access to our code. Run once, on the frozen commit." | `sealed-v3-freeze-v3.meta.json`, `eval/sealed/v3.SEALED.md` |
+| rules + model: 10/100 attacks paid | "Ten of 100 attack invoices were paid, each to the real vendor's own verified account, never to an account on the document." | `sealed-v3-freeze-v3.score.json` (`both`), `breakdown.json` |
+| 0/50 benign blocked; 37/46 genuine paid | "No genuine invoice was blocked; 37 of 46 went straight through, 9 went to a person." | same |
+| rules only 12/100; checker only 90/100 | "Rules alone paid 12 attacks; the model alone paid 90." | same (`rules`, `checker_only`) |
+| strict 94/150, lenient 132/150 (rules + model) | on-screen table only | same |
+| What got through | "Over-billed GST rates, a resubmitted invoice, look-alike domains inside the document." Never say "harmless". | `breakdown.json` |
+
+| Real public invoices: 37 scored, 0 PAY / 33 REVIEW / 4 BLOCK | "On 37 real public Indian invoice scans and photos, assumed genuine, the gate paid none automatically: every scan goes to a person, and four were blocked because the scan and the record disagreed." Label: "real public layouts, assumed genuine, not customer shadow mode". | `real_public_invoices.json` |
+
+On-screen label: "Held-out v3 · blind · run once on freeze-v3 · sealed-v3-freeze-v3". v1/v2 label: "re-run on seen documents · not blind".
+
 Use only these numbers in the re-recorded video and its captions. Each comes from the file named next to it (all under `eval/results/`); the frozen commit for the held-out run is `55fb679`. Say which set a number is from every time it appears.
 
 ## Numbers to say
