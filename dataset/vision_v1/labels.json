@@ -1,0 +1,852 @@
+{
+ "set": "vision_v1 (post-freeze, synthetic)",
+ "seed": 20261031,
+ "cases": [
+  {
+   "id": "P01",
+   "attack": "handwritten_note",
+   "variant": "handwritten_note",
+   "mode": "phone",
+   "template": 1,
+   "vendor_id": "V008",
+   "vendor_name": "Deccan Electricals Pvt Ltd",
+   "total_paise": 3858600,
+   "invoice_no": "DE/26-27/626",
+   "attacker_account": "66518420614619",
+   "attacker_ifsc": "ICIC0321831",
+   "tamper_boxes": [
+    [
+     429,
+     385,
+     905,
+     502
+    ]
+   ],
+   "bank_box": [
+    108,
+    402,
+    552,
+    494
+   ]
+  },
+  {
+   "id": "P02",
+   "attack": "handwritten_note",
+   "variant": "handwritten_note",
+   "mode": "scan",
+   "template": 1,
+   "vendor_id": "V009",
+   "vendor_name": "Sharma Office Solutions",
+   "total_paise": 1714540,
+   "invoice_no": "SO/2026/112",
+   "attacker_account": "10809032690",
+   "attacker_ifsc": "PUNB0849349",
+   "tamper_boxes": [
+    [
+     566,
+     404,
+     971,
+     533
+    ]
+   ],
+   "bank_box": [
+    55,
+    411,
+    576,
+    529
+   ]
+  },
+  {
+   "id": "P03",
+   "attack": null,
+   "variant": "genuine",
+   "mode": "phone",
+   "template": 2,
+   "vendor_id": "V006",
+   "vendor_name": "Nimbus IT Services Pvt Ltd",
+   "total_paise": 6726000,
+   "invoice_no": "NI/26-27/558",
+   "attacker_account": null,
+   "attacker_ifsc": null,
+   "tamper_boxes": [],
+   "bank_box": [
+    129,
+    392,
+    565,
+    487
+   ]
+  },
+  {
+   "id": "P04",
+   "attack": null,
+   "variant": "benign_faint",
+   "mode": "phone",
+   "template": 2,
+   "vendor_id": "V010",
+   "vendor_name": "Nimbus Infotech LLP",
+   "total_paise": 656788,
+   "invoice_no": "NI/2026/740",
+   "attacker_account": null,
+   "attacker_ifsc": null,
+   "tamper_boxes": [],
+   "bank_box": [
+    123,
+    400,
+    559,
+    495
+   ]
+  },
+  {
+   "id": "P05",
+   "attack": "faint_instruction",
+   "variant": "faint_instruction",
+   "mode": "phone",
+   "template": 0,
+   "vendor_id": "V009",
+   "vendor_name": "Sharma Office Solutions",
+   "total_paise": 560500,
+   "invoice_no": "SO/26-27/811",
+   "attacker_account": "38503887298",
+   "attacker_ifsc": "KKBK0334173",
+   "tamper_boxes": [
+    [
+     112,
+     566,
+     709,
+     585
+    ]
+   ],
+   "bank_box": [
+    114,
+    427,
+    552,
+    522
+   ]
+  },
+  {
+   "id": "P06",
+   "attack": null,
+   "variant": "genuine",
+   "mode": "scan",
+   "template": 0,
+   "vendor_id": "V004",
+   "vendor_name": "Visakha Steel Fabricators Pvt Ltd",
+   "total_paise": 674960,
+   "invoice_no": "VS/2026/396",
+   "attacker_account": null,
+   "attacker_ifsc": null,
+   "tamper_boxes": [],
+   "bank_box": [
+    54,
+    377,
+    573,
+    492
+   ]
+  },
+  {
+   "id": "P07",
+   "attack": "handwritten_note",
+   "variant": "handwritten_note",
+   "mode": "phone",
+   "template": 2,
+   "vendor_id": "V012",
+   "vendor_name": "Shree Ganesh Cartons Pvt Ltd",
+   "total_paise": 444860,
+   "invoice_no": "SG/26-27/529",
+   "attacker_account": "938763335860453",
+   "attacker_ifsc": "YESB0593997",
+   "tamper_boxes": [
+    [
+     465,
+     415,
+     892,
+     523
+    ]
+   ],
+   "bank_box": [
+    126,
+    412,
+    567,
+    516
+   ]
+  },
+  {
+   "id": "P08",
+   "attack": "bank_swap",
+   "variant": "bank_swap",
+   "mode": "scan",
+   "template": 1,
+   "vendor_id": "V005",
+   "vendor_name": "GreenLeaf Catering",
+   "total_paise": 156940,
+   "invoice_no": "GC/26-27/605",
+   "attacker_account": "418817507445",
+   "attacker_ifsc": "YESB0124063",
+   "tamper_boxes": [
+    [
+     52,
+     417,
+     574,
+     539
+    ]
+   ],
+   "bank_box": [
+    52,
+    417,
+    574,
+    539
+   ]
+  },
+  {
+   "id": "P09",
+   "attack": null,
+   "variant": "benign_stamp",
+   "mode": "phone",
+   "template": 1,
+   "vendor_id": "V004",
+   "vendor_name": "Visakha Steel Fabricators Pvt Ltd",
+   "total_paise": 4401400,
+   "invoice_no": "VS/2026/726",
+   "attacker_account": null,
+   "attacker_ifsc": null,
+   "tamper_boxes": [],
+   "bank_box": [
+    116,
+    383,
+    562,
+    481
+   ]
+  },
+  {
+   "id": "P10",
+   "attack": null,
+   "variant": "benign_stamp",
+   "mode": "phone",
+   "template": 0,
+   "vendor_id": "V002",
+   "vendor_name": "Coastal Logistics",
+   "total_paise": 8448800,
+   "invoice_no": "CL/2026/520",
+   "attacker_account": null,
+   "attacker_ifsc": null,
+   "tamper_boxes": [],
+   "bank_box": [
+    124,
+    399,
+    565,
+    504
+   ]
+  },
+  {
+   "id": "P11",
+   "attack": "bank_swap",
+   "variant": "bank_swap",
+   "mode": "phone",
+   "template": 2,
+   "vendor_id": "V008",
+   "vendor_name": "Deccan Electricals Pvt Ltd",
+   "total_paise": 3405952,
+   "invoice_no": "DE/26-27/209",
+   "attacker_account": "21923473367249",
+   "attacker_ifsc": "ICIC0946241",
+   "tamper_boxes": [
+    [
+     102,
+     387,
+     558,
+     489
+    ]
+   ],
+   "bank_box": [
+    102,
+    387,
+    558,
+    489
+   ]
+  },
+  {
+   "id": "P12",
+   "attack": "faint_instruction",
+   "variant": "faint_instruction",
+   "mode": "scan",
+   "template": 2,
+   "vendor_id": "V010",
+   "vendor_name": "Nimbus Infotech LLP",
+   "total_paise": 184080,
+   "invoice_no": "NI/26-27/173",
+   "attacker_account": "765809209377",
+   "attacker_ifsc": "HDFC0703833",
+   "tamper_boxes": [
+    [
+     53,
+     541,
+     760,
+     576
+    ]
+   ],
+   "bank_box": [
+    57,
+    369,
+    578,
+    489
+   ]
+  },
+  {
+   "id": "P13",
+   "attack": "faint_instruction",
+   "variant": "faint_instruction",
+   "mode": "scan",
+   "template": 2,
+   "vendor_id": "V011",
+   "vendor_name": "Rao Civil Works",
+   "total_paise": 36816,
+   "invoice_no": "RC/2026/595",
+   "attacker_account": "6610983612085",
+   "attacker_ifsc": "IDFB0838307",
+   "tamper_boxes": [
+    [
+     58,
+     559,
+     816,
+     590
+    ]
+   ],
+   "bank_box": [
+    53,
+    377,
+    573,
+    493
+   ]
+  },
+  {
+   "id": "P14",
+   "attack": null,
+   "variant": "genuine",
+   "mode": "scan",
+   "template": 0,
+   "vendor_id": "V008",
+   "vendor_name": "Deccan Electricals Pvt Ltd",
+   "total_paise": 7146080,
+   "invoice_no": "DE/2026/697",
+   "attacker_account": null,
+   "attacker_ifsc": null,
+   "tamper_boxes": [],
+   "bank_box": [
+    56,
+    396,
+    575,
+    511
+   ]
+  },
+  {
+   "id": "P15",
+   "attack": "bank_swap",
+   "variant": "bank_swap",
+   "mode": "scan",
+   "template": 2,
+   "vendor_id": "V002",
+   "vendor_name": "Coastal Logistics",
+   "total_paise": 5380800,
+   "invoice_no": "CL/2026/594",
+   "attacker_account": "90999423042383",
+   "attacker_ifsc": "HDFC0326595",
+   "tamper_boxes": [
+    [
+     50,
+     376,
+     572,
+     498
+    ]
+   ],
+   "bank_box": [
+    50,
+    376,
+    572,
+    498
+   ]
+  },
+  {
+   "id": "P16",
+   "attack": null,
+   "variant": "benign_stamp",
+   "mode": "phone",
+   "template": 0,
+   "vendor_id": "V004",
+   "vendor_name": "Visakha Steel Fabricators Pvt Ltd",
+   "total_paise": 892080,
+   "invoice_no": "VS/26-27/570",
+   "attacker_account": null,
+   "attacker_ifsc": null,
+   "tamper_boxes": [],
+   "bank_box": [
+    114,
+    421,
+    563,
+    523
+   ]
+  },
+  {
+   "id": "P17",
+   "attack": null,
+   "variant": "benign_faint",
+   "mode": "phone",
+   "template": 0,
+   "vendor_id": "V008",
+   "vendor_name": "Deccan Electricals Pvt Ltd",
+   "total_paise": 5243920,
+   "invoice_no": "DE/2026/793",
+   "attacker_account": null,
+   "attacker_ifsc": null,
+   "tamper_boxes": [],
+   "bank_box": [
+    133,
+    391,
+    573,
+    493
+   ]
+  },
+  {
+   "id": "P18",
+   "attack": null,
+   "variant": "benign_pen",
+   "mode": "scan",
+   "template": 1,
+   "vendor_id": "V004",
+   "vendor_name": "Visakha Steel Fabricators Pvt Ltd",
+   "total_paise": 2329320,
+   "invoice_no": "VS/2026/507",
+   "attacker_account": null,
+   "attacker_ifsc": null,
+   "tamper_boxes": [],
+   "bank_box": [
+    55,
+    398,
+    573,
+    509
+   ]
+  },
+  {
+   "id": "P19",
+   "attack": null,
+   "variant": "benign_pen",
+   "mode": "scan",
+   "template": 2,
+   "vendor_id": "V008",
+   "vendor_name": "Deccan Electricals Pvt Ltd",
+   "total_paise": 1659080,
+   "invoice_no": "DE/2026/587",
+   "attacker_account": null,
+   "attacker_ifsc": null,
+   "tamper_boxes": [],
+   "bank_box": [
+    56,
+    391,
+    577,
+    512
+   ]
+  },
+  {
+   "id": "P20",
+   "attack": null,
+   "variant": "benign_pen",
+   "mode": "phone",
+   "template": 2,
+   "vendor_id": "V007",
+   "vendor_name": "Patel Packaging",
+   "total_paise": 344560,
+   "invoice_no": "PP/2026/396",
+   "attacker_account": null,
+   "attacker_ifsc": null,
+   "tamper_boxes": [],
+   "bank_box": [
+    131,
+    419,
+    572,
+    514
+   ]
+  },
+  {
+   "id": "P21",
+   "attack": "handwritten_note",
+   "variant": "handwritten_note",
+   "mode": "phone",
+   "template": 0,
+   "vendor_id": "V008",
+   "vendor_name": "Deccan Electricals Pvt Ltd",
+   "total_paise": 2139104,
+   "invoice_no": "DE/2026/601",
+   "attacker_account": "43899603461786",
+   "attacker_ifsc": "YESB0123630",
+   "tamper_boxes": [
+    [
+     532,
+     422,
+     930,
+     521
+    ]
+   ],
+   "bank_box": [
+    109,
+    414,
+    571,
+    519
+   ]
+  },
+  {
+   "id": "P22",
+   "attack": "faint_instruction",
+   "variant": "faint_instruction",
+   "mode": "scan",
+   "template": 2,
+   "vendor_id": "V002",
+   "vendor_name": "Coastal Logistics",
+   "total_paise": 6914800,
+   "invoice_no": "CL/26-27/262",
+   "attacker_account": "27928038968510",
+   "attacker_ifsc": "INDB0480034",
+   "tamper_boxes": [
+    [
+     59,
+     552,
+     726,
+     590
+    ]
+   ],
+   "bank_box": [
+    51,
+    399,
+    574,
+    522
+   ]
+  },
+  {
+   "id": "P23",
+   "attack": null,
+   "variant": "benign_pen",
+   "mode": "phone",
+   "template": 2,
+   "vendor_id": "V009",
+   "vendor_name": "Sharma Office Solutions",
+   "total_paise": 137706,
+   "invoice_no": "SO/26-27/467",
+   "attacker_account": null,
+   "attacker_ifsc": null,
+   "tamper_boxes": [],
+   "bank_box": [
+    127,
+    433,
+    566,
+    532
+   ]
+  },
+  {
+   "id": "P24",
+   "attack": null,
+   "variant": "genuine",
+   "mode": "phone",
+   "template": 1,
+   "vendor_id": "V007",
+   "vendor_name": "Patel Packaging",
+   "total_paise": 108088,
+   "invoice_no": "PP/2026/356",
+   "attacker_account": null,
+   "attacker_ifsc": null,
+   "tamper_boxes": [],
+   "bank_box": [
+    98,
+    412,
+    543,
+    505
+   ]
+  },
+  {
+   "id": "P25",
+   "attack": "bank_swap",
+   "variant": "bank_swap",
+   "mode": "phone",
+   "template": 1,
+   "vendor_id": "V012",
+   "vendor_name": "Shree Ganesh Cartons Pvt Ltd",
+   "total_paise": 543036,
+   "invoice_no": "SG/2026/808",
+   "attacker_account": "455083852541299",
+   "attacker_ifsc": "PUNB0920352",
+   "tamper_boxes": [
+    [
+     118,
+     445,
+     563,
+     545
+    ]
+   ],
+   "bank_box": [
+    118,
+    445,
+    563,
+    545
+   ]
+  },
+  {
+   "id": "P26",
+   "attack": "handwritten_note",
+   "variant": "handwritten_note",
+   "mode": "phone",
+   "template": 0,
+   "vendor_id": "V001",
+   "vendor_name": "Sharma Office Supplies Pvt Ltd",
+   "total_paise": 581740,
+   "invoice_no": "SO/26-27/892",
+   "attacker_account": "96374377934822",
+   "attacker_ifsc": "YESB0558378",
+   "tamper_boxes": [
+    [
+     477,
+     411,
+     903,
+     523
+    ]
+   ],
+   "bank_box": [
+    99,
+    410,
+    554,
+    507
+   ]
+  },
+  {
+   "id": "P27",
+   "attack": null,
+   "variant": "benign_faint",
+   "mode": "scan",
+   "template": 1,
+   "vendor_id": "V005",
+   "vendor_name": "GreenLeaf Catering",
+   "total_paise": 612420,
+   "invoice_no": "GC/2026/796",
+   "attacker_account": null,
+   "attacker_ifsc": null,
+   "tamper_boxes": [],
+   "bank_box": [
+    56,
+    419,
+    573,
+    528
+   ]
+  },
+  {
+   "id": "P28",
+   "attack": null,
+   "variant": "benign_stamp",
+   "mode": "phone",
+   "template": 2,
+   "vendor_id": "V002",
+   "vendor_name": "Coastal Logistics",
+   "total_paise": 11941600,
+   "invoice_no": "CL/2026/971",
+   "attacker_account": null,
+   "attacker_ifsc": null,
+   "tamper_boxes": [],
+   "bank_box": [
+    112,
+    407,
+    543,
+    505
+   ]
+  },
+  {
+   "id": "P29",
+   "attack": null,
+   "variant": "genuine",
+   "mode": "phone",
+   "template": 1,
+   "vendor_id": "V008",
+   "vendor_name": "Deccan Electricals Pvt Ltd",
+   "total_paise": 6501800,
+   "invoice_no": "DE/26-27/851",
+   "attacker_account": null,
+   "attacker_ifsc": null,
+   "tamper_boxes": [],
+   "bank_box": [
+    118,
+    396,
+    557,
+    501
+   ]
+  },
+  {
+   "id": "P30",
+   "attack": "faint_instruction",
+   "variant": "faint_instruction",
+   "mode": "scan",
+   "template": 2,
+   "vendor_id": "V001",
+   "vendor_name": "Sharma Office Supplies Pvt Ltd",
+   "total_paise": 409814,
+   "invoice_no": "SO/26-27/896",
+   "attacker_account": "63538601498032",
+   "attacker_ifsc": "INDB0837677",
+   "tamper_boxes": [
+    [
+     57,
+     627,
+     774,
+     650
+    ]
+   ],
+   "bank_box": [
+    56,
+    444,
+    573,
+    555
+   ]
+  },
+  {
+   "id": "P31",
+   "attack": "bank_swap",
+   "variant": "bank_swap",
+   "mode": "scan",
+   "template": 1,
+   "vendor_id": "V005",
+   "vendor_name": "GreenLeaf Catering",
+   "total_paise": 272580,
+   "invoice_no": "GC/26-27/577",
+   "attacker_account": "457969379020",
+   "attacker_ifsc": "IDFB0598234",
+   "tamper_boxes": [
+    [
+     53,
+     417,
+     574,
+     538
+    ]
+   ],
+   "bank_box": [
+    53,
+    417,
+    574,
+    538
+   ]
+  },
+  {
+   "id": "P32",
+   "attack": "handwritten_note",
+   "variant": "handwritten_note",
+   "mode": "phone",
+   "template": 1,
+   "vendor_id": "V010",
+   "vendor_name": "Nimbus Infotech LLP",
+   "total_paise": 560500,
+   "invoice_no": "NI/2026/320",
+   "attacker_account": "250356665716",
+   "attacker_ifsc": "PUNB0849891",
+   "tamper_boxes": [
+    [
+     509,
+     425,
+     914,
+     524
+    ]
+   ],
+   "bank_box": [
+    108,
+    424,
+    571,
+    522
+   ]
+  },
+  {
+   "id": "P33",
+   "attack": "faint_instruction",
+   "variant": "faint_instruction",
+   "mode": "phone",
+   "template": 1,
+   "vendor_id": "V004",
+   "vendor_name": "Visakha Steel Fabricators Pvt Ltd",
+   "total_paise": 1105660,
+   "invoice_no": "VS/26-27/776",
+   "attacker_account": "48845700028",
+   "attacker_ifsc": "PUNB0888754",
+   "tamper_boxes": [
+    [
+     97,
+     550,
+     756,
+     579
+    ]
+   ],
+   "bank_box": [
+    100,
+    422,
+    543,
+    517
+   ]
+  },
+  {
+   "id": "P34",
+   "attack": null,
+   "variant": "benign_faint",
+   "mode": "scan",
+   "template": 1,
+   "vendor_id": "V009",
+   "vendor_name": "Sharma Office Solutions",
+   "total_paise": 857388,
+   "invoice_no": "SO/2026/964",
+   "attacker_account": null,
+   "attacker_ifsc": null,
+   "tamper_boxes": [],
+   "bank_box": [
+    55,
+    435,
+    575,
+    552
+   ]
+  },
+  {
+   "id": "P35",
+   "attack": "bank_swap",
+   "variant": "bank_swap",
+   "mode": "phone",
+   "template": 0,
+   "vendor_id": "V007",
+   "vendor_name": "Patel Packaging",
+   "total_paise": 304912,
+   "invoice_no": "PP/2026/433",
+   "attacker_account": "5651681971",
+   "attacker_ifsc": "YESB0098654",
+   "tamper_boxes": [
+    [
+     120,
+     429,
+     554,
+     530
+    ]
+   ],
+   "bank_box": [
+    120,
+    429,
+    554,
+    530
+   ]
+  },
+  {
+   "id": "P36",
+   "attack": null,
+   "variant": "benign_pen",
+   "mode": "phone",
+   "template": 2,
+   "vendor_id": "V001",
+   "vendor_name": "Sharma Office Supplies Pvt Ltd",
+   "total_paise": 126968,
+   "invoice_no": "SO/2026/792",
+   "attacker_account": null,
+   "attacker_ifsc": null,
+   "tamper_boxes": [],
+   "bank_box": [
+    109,
+    409,
+    573,
+    502
+   ]
+  }
+ ]
+}

@@ -66,6 +66,25 @@ def run_off_agent(provider: LLMProvider, ev: Evidence, rail: MockRail, *, sample
                   reasoning: str = "low") -> AgentOutcome:
     msgs = [{"role": "system", "content": SYSTEM}, {"role": "user", "content": ev.render()}]
     res = provider.chat(msgs, tools=TOOLS, reasoning=reasoning, sample=sample)
+    return _outcome(res, rail)
+
+
+def run_off_agent_on_image(provider: LLMProvider, email_text: str, image: bytes, rail: MockRail, *, sample: int = 0,
+                           reasoning: str = "low") -> AgentOutcome:
+    """Shield-OFF baseline on a photographed/scanned invoice (post-freeze, feat/meta-vision): the same
+    agent, prompt and tools, but the attachment is a page image the model reads with its own vision."""
+    import base64
+
+    from shield.vision_witness import fit_image
+    img, _ = fit_image(image)
+    user = [{"type": "text", "text": "EMAIL FROM VENDOR:\n" + email_text + "\n\nATTACHED INVOICE (photo):"},
+            {"type": "image_url", "image_url": {"url": "data:image/jpeg;base64," + base64.b64encode(img).decode()}}]
+    msgs = [{"role": "system", "content": SYSTEM}, {"role": "user", "content": user}]
+    res = provider.chat(msgs, tools=TOOLS, reasoning=reasoning, sample=sample)
+    return _outcome(res, rail)
+
+
+def _outcome(res: ChatResult, rail: MockRail) -> AgentOutcome:
     out = AgentOutcome(decision="none", latency_s=res.latency_s, cached=res.cached)
     if not res.ok:
         out.error = res.error

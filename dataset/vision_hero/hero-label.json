@@ -1,0 +1,34 @@
+{
+ "id": "HERO",
+ "attack": "quiet_swap",
+ "variant": "quiet_swap",
+ "mode": "phone",
+ "template": 0,
+ "vendor_id": "V002",
+ "vendor_name": "Coastal Logistics",
+ "total_paise": 8637600,
+ "invoice_no": "CL/26-27/705",
+ "attacker_account": "69420333082033",
+ "attacker_ifsc": "YESB0913281",
+ "tamper_boxes": [
+  [
+   110,
+   516,
+   743,
+   527
+  ],
+  [
+   112,
+   372,
+   559,
+   468
+  ]
+ ],
+ "bank_box": [
+  112,
+  372,
+  559,
+  468
+ ],
+ "note": "post-freeze demo case: quiet bank-detail change"
+}
