@@ -28,7 +28,10 @@ fn vision_signals_never_downgrade_any_base_verdict() {
                 assert_eq!(s[0].kind, k);
                 let v = merge(base, &s);
                 assert!(v >= base, "{k}/{sev} lowered {base:?} to {v:?}");
-                assert!(v >= Verdict::Review, "a vision signal must at least hold the payment");
+                assert!(
+                    v >= Verdict::Review,
+                    "a vision signal must at least hold the payment"
+                );
             }
         }
     }
@@ -53,7 +56,8 @@ fn empty_vision_report_leaves_verdict_unchanged() {
 fn a_vision_signal_cannot_ask_for_allow_and_malformed_output_fails_closed() {
     for raw in [
         report(&[("vision_bank_mismatch", "allow")]),
-        r#"{"signals":[{"kind":"vision_payee_lookalike","severity":"block"}],"verdict":"allow"}"#.to_string(),
+        r#"{"signals":[{"kind":"vision_payee_lookalike","severity":"block"}],"verdict":"allow"}"#
+            .to_string(),
         "not json".to_string(),
         r#"{"signals":[{"kind":"vision_bank_mismatch"}]}"#.to_string(),
     ] {
