@@ -213,7 +213,7 @@ def governor_evidence(ev: Evidence, buyer_gstin: str) -> dict:
         "all_printed_accounts": _uniq(accts + odd_accts),
         "all_printed_ifscs": _uniq(IFSC_RE.findall(upper) + odd_ifscs),
         "printed_total_paise": printed_total_paise(text),
-        "item_lines": item_lines(text),
+        "item_lines": item_lines(text) or _geometry_item_lines(ev, text),
         "currency": doc_currency(text),
         "all_currencies": currencies_seen(text),
         # Signed with the rest; the governor uses it only to verify model-proposed item lines
@@ -223,6 +223,17 @@ def governor_evidence(ev: Evidence, buyer_gstin: str) -> dict:
         "document_kind": document_kind(text),
     }
     return out
+
+
+def _geometry_item_lines(ev: Evidence, text: str) -> list[dict]:
+    """Word-box table parser (assembler/geometry.py), used only when the text parsers read nothing.
+    Accepted only when its lines add up exactly to the printed total AND every amount and
+    description fragment is found in the signed text layer."""
+    from assembler.geometry import geometry_lines, verified_in_text
+    lines = geometry_lines(getattr(ev, "words", None) or [], printed_total_paise(text))
+    if not lines or not verified_in_text(lines, text):
+        return []
+    return [{k: v for k, v in ln.items() if k != "fragments"} for ln in lines]
 
 
 # --- GST heads and document kind (review item 3, 2026-10-31) -------------------------------------

@@ -23,6 +23,8 @@ class Evidence:
     email_to: str = ""
     email_subject: str = ""
     email_body: str = ""
+    # Word boxes of the text layer (assembler/geometry.py); empty for OCR'd documents.
+    words: list = field(default_factory=list)
 
     def render(self) -> str:
         """Plain-text view handed to an agent."""
@@ -41,10 +43,14 @@ def assemble(pdf_path: str | Path, cover_email: dict) -> Evidence:
     if len(text) < 20:  # image-only PDF: local OCR, never trusted blindly
         from assembler.scan import ocr_text
         text, source = ocr_text(pdf_path), "ocr"
+    ws = []
+    if source == "text_layer":
+        from assembler.geometry import words as _words
+        ws = _words(pdf_path)
     meta = {k.lstrip("/"): str(v) for k, v in (reader.metadata or {}).items()}
     meta["text_source"] = source
     return Evidence(
         pdf_sha256=hashlib.sha256(raw).hexdigest(), pages=len(reader.pages), text=text, metadata=meta,
         email_from=cover_email.get("from", ""), email_to=cover_email.get("to", ""),
-        email_subject=cover_email.get("subject", ""), email_body=cover_email.get("body", ""),
+        email_subject=cover_email.get("subject", ""), email_body=cover_email.get("body", ""), words=ws,
     )

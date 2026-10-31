@@ -435,10 +435,10 @@ impl Governor {
         if ev.item_lines.is_empty() && ev.has_text_layer && ev.printed_total_paise.is_some() {
             match req.proposed_item_lines.as_deref() {
                 Some(pl) if !pl.is_empty() => match lines::verify_proposed(pl, ev.text_layer.as_deref(), ev.printed_total_paise) {
-                    Ok(()) => {
-                        model_lines = pl.to_vec();
+                    Ok(kept) => {
                         ctx.add("line_items_model_verified", Verdict::Allow, Control::Ai,
-                            format!("the parser read no item lines; {} model-proposed lines were verified verbatim against the signed text layer and add up to the printed total", pl.len()));
+                            format!("the parser read no item lines; {} model-proposed lines were verified verbatim against the signed text layer and add up to the printed total", kept.len()));
+                        model_lines = kept;
                     }
                     Err(problems) => ctx.add("line_items_unreadable", Verdict::Review, Control::Extraction,
                         format!("the parser read no item lines and the model-proposed lines failed verification: {}", problems.join("; "))),

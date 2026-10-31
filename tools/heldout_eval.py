@@ -315,12 +315,24 @@ def checker_only(raw: str | None) -> dict:
     return {"verdict": checker_verdict(raw, raw is not None), "reasons": []}
 
 
-def run(which: str, out: str, commit: str) -> int:
+def run(which: str, out: str, commit: str, resume: bool = False, budget_s: float | None = None) -> int:
+    """`resume`: keep rows already in the output file and run only the missing cases (re-runs on
+    seen sets, so a run can be split across short sessions; never used for a blind run).
+    `budget_s`: stop after this many seconds (exit code 3 = not finished; call again with resume)."""
     cases, meta = load_cases(which)
     prov = get_provider("spark", offline=True)
     rows = []
     path = REPO / "eval" / "results" / f"{out}.jsonl"
+    if resume and path.exists():
+        rows = [json.loads(x) for x in path.read_text().splitlines() if x.strip()]
+    done_ids = {r["id"] for r in rows}
+    t_start = time.time()
     for c in cases:
+        if c["id"] in done_ids:
+            continue
+        if budget_s is not None and time.time() - t_start > budget_s:
+            print(f"budget reached: {len(rows)}/{len(cases)} done", flush=True)
+            return 3
         row = {"id": c["id"]}
         try:
             inp = case_inputs(which, c)
@@ -402,13 +414,15 @@ def main(argv=None) -> int:
     ap.add_argument("--commit", default="")
     ap.add_argument("--score", default=None)
     ap.add_argument("--only", default=None, help="comma-separated v1 case ids (smoke test)")
+    ap.add_argument("--resume", action="store_true", help="re-runs only: keep finished rows, run the rest")
+    ap.add_argument("--budget", type=float, default=None, help="stop after N seconds (exit 3); use with --resume")
     a = ap.parse_args(argv)
     LIMIT = a.only.split(",") if a.only else None
     if a.prefetch:
         prefetch(a.set, a.workers)
         return 0
     if a.run:
-        return run(a.set, a.out, a.commit)
+        return run(a.set, a.out, a.commit, a.resume, a.budget)
     if a.score:
         return score(a.set, a.score)
     ap.print_help()

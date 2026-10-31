@@ -51,6 +51,7 @@ pub fn fold(s: &str) -> String {
     out
 }
 
+#[cfg(test)]
 fn group_western(n: u64) -> String {
     let s = n.to_string();
     let mut out = String::new();
@@ -63,6 +64,7 @@ fn group_western(n: u64) -> String {
     out
 }
 
+#[cfg(test)]
 fn group_indian(n: u64) -> String {
     let s = n.to_string();
     if s.len() <= 3 {
@@ -80,62 +82,199 @@ fn group_indian(n: u64) -> String {
     format!("{},{}", groups.join(","), tail)
 }
 
-/// Printed forms of a minor-unit amount (absolute value).
-fn amount_forms(minor: i64) -> Vec<String> {
-    let m = minor.unsigned_abs();
-    let (r, p) = (m / 100, m % 100);
-    let mut v = vec![format!("{r}.{p:02}"), format!("{}.{p:02}", group_western(r)), format!("{}.{p:02}", group_indian(r))];
-    if p == 0 {
-        v.extend([r.to_string(), group_western(r), group_indian(r)]);
+/// A number printed in the text: byte offset in the folded text and its canonical value.
+/// `minor` is the value in minor units (two decimals; more decimals only when the extra digits are
+/// zeros); `int` is the whole-number value when it has no fractional part. Groupings are read only
+/// when valid (Western 3-3-3 or Indian 2-2-3 before the last three digits); anything else is split
+/// at the commas into separate numbers, so "12,34" is never read as 1234.
+#[derive(Debug, Clone, Copy)]
+struct Num {
+    pos: usize,
+    end: usize,
+    minor: Option<i64>,
+    int: Option<i64>,
+}
+
+fn valid_grouping(groups: &[&str]) -> bool {
+    if groups.len() < 2 {
+        return true;
     }
-    v.sort();
-    v.dedup();
-    v
+    let (last, head) = groups.split_last().unwrap();
+    if last.len() != 3 || head[0].is_empty() || head[0].len() > 3 {
+        return false;
+    }
+    let western = head[1..].iter().all(|g| g.len() == 3) && head[0].len() <= 3;
+    let indian = head[1..].iter().all(|g| g.len() == 2) && head[0].len() <= 2;
+    western || indian
 }
 
-fn int_forms(n: i64) -> Vec<String> {
-    let m = n.unsigned_abs();
-    let mut v = vec![m.to_string(), group_western(m), group_indian(m)];
-    v.sort();
-    v.dedup();
-    v
+fn parse_num(int_part: &str, frac: Option<&str>) -> (Option<i64>, Option<i64>) {
+    let whole: Option<i64> = int_part.parse().ok();
+    let Some(w) = whole else { return (None, None) };
+    match frac {
+        None => (w.checked_mul(100), Some(w)),
+        Some(f) => {
+            let (head, rest) = f.split_at(f.len().min(2));
+            if !rest.bytes().all(|b| b == b'0') {
+                return (None, None);
+            }
+            let p: i64 = format!("{head:0<2}").parse().unwrap_or(0);
+            let minor = w.checked_mul(100).and_then(|v| v.checked_add(p));
+            (minor, (p == 0).then_some(w))
+        }
+    }
 }
 
-/// Byte offsets in `hay` where `needle` occurs as a whole number (not inside a longer one).
-fn number_positions(hay: &str, needle: &str) -> Vec<usize> {
+/// Every number printed in `hay`, under canonical numeric normalisation: the currency glyph or code
+/// before it (₹, Rs., INR) and grouping commas do not matter, only the digits and the decimal point.
+fn numbers(hay: &str) -> Vec<Num> {
     let b = hay.as_bytes();
     let mut out = vec![];
-    let mut from = 0;
-    while let Some(i) = hay[from..].find(needle) {
-        let s = from + i;
-        let e = s + needle.len();
-        let before_ok = s == 0 || !(b[s - 1].is_ascii_digit() || b[s - 1] == b',' || b[s - 1] == b'.');
-        let after_ok = match b.get(e) {
-            None => true,
-            Some(c) if c.is_ascii_digit() => false,
-            Some(b'.') | Some(b',') => !b.get(e + 1).is_some_and(|c| c.is_ascii_digit()),
-            _ => true,
-        };
-        if before_ok && after_ok {
-            out.push(s);
+    let mut i = 0;
+    while i < b.len() {
+        if !b[i].is_ascii_digit() || (i > 0 && b[i - 1].is_ascii_digit()) {
+            i += 1;
+            continue;
         }
-        from = s + 1;
-        if from >= hay.len() {
-            break;
+        // a digit glued to a letter-dot-digit run ("v1.2") or a preceding decimal ("0.5") is a part, not a start
+        if i > 1 && (b[i - 1] == b'.' || b[i - 1] == b',') && b[i - 2].is_ascii_digit() {
+            i += 1;
+            continue;
         }
+        let s = i;
+        let mut j = i;
+        while j < b.len() && (b[j].is_ascii_digit() || (b[j] == b',' && j + 1 < b.len() && b[j + 1].is_ascii_digit())) {
+            j += 1;
+        }
+        let mut frac = None;
+        let mut e = j;
+        if j + 1 < b.len() && b[j] == b'.' && b[j + 1].is_ascii_digit() {
+            let mut k = j + 1;
+            while k < b.len() && b[k].is_ascii_digit() {
+                k += 1;
+            }
+            frac = Some(&hay[j + 1..k]);
+            e = k;
+        }
+        let int_str = &hay[s..j];
+        let groups: Vec<&str> = int_str.split(',').collect();
+        if valid_grouping(&groups) {
+            let (minor, int) = parse_num(&groups.concat(), frac);
+            out.push(Num { pos: s, end: e, minor, int });
+        } else {
+            // invalid grouping: each comma-separated run is its own number (the last keeps the decimals)
+            let mut off = s;
+            let n = groups.len();
+            for (gi, g) in groups.iter().enumerate() {
+                let last = gi + 1 == n;
+                let (minor, int) = parse_num(g, if last { frac } else { None });
+                let gend = if last { e } else { off + g.len() };
+                if !g.is_empty() {
+                    out.push(Num { pos: off, end: gend, minor, int });
+                }
+                off += g.len() + 1;
+            }
+        }
+        i = e.max(i + 1);
     }
     out
 }
 
-fn positions_of_amount(hay: &str, minor: i64) -> Vec<usize> {
-    let mut v: Vec<usize> = amount_forms(minor).iter().flat_map(|f| number_positions(hay, f)).collect();
-    v.sort();
-    v.dedup();
-    v
+fn positions_of_amount_in(nums: &[Num], minor: i64) -> Vec<usize> {
+    let m = minor.checked_abs().unwrap_or(-1);
+    nums.iter().filter(|n| n.minor == Some(m)).map(|n| n.pos).collect()
 }
 
+fn positions_of_int_in(nums: &[Num], v: i64) -> Vec<usize> {
+    let m = v.checked_abs().unwrap_or(-1);
+    nums.iter().filter(|n| n.int == Some(m)).map(|n| n.pos).collect()
+}
+
+#[cfg(test)]
+fn positions_of_amount(hay: &str, minor: i64) -> Vec<usize> {
+    positions_of_amount_in(&numbers(hay), minor)
+}
+
+#[cfg(test)]
 fn positions_of_int(hay: &str, n: i64) -> Vec<usize> {
-    let mut v: Vec<usize> = int_forms(n).iter().flat_map(|f| number_positions(hay, f)).collect();
+    positions_of_int_in(&numbers(hay), n)
+}
+
+/// Percentages printed in hay[from..to] ("5%", "2.5 %"), in basis points.
+fn percents_between(hay: &str, nums: &[Num], from: usize, to: usize) -> Vec<i64> {
+    let b = hay.as_bytes();
+    nums.iter()
+        .filter(|n| n.pos >= from && n.pos < to)
+        .filter(|n| {
+            let mut k = n.end;
+            while k < b.len() && b[k] == b' ' {
+                k += 1;
+            }
+            b.get(k) == Some(&b'%')
+        })
+        .filter_map(|n| n.minor)
+        .filter(|&bp| bp > 0 && bp < 100_00)
+        .collect()
+}
+
+/// Folded text with every space removed, and the byte offset in the folded text of each byte.
+fn compact(hay: &str) -> (String, Vec<usize>) {
+    let mut s = String::with_capacity(hay.len());
+    let mut map = Vec::with_capacity(hay.len());
+    for (i, c) in hay.char_indices() {
+        if c == ' ' {
+            continue;
+        }
+        let before = s.len();
+        s.push(c);
+        for k in 0..(s.len() - before) {
+            map.push(i + k);
+        }
+    }
+    (s, map)
+}
+
+/// How far (folded bytes) the second half of a wrapped description may sit after the first.
+const WRAP: usize = 240;
+
+/// Where a description is printed: start offsets in the folded text. Matched (a) verbatim with
+/// whitespace folded, (b) ignoring whitespace entirely ("Grade )" vs "Grade)"), or (c) wrapped once
+/// inside a fixed-width row: the first part printed, other cells of the same row, then the rest of
+/// the description within WRAP bytes. Every character of the description must be printed, in order.
+fn description_positions(hay: &str, comp: &(String, Vec<usize>), d: &str) -> Vec<usize> {
+    let mut v: Vec<usize> = hay.match_indices(d).map(|(p, _)| p).collect();
+    if !v.is_empty() {
+        return v;
+    }
+    let (cs, map) = comp;
+    let dc: String = d.chars().filter(|c| *c != ' ').collect();
+    if dc.is_empty() {
+        return v;
+    }
+    v = cs.match_indices(dc.as_str()).map(|(p, _)| map[p]).collect();
+    if !v.is_empty() {
+        return v;
+    }
+    let idx: Vec<usize> = dc.char_indices().map(|(i, _)| i).collect();
+    for &k in idx.iter().skip(3) {
+        if dc.len() - k < 3 {
+            break;
+        }
+        let (a, rest) = dc.split_at(k);
+        for (p, _) in cs.match_indices(a) {
+            let a_end = p + a.len();
+            let Some(&hay_a_end) = map.get(a_end - 1) else { continue };
+            if let Some(q) = cs[a_end..].find(rest) {
+                let qs = a_end + q;
+                if map[qs].saturating_sub(hay_a_end) <= WRAP {
+                    v.push(map[p]);
+                }
+            }
+        }
+        if !v.is_empty() {
+            break;
+        }
+    }
     v.sort();
     v.dedup();
     v
@@ -162,11 +301,31 @@ fn negative_marked(hay: &str, pos: usize) -> bool {
 }
 
 const TAX_WORDS: &[&str] = &["cgst", "sgst", "igst", "utgst", "gst", "cess"];
+/// Spelled-out GST heads as Indian invoices print them.
+const TAX_PHRASES: &[&str] = &[
+    "integrated gst", "central gst", "state gst", "union territory gst", "integrated tax", "central tax", "state tax",
+    "state/ut tax", "ut tax", "compensation cess",
+];
 
+/// True when the folded description names a tax head: a GST head word, optionally followed by a
+/// rate glued on as digits ("IGST18 (18%)"), or a spelled-out head ("Integrated GST @ 18%"), after
+/// at most one of the bookkeeping prefixes "output", "add", "less". "GSTIN filing fee" is not tax:
+/// a head word followed by a letter never counts.
 pub fn names_tax(desc_folded: &str) -> bool {
+    for pre in ["output ", "add ", "add: ", "less ", "add:"] {
+        if let Some(rest) = desc_folded.strip_prefix(pre) {
+            if names_tax_head(rest.trim_start()) {
+                return true;
+            }
+        }
+    }
+    names_tax_head(desc_folded)
+}
+
+fn names_tax_head(d: &str) -> bool {
     TAX_WORDS.iter().any(|t| {
-        desc_folded.strip_prefix(t).is_some_and(|rest| rest.is_empty() || !rest.as_bytes()[0].is_ascii_alphanumeric())
-    }) || desc_folded.starts_with("output ") && names_tax(&desc_folded["output ".len()..])
+        d.strip_prefix(t).is_some_and(|rest| rest.is_empty() || !rest.as_bytes()[0].is_ascii_alphabetic())
+    }) || TAX_PHRASES.iter().any(|t| d.strip_prefix(t).is_some_and(|rest| rest.is_empty() || !rest.as_bytes()[0].is_ascii_alphabetic()))
 }
 
 fn discount_like(desc_folded: &str) -> bool {
@@ -174,8 +333,10 @@ fn discount_like(desc_folded: &str) -> bool {
 }
 
 /// Verify model-proposed lines against the signed text layer and printed total.
-/// Ok(()) when every check passes; Err(list of problems) otherwise.
-pub fn verify_proposed(lines: &[ItemLine], text_layer: Option<&str>, printed_total: Option<i64>) -> Result<(), Vec<String>> {
+/// Ok(lines the rules should run on) when every check passes; Err(list of problems) otherwise.
+/// Zero-amount lines ("Round Off 0.00", "Less Disc 0.00") are dropped: they cannot change the
+/// sum, the PO check or the payment, and a model listing them is not an error.
+pub fn verify_proposed(lines: &[ItemLine], text_layer: Option<&str>, printed_total: Option<i64>) -> Result<Vec<ItemLine>, Vec<String>> {
     let mut problems = vec![];
     let Some(text) = text_layer.filter(|t| !t.trim().is_empty()) else {
         return Err(vec!["no signed text layer to verify the lines against".into()]);
@@ -186,9 +347,15 @@ pub fn verify_proposed(lines: &[ItemLine], text_layer: Option<&str>, printed_tot
     if lines.is_empty() || lines.len() > MAX_LINES {
         return Err(vec![format!("{} lines proposed (allowed 1..={MAX_LINES})", lines.len())]);
     }
+    let kept: Vec<ItemLine> = lines.iter().filter(|l| l.amount_paise != 0).cloned().collect();
+    if kept.is_empty() {
+        return Err(vec!["every proposed line has a zero amount".into()]);
+    }
     let hay = fold(text);
+    let nums = numbers(&hay);
+    let comp = compact(&hay);
     let mut sum: Option<i64> = Some(0);
-    for (i, l) in lines.iter().enumerate() {
+    for (i, l) in kept.iter().enumerate() {
         let n = i + 1;
         sum = sum.and_then(|s| s.checked_add(l.amount_paise));
         let d = fold(&l.description);
@@ -199,16 +366,12 @@ pub fn verify_proposed(lines: &[ItemLine], text_layer: Option<&str>, printed_tot
         if l.is_tax && !names_tax(&d) {
             problems.push(format!("line {n}: flagged as tax but \"{}\" is not a tax line", l.description));
         }
-        let desc_pos: Vec<usize> = hay.match_indices(d.as_str()).map(|(p, _)| p).collect();
+        let desc_pos = description_positions(&hay, &comp, &d);
         if desc_pos.is_empty() {
             problems.push(format!("line {n}: description \"{}\" is not printed on the document", l.description));
             continue;
         }
-        if l.amount_paise == 0 {
-            problems.push(format!("line {n}: zero amount"));
-            continue;
-        }
-        let amt_pos = positions_of_amount(&hay, l.amount_paise);
+        let amt_pos = positions_of_amount_in(&nums, l.amount_paise);
         if amt_pos.is_empty() {
             problems.push(format!("line {n}: amount {} is not printed on the document", l.amount_paise));
             continue;
@@ -224,18 +387,31 @@ pub fn verify_proposed(lines: &[ItemLine], text_layer: Option<&str>, printed_tot
             problems.push(format!("line {n}: negative amount without a printed minus sign or discount wording"));
         }
         if let Some(q) = l.qty {
-            if q <= 0 || positions_of_int(&hay, q).is_empty() {
+            if q <= 0 || positions_of_int_in(&nums, q).is_empty() {
                 problems.push(format!("line {n}: quantity {q} is not printed on the document"));
             }
         }
         if let Some(u) = l.unit_price_minor {
-            if u <= 0 || positions_of_amount(&hay, u).is_empty() {
+            if u <= 0 || positions_of_amount_in(&nums, u).is_empty() {
                 problems.push(format!("line {n}: unit price {u} is not printed on the document"));
             }
         }
         if let (Some(q), Some(u)) = (l.qty, l.unit_price_minor) {
-            let ok = q.checked_mul(u).and_then(|v| v.checked_sub(l.amount_paise.abs())).is_some_and(|diff| diff.abs() <= q.abs());
-            if !ok {
+            let gross = q.checked_mul(u);
+            let tol = q.abs().max(1);
+            let exact = gross.and_then(|v| v.checked_sub(l.amount_paise.abs())).is_some_and(|diff| diff.abs() <= tol);
+            // A printed line discount: qty x rate less a percentage printed in the same row
+            // (between the description and the amount) must give the amount exactly (± one minor
+            // unit per unit). The line can only bill less than qty x rate, never more.
+            let discounted = !exact && gross.is_some_and(|g| g > l.amount_paise.abs()) && desc_pos.iter().any(|&dp| {
+                usable.iter().filter(|&&ap| ap > dp).any(|&ap| {
+                    percents_between(&hay, &nums, dp, ap).iter().any(|&bp| {
+                        gross.and_then(|g| g.checked_mul(10_000 - bp)).map(|v| v / 10_000)
+                            .and_then(|net| net.checked_sub(l.amount_paise.abs())).is_some_and(|diff| diff.abs() <= tol)
+                    })
+                })
+            });
+            if !exact && !discounted {
                 problems.push(format!("line {n}: quantity x unit price does not give the amount"));
             }
         }
@@ -245,7 +421,7 @@ pub fn verify_proposed(lines: &[ItemLine], text_layer: Option<&str>, printed_tot
         Some(s) if s != total => problems.push(format!("lines add up to {s} but the invoice prints {total}")),
         _ => {}
     }
-    if problems.is_empty() { Ok(()) } else { Err(problems) }
+    if problems.is_empty() { Ok(kept) } else { Err(problems) }
 }
 
 #[cfg(test)]
@@ -269,7 +445,7 @@ mod tests {
 
     #[test]
     fn verbatim_lines_that_add_up_verify() {
-        assert_eq!(verify_proposed(&good(), Some(TEXT), Some(57_230_00)), Ok(()));
+        assert_eq!(verify_proposed(&good(), Some(TEXT), Some(57_230_00)).map(|v| v.len()), Ok(4));
     }
 
     #[test]
