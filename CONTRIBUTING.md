@@ -23,7 +23,7 @@ python -m eval.demo        # offline replay, no API key, no network
 
 ## Branches and pull requests
 
-- `main` is protected: changes land through a pull request, and every required CI job must pass before it can merge.
+- Changes to `main` land through a pull request, and every CI job (Rust, Python, dependency audit, Docker image, compose smoke) must be green before it merges.
 - Name branches by purpose: `fix/...`, `hardening/...`, `eval/...`, `chore/...`, `docs/...`.
 - Keep a pull request to one change, and say in the description what it changes and how you checked it.
 - Dependabot opens weekly update PRs. Minor and patch Cargo/pip updates are grouped; Cargo semver-major updates for crates that broke the build are ignored in `.github/dependabot.yml`.
