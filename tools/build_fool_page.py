@@ -1,11 +1,11 @@
 """Build the static "Fool the Shield" replay page (docs/fool-the-shield/index.html).
 
-Post-freeze verdicts only: the held-out v2 run 2 at 55fb679 (rules / checker-only / both) and the
+Post-freeze verdicts only: by default the blind held-out v3 run on freeze-v3 (--set v2 rebuilds the older v2 run 2 at 55fb679) (rules / checker-only / both) and the
 demo opening case OC1. No case documents are copied; only ids, the set's category labels, verdicts
 and rule names. The page makes no network calls and needs no account; it is ready for GitHub Pages
 (serve /docs). Its UI says "Replaying recorded runs".
 
-    python3 -m tools.build_fool_page [--labels /workspace/blind-cases-v2/labels/labels.jsonl]
+    python3 -m tools.build_fool_page [--set v3|v2] [--labels <labels.jsonl>]
 """
 from __future__ import annotations
 
@@ -16,15 +16,23 @@ import pathlib
 
 REPO = pathlib.Path(__file__).resolve().parents[1]
 RUN = "heldout-v2-run2-55fb679"
+SETS = {
+    "v2": {"run": "heldout-v2-run2-55fb679", "commit": "55fb679", "labels": "/workspace/blind-cases-v2/labels/labels.jsonl",
+           "title": "Choose an attack from the second held-out set",
+           "blurb": "Written after our first blind test by a separate AI agent with no access to the code; its attack categories were informed by that test's failures. The first attempt to run it crashed before producing any verdict."},
+    "v3": {"run": "sealed-v3-freeze-v3", "commit": "5c698b0 (freeze-v3)", "labels": "/workspace/blind-cases-v3/labels/labels.jsonl",
+           "title": "Choose an attack from the third held-out set (blind, run once)",
+           "blurb": "150 invoices (100 attacks, 50 benign), sealed and hashed before the gate saw them, written by a separate AI agent with no repo access, run once on the frozen gate code; labels opened after every verdict was written. Earlier sets v1/v2 are re-runs on documents we had already seen and are not blind."},
+}
 
 
-def data(labels_path: pathlib.Path) -> dict:
+def data(labels_path: pathlib.Path, run: str = RUN, commit: str = "55fb679") -> dict:
     labs = {}
     for line in labels_path.read_text().splitlines():
         if line.strip():
             x = json.loads(line)
             labs[x["case_id"]] = {"kind": x["kind"], "category": x["category"], "expected": x["expected"]}
-    rows = [json.loads(x) for x in (REPO / "eval" / "results" / f"{RUN}.jsonl").read_text().splitlines() if x.strip()]
+    rows = [json.loads(x) for x in (REPO / "eval" / "results" / f"{run}.jsonl").read_text().splitlines() if x.strip()]
     cases = []
     for r in rows:
         lab = labs[r["id"]]
@@ -33,8 +41,8 @@ def data(labels_path: pathlib.Path) -> dict:
                                    "reasons": [x.split(":")[0] for x in r[a].get("reasons", []) if not x.endswith(":allow")]}
                                for a in ("rules", "checker_only", "both")}})
     oc = json.loads((REPO / "eval" / "results" / "demo-opening-case.json").read_text())
-    score = json.loads((REPO / "eval" / "results" / f"{RUN}.score.json").read_text())
-    return {"run": RUN, "commit": "55fb679", "cases": cases,
+    score = json.loads((REPO / "eval" / "results" / f"{run}.score.json").read_text())
+    return {"run": run, "commit": commit, "cases": cases,
             "summary": {a: {k: score[a][k] for k in ("attacks", "attack_paid", "clean_benign", "clean_benign_false_alarm")} for a in score},
             "opening": {"verdict": oc["arms"]["both"]["verdict"].upper(),
                         "reasons": [x["rule"] for x in oc["arms"]["both"]["reasons"]]}}
@@ -64,7 +72,7 @@ small,.muted{color:#5b6475}code{font-size:13px}
 <div class="card"><b>Opening case (fictional, modelled on a publicly reported Oct 2026 campaign):</b> look-alike sender, an expiring discount, and instructions for AI agents hidden in invisible characters.
 Gate verdict: <span class="v __OCV__">__OCV__</span> <small>(__OCR__)</small></div>
 <div class="card" id="sum"></div>
-<div class="card"><b>Choose an attack from the second held-out set</b><div class="muted" style="font-size:14px">Written after our first blind test by a separate AI agent with no access to the code; its attack categories were informed by that test's failures. The first attempt to run it crashed before producing any verdict.</div><div class="grid" id="cats" style="margin-top:10px"></div></div>
+<div class="card"><b>__TITLE__</b><div class="muted" style="font-size:14px">__BLURB__</div><div class="grid" id="cats" style="margin-top:10px"></div></div>
 <div class="card" id="detail"><span class="muted">No attack selected.</span></div>
 <div class="card"><small>Arms: <b>AI checker alone</b> = Muse Spark Open reading the invoice, no rules. <b>Gate</b> = the deterministic Rust governor (payee always from the vendor master). <b>Gate + AI</b> = the gate with the model allowed to propose item lines (verified verbatim) and raise signals (escalate only). PAY in a gate arm always pays the master account, never the account on the document. Source: <code>eval/results/__RUN__.jsonl</code>.</small></div>
 </main>
@@ -73,9 +81,9 @@ Gate verdict: <span class="v __OCV__">__OCV__</span> <small>(__OCR__)</small></d
 const D=JSON.parse(document.getElementById('data').textContent);
 const ARMS=[['checker_only','AI checker alone'],['rules','Gate'],['both','Gate + AI']];
 function el(t,c,txt){const e=document.createElement(t);if(c)e.className=c;if(txt!=null)e.textContent=txt;return e}
-const s=document.getElementById('sum');s.appendChild(el('b',null,'Across all 40 attacks: '));
+const s=document.getElementById('sum');s.appendChild(el('b',null,`Across all ${D.summary.both.attacks} attacks: `));
 ARMS.forEach(([a,n])=>{const x=D.summary[a];s.appendChild(el('span',null,` ${n}: ${x.attack_paid}/${x.attacks} paid ·`))});
-s.appendChild(el('div','muted',`Genuine invoices sent to a human: gate ${D.summary.rules.clean_benign_false_alarm}/${D.summary.rules.clean_benign}, gate + AI ${D.summary.both.clean_benign_false_alarm}/${D.summary.both.clean_benign} (the gate could not read this invoice layout's item table).`));
+s.appendChild(el('div','muted',`Genuine invoices sent to a human: gate ${D.summary.rules.clean_benign_false_alarm}/${D.summary.rules.clean_benign}, gate + AI ${D.summary.both.clean_benign_false_alarm}/${D.summary.both.clean_benign} `));
 const atk=D.cases.filter(c=>c.kind==='attack');const cats=[...new Set(atk.map(c=>c.category))].sort();
 const box=document.getElementById('cats');
 cats.forEach(cat=>{const b=el('button','cat');b.appendChild(el('div',null,cat.replaceAll('_',' ')));
@@ -94,13 +102,15 @@ function show(cat){const d=document.getElementById('detail');d.textContent='';
 
 def main() -> int:
     ap = argparse.ArgumentParser()
-    ap.add_argument("--labels", default="/workspace/blind-cases-v2/labels/labels.jsonl")
+    ap.add_argument("--set", default="v3", choices=sorted(SETS))
+    ap.add_argument("--labels", default=None)
     a = ap.parse_args()
-    d = data(pathlib.Path(a.labels))
+    cfg = SETS[a.set]
+    d = data(pathlib.Path(a.labels or cfg["labels"]), cfg["run"], cfg["commit"])
     out = REPO / "docs" / "fool-the-shield"
     out.mkdir(parents=True, exist_ok=True)
     blob = json.dumps(d, ensure_ascii=False).replace("</", "<\\/")
-    page = (PAGE.replace("__DATA__", blob).replace("__COMMIT__", d["commit"]).replace("__RUN__", d["run"])
+    page = (PAGE.replace("__DATA__", blob).replace("__COMMIT__", d["commit"]).replace("__RUN__", d["run"]).replace("__TITLE__", html.escape(cfg["title"])).replace("__BLURB__", html.escape(cfg["blurb"]))
             .replace("__OCV__", html.escape(d["opening"]["verdict"])).replace("__OCR__", html.escape(", ".join(d["opening"]["reasons"]))))
     (out / "index.html").write_text(page)
     print("wrote", (out / "index.html").relative_to(REPO), len(d["cases"]), "cases")

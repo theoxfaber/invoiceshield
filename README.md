@@ -6,6 +6,8 @@
 
 > Built during the Meta Global AI Developer Hackathon (Oct 26 – Nov 4, 2026). All vendors, GSTINs, accounts and invoices in this repo are fictional; any match with a real business, account or domain is coincidental. No real payment, bank, customer or pilot is involved. Not financial, tax or legal advice.
 
+**Live sandbox:** <https://invoiceshield-sandbox.onrender.com> (Render free tier, may take about a minute to wake). Hard caps: $5 lifetime model spend, 50 model calls a day (past either cap the gate answers REVIEW at most), synthetic data only; do not upload real invoices. Details in [`docs/SANDBOX.md`](docs/SANDBOX.md).
+
 **What makes it different:** the model has no bank field to fill in (a proposal that carries one is BLOCKed); the invoice's issuer GSTIN is checksum-validated and must match the vendor master; any account or IFSC printed anywhere in the document (format-checked, look-alike characters flagged) is compared with the master and a mismatch is a tamper alert; and changing a vendor's bank details on the server requires a call-back to the number on file, two approvers who are not the maker, and a cooling-off period (72 h by default) before it takes effect.
 
 ## The problem
