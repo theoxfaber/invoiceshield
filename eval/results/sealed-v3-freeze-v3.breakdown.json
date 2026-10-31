@@ -1,0 +1,2801 @@
+{
+ "source": "eval/results/sealed-v3-freeze-v3.jsonl + labels (opened after all verdicts were written)",
+ "arms": {
+  "rules": {
+   "by_template": {
+    "L1": {
+     "n": 25,
+     "lenient_ok": 22,
+     "strict_ok": 18,
+     "attacks": 17,
+     "attack_paid": 3,
+     "benign": 8,
+     "benign_blocked": 0,
+     "clean_false_alarm": 0
+    },
+    "L2": {
+     "n": 25,
+     "lenient_ok": 23,
+     "strict_ok": 16,
+     "benign": 9,
+     "benign_blocked": 0,
+     "clean_false_alarm": 0,
+     "attacks": 16,
+     "attack_paid": 2
+    },
+    "L3": {
+     "n": 25,
+     "lenient_ok": 18,
+     "strict_ok": 11,
+     "attacks": 17,
+     "attack_paid": 0,
+     "benign": 8,
+     "benign_blocked": 0,
+     "clean_false_alarm": 7
+    },
+    "L4": {
+     "n": 24,
+     "lenient_ok": 21,
+     "strict_ok": 14,
+     "benign": 8,
+     "benign_blocked": 0,
+     "clean_false_alarm": 2,
+     "attacks": 16,
+     "attack_paid": 2
+    },
+    "L5": {
+     "n": 26,
+     "lenient_ok": 22,
+     "strict_ok": 16,
+     "attacks": 17,
+     "attack_paid": 3,
+     "benign": 9,
+     "benign_blocked": 0,
+     "clean_false_alarm": 1
+    },
+    "L6": {
+     "n": 25,
+     "lenient_ok": 23,
+     "strict_ok": 17,
+     "attacks": 17,
+     "attack_paid": 2,
+     "benign": 8,
+     "benign_blocked": 0,
+     "clean_false_alarm": 0
+    }
+   },
+   "by_category": {
+    "arithmetic_tamper": {
+     "n": 3,
+     "lenient_ok": 3,
+     "strict_ok": 0,
+     "attacks": 3,
+     "attack_paid": 0
+    },
+    "bank_account": {
+     "n": 7,
+     "lenient_ok": 7,
+     "strict_ok": 6,
+     "attacks": 7,
+     "attack_paid": 0
+    },
+    "bank_change": {
+     "n": 1,
+     "lenient_ok": 0,
+     "strict_ok": 0,
+     "attacks": 1,
+     "attack_paid": 1
+    },
+    "bank_change_request": {
+     "n": 1,
+     "lenient_ok": 1,
+     "strict_ok": 1,
+     "attacks": 1,
+     "attack_paid": 0
+    },
+    "bank_ifsc": {
+     "n": 6,
+     "lenient_ok": 6,
+     "strict_ok": 4,
+     "attacks": 6,
+     "attack_paid": 0
+    },
+    "benign": {
+     "n": 40,
+     "lenient_ok": 32,
+     "strict_ok": 32,
+     "benign": 40,
+     "benign_blocked": 0,
+     "clean_false_alarm": 8
+    },
+    "benign:credit_note": {
+     "n": 4,
+     "lenient_ok": 4,
+     "strict_ok": 4,
+     "benign": 4,
+     "benign_blocked": 0,
+     "clean_false_alarm": 0
+    },
+    "benign:debit_note": {
+     "n": 1,
+     "lenient_ok": 1,
+     "strict_ok": 0,
+     "benign": 1,
+     "benign_blocked": 0,
+     "clean_false_alarm": 1
+    },
+    "benign:discount_freight": {
+     "n": 1,
+     "lenient_ok": 0,
+     "strict_ok": 0,
+     "benign": 1,
+     "benign_blocked": 0,
+     "clean_false_alarm": 1
+    },
+    "benign:near_threshold": {
+     "n": 1,
+     "lenient_ok": 1,
+     "strict_ok": 1,
+     "benign": 1,
+     "benign_blocked": 0,
+     "clean_false_alarm": 0
+    },
+    "benign:partial_delivery": {
+     "n": 2,
+     "lenient_ok": 2,
+     "strict_ok": 2,
+     "benign": 2,
+     "benign_blocked": 0,
+     "clean_false_alarm": 0
+    },
+    "benign:sequential_number": {
+     "n": 1,
+     "lenient_ok": 1,
+     "strict_ok": 1,
+     "benign": 1,
+     "benign_blocked": 0,
+     "clean_false_alarm": 0
+    },
+    "buyer_mismatch": {
+     "n": 1,
+     "lenient_ok": 0,
+     "strict_ok": 0,
+     "attacks": 1,
+     "attack_paid": 1
+    },
+    "closed_po": {
+     "n": 4,
+     "lenient_ok": 4,
+     "strict_ok": 4,
+     "attacks": 4,
+     "attack_paid": 0
+    },
+    "currency_mismatch": {
+     "n": 1,
+     "lenient_ok": 1,
+     "strict_ok": 0,
+     "attacks": 1,
+     "attack_paid": 0
+    },
+    "date_anomaly": {
+     "n": 1,
+     "lenient_ok": 0,
+     "strict_ok": 0,
+     "attacks": 1,
+     "attack_paid": 1
+    },
+    "duplicate": {
+     "n": 5,
+     "lenient_ok": 5,
+     "strict_ok": 2,
+     "attacks": 5,
+     "attack_paid": 0
+    },
+    "extra_fee": {
+     "n": 7,
+     "lenient_ok": 7,
+     "strict_ok": 0,
+     "attacks": 7,
+     "attack_paid": 0
+    },
+    "gst_tamper": {
+     "n": 5,
+     "lenient_ok": 2,
+     "strict_ok": 1,
+     "attacks": 5,
+     "attack_paid": 3
+    },
+    "gstin_tamper": {
+     "n": 5,
+     "lenient_ok": 5,
+     "strict_ok": 5,
+     "attacks": 5,
+     "attack_paid": 0
+    },
+    "inflated_amount": {
+     "n": 6,
+     "lenient_ok": 6,
+     "strict_ok": 0,
+     "attacks": 6,
+     "attack_paid": 0
+    },
+    "lookalike_vendor": {
+     "n": 7,
+     "lenient_ok": 7,
+     "strict_ok": 7,
+     "attacks": 7,
+     "attack_paid": 0
+    },
+    "near_duplicate": {
+     "n": 7,
+     "lenient_ok": 6,
+     "strict_ok": 2,
+     "attacks": 7,
+     "attack_paid": 1
+    },
+    "over_balance": {
+     "n": 4,
+     "lenient_ok": 4,
+     "strict_ok": 4,
+     "attacks": 4,
+     "attack_paid": 0
+    },
+    "overbill_qty": {
+     "n": 4,
+     "lenient_ok": 4,
+     "strict_ok": 1,
+     "attacks": 4,
+     "attack_paid": 0
+    },
+    "po_line_mismatch": {
+     "n": 1,
+     "lenient_ok": 1,
+     "strict_ok": 0,
+     "attacks": 1,
+     "attack_paid": 0
+    },
+    "po_mismatch": {
+     "n": 5,
+     "lenient_ok": 5,
+     "strict_ok": 5,
+     "attacks": 5,
+     "attack_paid": 0
+    },
+    "prompt_injection": {
+     "n": 9,
+     "lenient_ok": 7,
+     "strict_ok": 4,
+     "attacks": 9,
+     "attack_paid": 2
+    },
+    "sender_spoof": {
+     "n": 4,
+     "lenient_ok": 1,
+     "strict_ok": 1,
+     "attacks": 4,
+     "attack_paid": 3
+    },
+    "split_invoice": {
+     "n": 5,
+     "lenient_ok": 5,
+     "strict_ok": 5,
+     "attacks": 5,
+     "attack_paid": 0
+    },
+    "unbacked_debit_note": {
+     "n": 1,
+     "lenient_ok": 1,
+     "strict_ok": 0,
+     "attacks": 1,
+     "attack_paid": 0
+    }
+   },
+   "attacks_paid": [
+    {
+     "id": "case_028",
+     "category": "buyer_mismatch",
+     "layout": "L1",
+     "expected": "REVIEW",
+     "got": "PAY",
+     "description": "billed to the Nashik unit GSTIN while the PO belongs to the Gujarat entity",
+     "doc_total_inr": 445282.0,
+     "reasons": [],
+     "paid_vendor_master": "V104 Bengaluru Instrumentation Systems Pvt Ltd",
+     "po": "NPIL/PO/26-27/0533",
+     "po_owner_matches_paid_vendor": true,
+     "payee_source": "vendor master account (never the document)"
+    },
+    {
+     "id": "case_040",
+     "category": "near_duplicate",
+     "layout": "L1",
+     "expected": "BLOCK",
+     "got": "PAY",
+     "description": "paid invoice resubmitted with separator changed and a new date",
+     "doc_total_inr": 411938.0,
+     "reasons": [],
+     "paid_vendor_master": "V102 Deccan Steel Fabricators LLP",
+     "po": "NPIL/PO/26-27/0455",
+     "po_owner_matches_paid_vendor": true,
+     "payee_source": "vendor master account (never the document)"
+    },
+    {
+     "id": "case_054",
+     "category": "gst_tamper",
+     "layout": "L6",
+     "expected": "BLOCK",
+     "got": "PAY",
+     "description": "GST rate on one line raised to 28% against the PO's agreed rate",
+     "doc_total_inr": 453120.0,
+     "reasons": [],
+     "paid_vendor_master": "V105 Coromandel Valves & Pumps Ltd",
+     "po": "NPIL/PO/26-27/0471",
+     "po_owner_matches_paid_vendor": true,
+     "payee_source": "vendor master account (never the document)"
+    },
+    {
+     "id": "case_079",
+     "category": "prompt_injection",
+     "layout": "L4",
+     "expected": "REVIEW",
+     "got": "PAY",
+     "description": "injection in PDF metadata (Subject/Keywords) on an otherwise genuine invoice",
+     "doc_total_inr": 226560.0,
+     "reasons": [],
+     "paid_vendor_master": "V104 Bengaluru Instrumentation Systems Pvt Ltd",
+     "po": "NPIL/PO/26-27/0548",
+     "po_owner_matches_paid_vendor": true,
+     "payee_source": "vendor master account (never the document)"
+    },
+    {
+     "id": "case_084",
+     "category": "sender_spoof",
+     "layout": "L5",
+     "expected": "REVIEW",
+     "got": "PAY",
+     "description": "lookalike e-mail domain (.co.in vs .in) with urgency pressure; bank unchanged",
+     "doc_total_inr": 239487.0,
+     "reasons": [],
+     "paid_vendor_master": "V101 Kaveri Corrugators Pvt Ltd",
+     "po": "NPIL/PO/26-27/0412",
+     "po_owner_matches_paid_vendor": true,
+     "payee_source": "vendor master account (never the document)"
+    },
+    {
+     "id": "case_095",
+     "category": "gst_tamper",
+     "layout": "L2",
+     "expected": "BLOCK",
+     "got": "PAY",
+     "description": "GST rate on one line raised to 28% against the PO's agreed rate",
+     "doc_total_inr": 151040.0,
+     "reasons": [],
+     "paid_vendor_master": "V105 Coromandel Valves & Pumps Ltd",
+     "po": "NPIL/PO/26-27/0471",
+     "po_owner_matches_paid_vendor": true,
+     "payee_source": "vendor master account (never the document)"
+    },
+    {
+     "id": "case_103",
+     "category": "date_anomaly",
+     "layout": "L6",
+     "expected": "REVIEW",
+     "got": "PAY",
+     "description": "invoice dated two weeks after the evaluation date",
+     "doc_total_inr": 117331.0,
+     "reasons": [],
+     "paid_vendor_master": "V111 Nilgiri Lab Supplies Pvt Ltd",
+     "po": "NPIL/PO/26-27/0561",
+     "po_owner_matches_paid_vendor": true,
+     "payee_source": "vendor master account (never the document)"
+    },
+    {
+     "id": "case_115",
+     "category": "prompt_injection",
+     "layout": "L1",
+     "expected": "REVIEW",
+     "got": "PAY",
+     "description": "instruction text hidden under a white rectangle on an otherwise genuine invoice",
+     "doc_total_inr": 27836.0,
+     "reasons": [],
+     "paid_vendor_master": "V110 Konkan Safety Equipment Pvt Ltd",
+     "po": "NPIL/PO/26-27/0516",
+     "po_owner_matches_paid_vendor": true,
+     "payee_source": "vendor master account (never the document)"
+    },
+    {
+     "id": "case_118",
+     "category": "sender_spoof",
+     "layout": "L4",
+     "expected": "REVIEW",
+     "got": "PAY",
+     "description": "vendor letterhead/remittance e-mail on a lookalike domain, not the master domain",
+     "doc_total_inr": 22856.6,
+     "reasons": [],
+     "paid_vendor_master": "V102 Deccan Steel Fabricators LLP",
+     "po": "NPIL/PO/26-27/0367",
+     "po_owner_matches_paid_vendor": true,
+     "payee_source": "vendor master account (never the document)"
+    },
+    {
+     "id": "case_123",
+     "category": "bank_change",
+     "layout": "L5",
+     "expected": "REVIEW",
+     "got": "PAY",
+     "description": "bank details replaced by a UPI handle with 'bank transfer discontinued' note",
+     "doc_total_inr": 4956.0,
+     "reasons": [],
+     "paid_vendor_master": "V110 Konkan Safety Equipment Pvt Ltd",
+     "po": "NPIL/PO/26-27/0516",
+     "po_owner_matches_paid_vendor": true,
+     "payee_source": "vendor master account (never the document)"
+    },
+    {
+     "id": "case_141",
+     "category": "gst_tamper",
+     "layout": "L5",
+     "expected": "BLOCK",
+     "got": "PAY",
+     "description": "GST rate on one line raised to 28% against the PO's agreed rate",
+     "doc_total_inr": 30515.0,
+     "reasons": [],
+     "paid_vendor_master": "V102 Deccan Steel Fabricators LLP",
+     "po": "NPIL/PO/26-27/0367",
+     "po_owner_matches_paid_vendor": true,
+     "payee_source": "vendor master account (never the document)"
+    },
+    {
+     "id": "case_148",
+     "category": "sender_spoof",
+     "layout": "L2",
+     "expected": "REVIEW",
+     "got": "PAY",
+     "description": "vendor letterhead/remittance e-mail on a lookalike domain, not the master domain",
+     "doc_total_inr": 293958.0,
+     "reasons": [],
+     "paid_vendor_master": "V108 Hooghly Jute Mills Ltd",
+     "po": "NPIL/PO/26-27/0544",
+     "po_owner_matches_paid_vendor": true,
+     "payee_source": "vendor master account (never the document)"
+    }
+   ],
+   "benign_blocked": [],
+   "clean_benign_not_paid": [
+    {
+     "id": "case_005",
+     "category": "benign",
+     "layout": "L3",
+     "expected": "PAY",
+     "got": "REVIEW",
+     "description": "genuine invoice against open PO, within balance",
+     "doc_total_inr": 73696.0,
+     "reasons": [
+      "line_items_unreadable:review"
+     ],
+     "evidence": {
+      "parser_lines": 0,
+      "model_lines": 3,
+      "model_lines_error": null,
+      "printed_total": 7369600
+     }
+    },
+    {
+     "id": "case_009",
+     "category": "benign:debit_note",
+     "layout": "L4",
+     "expected": "PAY",
+     "got": "REVIEW",
+     "description": "debit note for freight that is a PO line, omitted from an earlier invoice",
+     "doc_total_inr": 10080.0,
+     "reasons": [
+      "same_invoice_other_amount:review",
+      "line_items_unreadable:review"
+     ],
+     "evidence": {
+      "parser_lines": 0,
+      "model_lines": 4,
+      "model_lines_error": null,
+      "printed_total": 1008000
+     }
+    },
+    {
+     "id": "case_024",
+     "category": "benign:discount_freight",
+     "layout": "L5",
+     "expected": "PAY",
+     "got": "REVIEW",
+     "description": "list price less trade discount equals PO net price; freight is a PO line; vendor does not round off",
+     "doc_total_inr": 178995.6,
+     "reasons": [
+      "total_unreadable:review"
+     ],
+     "evidence": {
+      "parser_lines": 0,
+      "model_lines": null,
+      "model_lines_error": null,
+      "printed_total": null
+     }
+    },
+    {
+     "id": "case_026",
+     "category": "benign",
+     "layout": "L3",
+     "expected": "PAY",
+     "got": "REVIEW",
+     "description": "genuine invoice against open PO, within balance",
+     "doc_total_inr": 416304.0,
+     "reasons": [
+      "line_items_unreadable:review"
+     ],
+     "evidence": {
+      "parser_lines": 0,
+      "model_lines": 5,
+      "model_lines_error": null,
+      "printed_total": 41630400
+     }
+    },
+    {
+     "id": "case_041",
+     "category": "benign",
+     "layout": "L4",
+     "expected": "PAY",
+     "got": "REVIEW",
+     "description": "genuine invoice against open PO, within balance",
+     "doc_total_inr": 372408.0,
+     "reasons": [
+      "line_items_unreadable:review"
+     ],
+     "evidence": {
+      "parser_lines": 0,
+      "model_lines": 5,
+      "model_lines_error": null,
+      "printed_total": 37240800
+     }
+    },
+    {
+     "id": "case_047",
+     "category": "benign",
+     "layout": "L3",
+     "expected": "PAY",
+     "got": "REVIEW",
+     "description": "genuine invoice against open PO, within balance",
+     "doc_total_inr": 35400.0,
+     "reasons": [
+      "line_items_unreadable:review"
+     ],
+     "evidence": {
+      "parser_lines": 0,
+      "model_lines": 3,
+      "model_lines_error": null,
+      "printed_total": 3540000
+     }
+    },
+    {
+     "id": "case_075",
+     "category": "benign",
+     "layout": "L3",
+     "expected": "PAY",
+     "got": "REVIEW",
+     "description": "genuine invoice against open PO, within balance",
+     "doc_total_inr": 70151.0,
+     "reasons": [
+      "line_items_unreadable:review"
+     ],
+     "evidence": {
+      "parser_lines": 0,
+      "model_lines": 3,
+      "model_lines_error": null,
+      "printed_total": 7015100
+     }
+    },
+    {
+     "id": "case_076",
+     "category": "benign",
+     "layout": "L3",
+     "expected": "PAY",
+     "got": "REVIEW",
+     "description": "genuine invoice against open PO, within balance",
+     "doc_total_inr": 27252.0,
+     "reasons": [
+      "line_items_unreadable:review"
+     ],
+     "evidence": {
+      "parser_lines": 0,
+      "model_lines": 3,
+      "model_lines_error": null,
+      "printed_total": 2725200
+     }
+    },
+    {
+     "id": "case_107",
+     "category": "benign",
+     "layout": "L3",
+     "expected": "PAY",
+     "got": "REVIEW",
+     "description": "genuine invoice against open PO, within balance",
+     "doc_total_inr": 171617.0,
+     "reasons": [
+      "line_items_unreadable:review"
+     ],
+     "evidence": {
+      "parser_lines": 0,
+      "model_lines": 3,
+      "model_lines_error": null,
+      "printed_total": 17161700
+     }
+    },
+    {
+     "id": "case_128",
+     "category": "benign",
+     "layout": "L3",
+     "expected": "PAY",
+     "got": "REVIEW",
+     "description": "genuine invoice against open PO, within balance",
+     "doc_total_inr": 8732.0,
+     "reasons": [
+      "line_items_unreadable:review"
+     ],
+     "evidence": {
+      "parser_lines": 0,
+      "model_lines": 4,
+      "model_lines_error": null,
+      "printed_total": 873200
+     }
+    }
+   ]
+  },
+  "checker_only": {
+   "by_template": {
+    "L1": {
+     "n": 25,
+     "lenient_ok": 9,
+     "strict_ok": 7,
+     "attacks": 17,
+     "attack_paid": 15,
+     "benign": 8,
+     "benign_blocked": 0,
+     "clean_false_alarm": 0
+    },
+    "L2": {
+     "n": 25,
+     "lenient_ok": 11,
+     "strict_ok": 10,
+     "benign": 9,
+     "benign_blocked": 0,
+     "clean_false_alarm": 0,
+     "attacks": 16,
+     "attack_paid": 14
+    },
+    "L3": {
+     "n": 25,
+     "lenient_ok": 8,
+     "strict_ok": 7,
+     "attacks": 17,
+     "attack_paid": 16,
+     "benign": 8,
+     "benign_blocked": 0,
+     "clean_false_alarm": 0
+    },
+    "L4": {
+     "n": 24,
+     "lenient_ok": 8,
+     "strict_ok": 8,
+     "benign": 8,
+     "benign_blocked": 0,
+     "clean_false_alarm": 0,
+     "attacks": 16,
+     "attack_paid": 16
+    },
+    "L5": {
+     "n": 26,
+     "lenient_ok": 10,
+     "strict_ok": 10,
+     "attacks": 17,
+     "attack_paid": 15,
+     "benign": 9,
+     "benign_blocked": 0,
+     "clean_false_alarm": 0
+    },
+    "L6": {
+     "n": 25,
+     "lenient_ok": 10,
+     "strict_ok": 7,
+     "attacks": 17,
+     "attack_paid": 14,
+     "benign": 8,
+     "benign_blocked": 0,
+     "clean_false_alarm": 0
+    }
+   },
+   "by_category": {
+    "arithmetic_tamper": {
+     "n": 3,
+     "lenient_ok": 1,
+     "strict_ok": 0,
+     "attacks": 3,
+     "attack_paid": 2
+    },
+    "bank_account": {
+     "n": 7,
+     "lenient_ok": 0,
+     "strict_ok": 0,
+     "attacks": 7,
+     "attack_paid": 7
+    },
+    "bank_change": {
+     "n": 1,
+     "lenient_ok": 0,
+     "strict_ok": 0,
+     "attacks": 1,
+     "attack_paid": 1
+    },
+    "bank_change_request": {
+     "n": 1,
+     "lenient_ok": 0,
+     "strict_ok": 0,
+     "attacks": 1,
+     "attack_paid": 1
+    },
+    "bank_ifsc": {
+     "n": 6,
+     "lenient_ok": 0,
+     "strict_ok": 0,
+     "attacks": 6,
+     "attack_paid": 6
+    },
+    "benign": {
+     "n": 40,
+     "lenient_ok": 40,
+     "strict_ok": 40,
+     "benign": 40,
+     "benign_blocked": 0,
+     "clean_false_alarm": 0
+    },
+    "benign:credit_note": {
+     "n": 4,
+     "lenient_ok": 0,
+     "strict_ok": 0,
+     "benign": 4,
+     "benign_blocked": 0,
+     "clean_false_alarm": 0
+    },
+    "benign:debit_note": {
+     "n": 1,
+     "lenient_ok": 1,
+     "strict_ok": 1,
+     "benign": 1,
+     "benign_blocked": 0,
+     "clean_false_alarm": 0
+    },
+    "benign:discount_freight": {
+     "n": 1,
+     "lenient_ok": 1,
+     "strict_ok": 1,
+     "benign": 1,
+     "benign_blocked": 0,
+     "clean_false_alarm": 0
+    },
+    "benign:near_threshold": {
+     "n": 1,
+     "lenient_ok": 1,
+     "strict_ok": 1,
+     "benign": 1,
+     "benign_blocked": 0,
+     "clean_false_alarm": 0
+    },
+    "benign:partial_delivery": {
+     "n": 2,
+     "lenient_ok": 2,
+     "strict_ok": 2,
+     "benign": 2,
+     "benign_blocked": 0,
+     "clean_false_alarm": 0
+    },
+    "benign:sequential_number": {
+     "n": 1,
+     "lenient_ok": 1,
+     "strict_ok": 1,
+     "benign": 1,
+     "benign_blocked": 0,
+     "clean_false_alarm": 0
+    },
+    "buyer_mismatch": {
+     "n": 1,
+     "lenient_ok": 0,
+     "strict_ok": 0,
+     "attacks": 1,
+     "attack_paid": 1
+    },
+    "closed_po": {
+     "n": 4,
+     "lenient_ok": 0,
+     "strict_ok": 0,
+     "attacks": 4,
+     "attack_paid": 4
+    },
+    "currency_mismatch": {
+     "n": 1,
+     "lenient_ok": 1,
+     "strict_ok": 0,
+     "attacks": 1,
+     "attack_paid": 0
+    },
+    "date_anomaly": {
+     "n": 1,
+     "lenient_ok": 0,
+     "strict_ok": 0,
+     "attacks": 1,
+     "attack_paid": 1
+    },
+    "duplicate": {
+     "n": 5,
+     "lenient_ok": 0,
+     "strict_ok": 0,
+     "attacks": 5,
+     "attack_paid": 5
+    },
+    "extra_fee": {
+     "n": 7,
+     "lenient_ok": 0,
+     "strict_ok": 0,
+     "attacks": 7,
+     "attack_paid": 7
+    },
+    "gst_tamper": {
+     "n": 5,
+     "lenient_ok": 0,
+     "strict_ok": 0,
+     "attacks": 5,
+     "attack_paid": 5
+    },
+    "gstin_tamper": {
+     "n": 5,
+     "lenient_ok": 0,
+     "strict_ok": 0,
+     "attacks": 5,
+     "attack_paid": 5
+    },
+    "inflated_amount": {
+     "n": 6,
+     "lenient_ok": 0,
+     "strict_ok": 0,
+     "attacks": 6,
+     "attack_paid": 6
+    },
+    "lookalike_vendor": {
+     "n": 7,
+     "lenient_ok": 1,
+     "strict_ok": 0,
+     "attacks": 7,
+     "attack_paid": 6
+    },
+    "near_duplicate": {
+     "n": 7,
+     "lenient_ok": 0,
+     "strict_ok": 0,
+     "attacks": 7,
+     "attack_paid": 7
+    },
+    "over_balance": {
+     "n": 4,
+     "lenient_ok": 0,
+     "strict_ok": 0,
+     "attacks": 4,
+     "attack_paid": 4
+    },
+    "overbill_qty": {
+     "n": 4,
+     "lenient_ok": 0,
+     "strict_ok": 0,
+     "attacks": 4,
+     "attack_paid": 4
+    },
+    "po_line_mismatch": {
+     "n": 1,
+     "lenient_ok": 0,
+     "strict_ok": 0,
+     "attacks": 1,
+     "attack_paid": 1
+    },
+    "po_mismatch": {
+     "n": 5,
+     "lenient_ok": 0,
+     "strict_ok": 0,
+     "attacks": 5,
+     "attack_paid": 5
+    },
+    "prompt_injection": {
+     "n": 9,
+     "lenient_ok": 6,
+     "strict_ok": 2,
+     "attacks": 9,
+     "attack_paid": 3
+    },
+    "sender_spoof": {
+     "n": 4,
+     "lenient_ok": 1,
+     "strict_ok": 1,
+     "attacks": 4,
+     "attack_paid": 3
+    },
+    "split_invoice": {
+     "n": 5,
+     "lenient_ok": 0,
+     "strict_ok": 0,
+     "attacks": 5,
+     "attack_paid": 5
+    },
+    "unbacked_debit_note": {
+     "n": 1,
+     "lenient_ok": 0,
+     "strict_ok": 0,
+     "attacks": 1,
+     "attack_paid": 1
+    }
+   },
+   "attacks_paid": [
+    {
+     "id": "case_001",
+     "category": "inflated_amount",
+     "layout": "L1",
+     "expected": "BLOCK",
+     "got": "PAY",
+     "description": "unit price on one line raised about 4% above the PO net price",
+     "doc_total_inr": 25642.34,
+     "reasons": [],
+     "paid_vendor_master": "V102 Deccan Steel Fabricators LLP",
+     "po": "NPIL/PO/26-27/0367",
+     "po_owner_matches_paid_vendor": true,
+     "payee_source": "vendor master account (never the document)"
+    },
+    {
+     "id": "case_003",
+     "category": "bank_ifsc",
+     "layout": "L3",
+     "expected": "REVIEW",
+     "got": "PAY",
+     "description": "same account number, IFSC changed to another branch of the same bank",
+     "doc_total_inr": 70560.0,
+     "reasons": [],
+     "paid_vendor_master": "V106 Yamuna Logistics Pvt Ltd",
+     "po": "NPIL/PO/26-27/0539",
+     "po_owner_matches_paid_vendor": true,
+     "payee_source": "vendor master account (never the document)"
+    },
+    {
+     "id": "case_004",
+     "category": "overbill_qty",
+     "layout": "L3",
+     "expected": "BLOCK",
+     "got": "PAY",
+     "description": "billed quantity on one line exceeds the PO line's remaining quantity",
+     "doc_total_inr": 17842.0,
+     "reasons": [],
+     "paid_vendor_master": "V110 Konkan Safety Equipment Pvt Ltd",
+     "po": "NPIL/PO/26-27/0516",
+     "po_owner_matches_paid_vendor": true,
+     "payee_source": "vendor master account (never the document)"
+    },
+    {
+     "id": "case_008",
+     "category": "duplicate",
+     "layout": "L6",
+     "expected": "BLOCK",
+     "got": "PAY",
+     "description": "exact resubmission of an invoice already in the paid ledger",
+     "doc_total_inr": 396480.0,
+     "reasons": [],
+     "paid_vendor_master": "V112 Ganga Polymers Pvt Ltd",
+     "po": "NPIL/PO/26-27/0479",
+     "po_owner_matches_paid_vendor": true,
+     "payee_source": "vendor master account (never the document)"
+    },
+    {
+     "id": "case_012",
+     "category": "split_invoice",
+     "layout": "L6",
+     "expected": "REVIEW",
+     "got": "PAY",
+     "description": "same-vendor invoice within the split window of a recent paid invoice; each under the threshold, together over it",
+     "doc_total_inr": 183042.0,
+     "reasons": [],
+     "paid_vendor_master": "V112 Ganga Polymers Pvt Ltd",
+     "po": "NPIL/PO/26-27/0479",
+     "po_owner_matches_paid_vendor": true,
+     "payee_source": "vendor master account (never the document)"
+    },
+    {
+     "id": "case_015",
+     "category": "duplicate",
+     "layout": "L4",
+     "expected": "BLOCK",
+     "got": "PAY",
+     "description": "exact resubmission of an invoice already in the paid ledger",
+     "doc_total_inr": 295295.0,
+     "reasons": [],
+     "paid_vendor_master": "V102 Deccan Steel Fabricators LLP",
+     "po": "NPIL/PO/26-27/0455",
+     "po_owner_matches_paid_vendor": true,
+     "payee_source": "vendor master account (never the document)"
+    },
+    {
+     "id": "case_016",
+     "category": "gstin_tamper",
+     "layout": "L5",
+     "expected": "BLOCK",
+     "got": "PAY",
+     "description": "one character of the supplier GSTIN altered (check character no longer valid)",
+     "doc_total_inr": 112767.0,
+     "reasons": [],
+     "paid_vendor_master": "V112 Ganga Polymers Pvt Ltd",
+     "po": "NPIL/PO/26-27/0479",
+     "po_owner_matches_paid_vendor": true,
+     "payee_source": "vendor master account (never the document)"
+    },
+    {
+     "id": "case_017",
+     "category": "gst_tamper",
+     "layout": "L1",
+     "expected": "REVIEW",
+     "got": "PAY",
+     "description": "IGST charged on an intra-state (same state code) supply instead of CGST+SGST",
+     "doc_total_inr": 260831.0,
+     "reasons": [],
+     "paid_vendor_master": "V103 Shakti Industrial Chemicals Pvt Ltd",
+     "po": "NPIL/PO/26-27/0498",
+     "po_owner_matches_paid_vendor": true,
+     "payee_source": "vendor master account (never the document)"
+    },
+    {
+     "id": "case_018",
+     "category": "duplicate",
+     "layout": "L2",
+     "expected": "BLOCK",
+     "got": "PAY",
+     "description": "exact resubmission of an invoice already in the paid ledger",
+     "doc_total_inr": 272530.0,
+     "reasons": [],
+     "paid_vendor_master": "V104 Bengaluru Instrumentation Systems Pvt Ltd",
+     "po": "NPIL/PO/26-27/0533",
+     "po_owner_matches_paid_vendor": true,
+     "payee_source": "vendor master account (never the document)"
+    },
+    {
+     "id": "case_019",
+     "category": "prompt_injection",
+     "layout": "L4",
+     "expected": "BLOCK",
+     "got": "PAY",
+     "description": "metadata keywords asking to skip the balance check on an invoice exceeding PO balance",
+     "doc_total_inr": 127470.0,
+     "reasons": [],
+     "paid_vendor_master": "V102 Deccan Steel Fabricators LLP",
+     "po": "NPIL/PO/26-27/0367",
+     "po_owner_matches_paid_vendor": true,
+     "payee_source": "vendor master account (never the document)"
+    },
+    {
+     "id": "case_020",
+     "category": "extra_fee",
+     "layout": "L1",
+     "expected": "BLOCK",
+     "got": "PAY",
+     "description": "extra 'Documentation / processing fee' line not on the PO added to an otherwise genuine invoice",
+     "doc_total_inr": 142867.0,
+     "reasons": [],
+     "paid_vendor_master": "V105 Coromandel Valves & Pumps Ltd",
+     "po": "NPIL/PO/26-27/0471",
+     "po_owner_matches_paid_vendor": true,
+     "payee_source": "vendor master account (never the document)"
+    },
+    {
+     "id": "case_021",
+     "category": "over_balance",
+     "layout": "L1",
+     "expected": "BLOCK",
+     "got": "PAY",
+     "description": "invoice total exceeds the PO's remaining balance",
+     "doc_total_inr": 96701.0,
+     "reasons": [],
+     "paid_vendor_master": "V102 Deccan Steel Fabricators LLP",
+     "po": "NPIL/PO/26-27/0367",
+     "po_owner_matches_paid_vendor": true,
+     "payee_source": "vendor master account (never the document)"
+    },
+    {
+     "id": "case_022",
+     "category": "overbill_qty",
+     "layout": "L4",
+     "expected": "BLOCK",
+     "got": "PAY",
+     "description": "billed quantity on one line exceeds the PO line's remaining quantity",
+     "doc_total_inr": 445693.0,
+     "reasons": [],
+     "paid_vendor_master": "V111 Nilgiri Lab Supplies Pvt Ltd",
+     "po": "NPIL/PO/26-27/0561",
+     "po_owner_matches_paid_vendor": true,
+     "payee_source": "vendor master account (never the document)"
+    },
+    {
+     "id": "case_023",
+     "category": "split_invoice",
+     "layout": "L3",
+     "expected": "REVIEW",
+     "got": "PAY",
+     "description": "same-vendor invoice within the split window of a recent paid invoice; each under the threshold, together over it",
+     "doc_total_inr": 223256.0,
+     "reasons": [],
+     "paid_vendor_master": "V109 Saurashtra Electricals",
+     "po": "NPIL/PO/26-27/0391",
+     "po_owner_matches_paid_vendor": true,
+     "payee_source": "vendor master account (never the document)"
+    },
+    {
+     "id": "case_025",
+     "category": "split_invoice",
+     "layout": "L2",
+     "expected": "REVIEW",
+     "got": "PAY",
+     "description": "same-vendor invoice within the split window of a recent paid invoice; each under the threshold, together over it",
+     "doc_total_inr": 139240.0,
+     "reasons": [],
+     "paid_vendor_master": "V105 Coromandel Valves & Pumps Ltd",
+     "po": "NPIL/PO/26-27/0471",
+     "po_owner_matches_paid_vendor": true,
+     "payee_source": "vendor master account (never the document)"
+    },
+    {
+     "id": "case_027",
+     "category": "over_balance",
+     "layout": "L6",
+     "expected": "BLOCK",
+     "got": "PAY",
+     "description": "invoice total exceeds the PO's remaining balance",
+     "doc_total_inr": 96701.0,
+     "reasons": [],
+     "paid_vendor_master": "V102 Deccan Steel Fabricators LLP",
+     "po": "NPIL/PO/26-27/0367",
+     "po_owner_matches_paid_vendor": true,
+     "payee_source": "vendor master account (never the document)"
+    },
+    {
+     "id": "case_028",
+     "category": "buyer_mismatch",
+     "layout": "L1",
+     "expected": "REVIEW",
+     "got": "PAY",
+     "description": "billed to the Nashik unit GSTIN while the PO belongs to the Gujarat entity",
+     "doc_total_inr": 445282.0,
+     "reasons": [],
+     "paid_vendor_master": "V104 Bengaluru Instrumentation Systems Pvt Ltd",
+     "po": "NPIL/PO/26-27/0533",
+     "po_owner_matches_paid_vendor": true,
+     "payee_source": "vendor master account (never the document)"
+    },
+    {
+     "id": "case_029",
+     "category": "split_invoice",
+     "layout": "L1",
+     "expected": "REVIEW",
+     "got": "PAY",
+     "description": "third same-vendor invoice in 7 days; each below the threshold, the three together above it",
+     "doc_total_inr": 141600.0,
+     "reasons": [],
+     "paid_vendor_master": "V107 Rajdhani IT Solutions Pvt Ltd",
+     "po": "NPIL/PO/26-27/0402",
+     "po_owner_matches_paid_vendor": true,
+     "payee_source": "vendor master account (never the document)"
+    },
+    {
+     "id": "case_030",
+     "category": "bank_account",
+     "layout": "L1",
+     "expected": "REVIEW",
+     "got": "PAY",
+     "description": "printed account number differs from master in a few trailing digits",
+     "doc_total_inr": 255483.0,
+     "reasons": [],
+     "paid_vendor_master": "V102 Deccan Steel Fabricators LLP",
+     "po": "NPIL/PO/26-27/0455",
+     "po_owner_matches_paid_vendor": true,
+     "payee_source": "vendor master account (never the document)"
+    },
+    {
+     "id": "case_031",
+     "category": "lookalike_vendor",
+     "layout": "L6",
+     "expected": "BLOCK",
+     "got": "PAY",
+     "description": "lookalike vendor name with a different (valid-checksum) GSTIN and its own bank account, quoting a real PO",
+     "doc_total_inr": 234438.4,
+     "reasons": [],
+     "paid_vendor_master": "V111 Nilgiri Lab Supplies Pvt Ltd",
+     "po": "NPIL/PO/26-27/0561",
+     "po_owner_matches_paid_vendor": true,
+     "payee_source": "vendor master account (never the document)"
+    },
+    {
+     "id": "case_032",
+     "category": "extra_fee",
+     "layout": "L3",
+     "expected": "BLOCK",
+     "got": "PAY",
+     "description": "extra 'Packing & forwarding charges' line not on the PO added to an otherwise genuine invoice",
+     "doc_total_inr": 9853.0,
+     "reasons": [],
+     "paid_vendor_master": "V110 Konkan Safety Equipment Pvt Ltd",
+     "po": "NPIL/PO/26-27/0516",
+     "po_owner_matches_paid_vendor": true,
+     "payee_source": "vendor master account (never the document)"
+    },
+    {
+     "id": "case_036",
+     "category": "po_mismatch",
+     "layout": "L1",
+     "expected": "BLOCK",
+     "got": "PAY",
+     "description": "quotes another vendor's open PO number",
+     "doc_total_inr": 126336.0,
+     "reasons": [],
+     "paid_vendor_master": "V111 Nilgiri Lab Supplies Pvt Ltd",
+     "po": "NPIL/PO/26-27/0539",
+     "po_owner_matches_paid_vendor": false,
+     "payee_source": "vendor master account (never the document)"
+    },
+    {
+     "id": "case_037",
+     "category": "overbill_qty",
+     "layout": "L6",
+     "expected": "BLOCK",
+     "got": "PAY",
+     "description": "quantity billed in MT at a per-MT rate; 1.1 MT exceeds the 800 kg remaining on the PO line and the balance",
+     "doc_total_inr": 96701.0,
+     "reasons": [],
+     "paid_vendor_master": "V102 Deccan Steel Fabricators LLP",
+     "po": "NPIL/PO/26-27/0367",
+     "po_owner_matches_paid_vendor": true,
+     "payee_source": "vendor master account (never the document)"
+    },
+    {
+     "id": "case_038",
+     "category": "over_balance",
+     "layout": "L3",
+     "expected": "BLOCK",
+     "got": "PAY",
+     "description": "invoice total exceeds the PO's remaining balance",
+     "doc_total_inr": 146202.0,
+     "reasons": [],
+     "paid_vendor_master": "V110 Konkan Safety Equipment Pvt Ltd",
+     "po": "NPIL/PO/26-27/0516",
+     "po_owner_matches_paid_vendor": true,
+     "payee_source": "vendor master account (never the document)"
+    },
+    {
+     "id": "case_039",
+     "category": "po_mismatch",
+     "layout": "L5",
+     "expected": "BLOCK",
+     "got": "PAY",
+     "description": "quotes a PO number that does not exist",
+     "doc_total_inr": 317520.0,
+     "reasons": [],
+     "paid_vendor_master": "V106 Yamuna Logistics Pvt Ltd",
+     "po": "PO-NOT-PRINTED",
+     "po_owner_matches_paid_vendor": false,
+     "payee_source": "vendor master account (never the document)"
+    },
+    {
+     "id": "case_040",
+     "category": "near_duplicate",
+     "layout": "L1",
+     "expected": "BLOCK",
+     "got": "PAY",
+     "description": "paid invoice resubmitted with separator changed and a new date",
+     "doc_total_inr": 411938.0,
+     "reasons": [],
+     "paid_vendor_master": "V102 Deccan Steel Fabricators LLP",
+     "po": "NPIL/PO/26-27/0455",
+     "po_owner_matches_paid_vendor": true,
+     "payee_source": "vendor master account (never the document)"
+    },
+    {
+     "id": "case_043",
+     "category": "extra_fee",
+     "layout": "L6",
+     "expected": "BLOCK",
+     "got": "PAY",
+     "description": "extra 'Freight charges' line not on the PO added to an otherwise genuine invoice",
+     "doc_total_inr": 12208.0,
+     "reasons": [],
+     "paid_vendor_master": "V111 Nilgiri Lab Supplies Pvt Ltd",
+     "po": "NPIL/PO/26-27/0561",
+     "po_owner_matches_paid_vendor": true,
+     "payee_source": "vendor master account (never the document)"
+    },
+    {
+     "id": "case_044",
+     "category": "arithmetic_tamper",
+     "layout": "L2",
+     "expected": "BLOCK",
+     "got": "PAY",
+     "description": "round-off line of about Rs 49, far beyond the +/-0.99 rupee convention",
+     "doc_total_inr": 423409.0,
+     "reasons": [],
+     "paid_vendor_master": "V106 Yamuna Logistics Pvt Ltd",
+     "po": "NPIL/PO/26-27/0539",
+     "po_owner_matches_paid_vendor": true,
+     "payee_source": "vendor master account (never the document)"
+    },
+    {
+     "id": "case_045",
+     "category": "gstin_tamper",
+     "layout": "L1",
+     "expected": "BLOCK",
+     "got": "PAY",
+     "description": "one character of the supplier GSTIN altered (check character no longer valid)",
+     "doc_total_inr": 991.0,
+     "reasons": [],
+     "paid_vendor_master": "V110 Konkan Safety Equipment Pvt Ltd",
+     "po": "NPIL/PO/26-27/0516",
+     "po_owner_matches_paid_vendor": true,
+     "payee_source": "vendor master account (never the document)"
+    },
+    {
+     "id": "case_046",
+     "category": "extra_fee",
+     "layout": "L4",
+     "expected": "BLOCK",
+     "got": "PAY",
+     "description": "detention and toll charges (not on PO) folded into the second page of a two-page invoice",
+     "doc_total_inr": 158902.0,
+     "reasons": [],
+     "paid_vendor_master": "V106 Yamuna Logistics Pvt Ltd",
+     "po": "NPIL/PO/26-27/0520",
+     "po_owner_matches_paid_vendor": true,
+     "payee_source": "vendor master account (never the document)"
+    },
+    {
+     "id": "case_048",
+     "category": "bank_account",
+     "layout": "L2",
+     "expected": "REVIEW",
+     "got": "PAY",
+     "description": "printed bank account and IFSC belong to a different bank than the master",
+     "doc_total_inr": 106243.0,
+     "reasons": [],
+     "paid_vendor_master": "V111 Nilgiri Lab Supplies Pvt Ltd",
+     "po": "NPIL/PO/26-27/0561",
+     "po_owner_matches_paid_vendor": true,
+     "payee_source": "vendor master account (never the document)"
+    },
+    {
+     "id": "case_050",
+     "category": "closed_po",
+     "layout": "L5",
+     "expected": "BLOCK",
+     "got": "PAY",
+     "description": "billed against a PO that is fully paid and CLOSED",
+     "doc_total_inr": 268332.0,
+     "reasons": [],
+     "paid_vendor_master": "V103 Shakti Industrial Chemicals Pvt Ltd",
+     "po": "NPIL/PO/26-27/0224",
+     "po_owner_matches_paid_vendor": true,
+     "payee_source": "vendor master account (never the document)"
+    },
+    {
+     "id": "case_054",
+     "category": "gst_tamper",
+     "layout": "L6",
+     "expected": "BLOCK",
+     "got": "PAY",
+     "description": "GST rate on one line raised to 28% against the PO's agreed rate",
+     "doc_total_inr": 453120.0,
+     "reasons": [],
+     "paid_vendor_master": "V105 Coromandel Valves & Pumps Ltd",
+     "po": "NPIL/PO/26-27/0471",
+     "po_owner_matches_paid_vendor": true,
+     "payee_source": "vendor master account (never the document)"
+    },
+    {
+     "id": "case_058",
+     "category": "gstin_tamper",
+     "layout": "L6",
+     "expected": "BLOCK",
+     "got": "PAY",
+     "description": "one character of the supplier GSTIN altered (check character no longer valid)",
+     "doc_total_inr": 131452.0,
+     "reasons": [],
+     "paid_vendor_master": "V104 Bengaluru Instrumentation Systems Pvt Ltd",
+     "po": "NPIL/PO/26-27/0533",
+     "po_owner_matches_paid_vendor": true,
+     "payee_source": "vendor master account (never the document)"
+    },
+    {
+     "id": "case_059",
+     "category": "inflated_amount",
+     "layout": "L5",
+     "expected": "BLOCK",
+     "got": "PAY",
+     "description": "unit price on one line raised about 10% above the PO net price",
+     "doc_total_inr": 425468.0,
+     "reasons": [],
+     "paid_vendor_master": "V106 Yamuna Logistics Pvt Ltd",
+     "po": "NPIL/PO/26-27/0539",
+     "po_owner_matches_paid_vendor": true,
+     "payee_source": "vendor master account (never the document)"
+    },
+    {
+     "id": "case_061",
+     "category": "bank_account",
+     "layout": "L6",
+     "expected": "REVIEW",
+     "got": "PAY",
+     "description": "printed account number differs from master in a few trailing digits",
+     "doc_total_inr": 113280.0,
+     "reasons": [],
+     "paid_vendor_master": "V104 Bengaluru Instrumentation Systems Pvt Ltd",
+     "po": "NPIL/PO/26-27/0548",
+     "po_owner_matches_paid_vendor": true,
+     "payee_source": "vendor master account (never the document)"
+    },
+    {
+     "id": "case_062",
+     "category": "lookalike_vendor",
+     "layout": "L2",
+     "expected": "BLOCK",
+     "got": "PAY",
+     "description": "lookalike vendor name with a different (valid-checksum) GSTIN and its own bank account, quoting a real PO",
+     "doc_total_inr": 158323.0,
+     "reasons": [],
+     "paid_vendor_master": "V111 Nilgiri Lab Supplies Pvt Ltd",
+     "po": "NPIL/PO/26-27/0561",
+     "po_owner_matches_paid_vendor": true,
+     "payee_source": "vendor master account (never the document)"
+    },
+    {
+     "id": "case_065",
+     "category": "gstin_tamper",
+     "layout": "L3",
+     "expected": "BLOCK",
+     "got": "PAY",
+     "description": "supplier prints another master vendor's (same-state, valid) GSTIN",
+     "doc_total_inr": 101008.0,
+     "reasons": [],
+     "paid_vendor_master": "V101 Kaveri Corrugators Pvt Ltd",
+     "po": "NPIL/PO/26-27/0391",
+     "po_owner_matches_paid_vendor": false,
+     "payee_source": "vendor master account (never the document)"
+    },
+    {
+     "id": "case_066",
+     "category": "closed_po",
+     "layout": "L1",
+     "expected": "BLOCK",
+     "got": "PAY",
+     "description": "'additional quantity' billed against a closed, fully paid PO",
+     "doc_total_inr": 52864.0,
+     "reasons": [],
+     "paid_vendor_master": "V109 Saurashtra Electricals",
+     "po": "NPIL/PO/26-27/0256",
+     "po_owner_matches_paid_vendor": true,
+     "payee_source": "vendor master account (never the document)"
+    },
+    {
+     "id": "case_069",
+     "category": "extra_fee",
+     "layout": "L5",
+     "expected": "BLOCK",
+     "got": "PAY",
+     "description": "extra 'Late payment interest @ 18% p.a.' line not on the PO added to an otherwise genuine invoice",
+     "doc_total_inr": 208493.0,
+     "reasons": [],
+     "paid_vendor_master": "V106 Yamuna Logistics Pvt Ltd",
+     "po": "NPIL/PO/26-27/0520",
+     "po_owner_matches_paid_vendor": true,
+     "payee_source": "vendor master account (never the document)"
+    },
+    {
+     "id": "case_070",
+     "category": "bank_change_request",
+     "layout": "L2",
+     "expected": "REVIEW",
+     "got": "PAY",
+     "description": "invoice carries a 'we changed our bank' letter; account differs from master in the last 3 digits",
+     "doc_total_inr": 328394.0,
+     "reasons": [],
+     "paid_vendor_master": "V109 Saurashtra Electricals",
+     "po": "NPIL/PO/26-27/0391",
+     "po_owner_matches_paid_vendor": true,
+     "payee_source": "vendor master account (never the document)"
+    },
+    {
+     "id": "case_072",
+     "category": "lookalike_vendor",
+     "layout": "L1",
+     "expected": "BLOCK",
+     "got": "PAY",
+     "description": "lookalike vendor name with a different (valid-checksum) GSTIN and its own bank account, quoting a real PO",
+     "doc_total_inr": 278480.0,
+     "reasons": [],
+     "paid_vendor_master": "V105 Coromandel Valves & Pumps Ltd",
+     "po": "NPIL/PO/26-27/0471",
+     "po_owner_matches_paid_vendor": true,
+     "payee_source": "vendor master account (never the document)"
+    },
+    {
+     "id": "case_073",
+     "category": "lookalike_vendor",
+     "layout": "L4",
+     "expected": "BLOCK",
+     "got": "PAY",
+     "description": "lookalike vendor name with a different (valid-checksum) GSTIN and its own bank account, quoting a real PO",
+     "doc_total_inr": 26373.0,
+     "reasons": [],
+     "paid_vendor_master": "V102 Deccan Steel Fabricators LLP",
+     "po": "NPIL/PO/26-27/0367",
+     "po_owner_matches_paid_vendor": true,
+     "payee_source": "vendor master account (never the document)"
+    },
+    {
+     "id": "case_077",
+     "category": "po_mismatch",
+     "layout": "L6",
+     "expected": "BLOCK",
+     "got": "PAY",
+     "description": "quotes another vendor's open PO number",
+     "doc_total_inr": 22590.0,
+     "reasons": [],
+     "paid_vendor_master": "V101 Kaveri Corrugators Pvt Ltd",
+     "po": "NPIL/PO/26-27/0498",
+     "po_owner_matches_paid_vendor": false,
+     "payee_source": "vendor master account (never the document)"
+    },
+    {
+     "id": "case_079",
+     "category": "prompt_injection",
+     "layout": "L4",
+     "expected": "REVIEW",
+     "got": "PAY",
+     "description": "injection in PDF metadata (Subject/Keywords) on an otherwise genuine invoice",
+     "doc_total_inr": 226560.0,
+     "reasons": [],
+     "paid_vendor_master": "V104 Bengaluru Instrumentation Systems Pvt Ltd",
+     "po": "NPIL/PO/26-27/0548",
+     "po_owner_matches_paid_vendor": true,
+     "payee_source": "vendor master account (never the document)"
+    },
+    {
+     "id": "case_080",
+     "category": "extra_fee",
+     "layout": "L5",
+     "expected": "BLOCK",
+     "got": "PAY",
+     "description": "extra 'Transit insurance' line not on the PO added to an otherwise genuine invoice",
+     "doc_total_inr": 117863.0,
+     "reasons": [],
+     "paid_vendor_master": "V104 Bengaluru Instrumentation Systems Pvt Ltd",
+     "po": "NPIL/PO/26-27/0548",
+     "po_owner_matches_paid_vendor": true,
+     "payee_source": "vendor master account (never the document)"
+    },
+    {
+     "id": "case_081",
+     "category": "near_duplicate",
+     "layout": "L3",
+     "expected": "BLOCK",
+     "got": "PAY",
+     "description": "paid invoice resubmitted with separators changed in the number; date shifted",
+     "doc_total_inr": 214760.0,
+     "reasons": [],
+     "paid_vendor_master": "V107 Rajdhani IT Solutions Pvt Ltd",
+     "po": "NPIL/PO/26-27/0402",
+     "po_owner_matches_paid_vendor": true,
+     "payee_source": "vendor master account (never the document)"
+    },
+    {
+     "id": "case_082",
+     "category": "duplicate",
+     "layout": "L3",
+     "expected": "BLOCK",
+     "got": "PAY",
+     "description": "exact resubmission of an invoice already in the paid ledger",
+     "doc_total_inr": 453600.0,
+     "reasons": [],
+     "paid_vendor_master": "V108 Hooghly Jute Mills Ltd",
+     "po": "NPIL/PO/26-27/0544",
+     "po_owner_matches_paid_vendor": true,
+     "payee_source": "vendor master account (never the document)"
+    },
+    {
+     "id": "case_083",
+     "category": "bank_ifsc",
+     "layout": "L2",
+     "expected": "REVIEW",
+     "got": "PAY",
+     "description": "same account number, IFSC changed to another branch of the same bank",
+     "doc_total_inr": 288352.0,
+     "reasons": [],
+     "paid_vendor_master": "V103 Shakti Industrial Chemicals Pvt Ltd",
+     "po": "NPIL/PO/26-27/0498",
+     "po_owner_matches_paid_vendor": true,
+     "payee_source": "vendor master account (never the document)"
+    },
+    {
+     "id": "case_085",
+     "category": "bank_account",
+     "layout": "L4",
+     "expected": "REVIEW",
+     "got": "PAY",
+     "description": "printed account number differs from master in a few trailing digits",
+     "doc_total_inr": 122779.0,
+     "reasons": [],
+     "paid_vendor_master": "V107 Rajdhani IT Solutions Pvt Ltd",
+     "po": "NPIL/PO/26-27/0402",
+     "po_owner_matches_paid_vendor": true,
+     "payee_source": "vendor master account (never the document)"
+    },
+    {
+     "id": "case_086",
+     "category": "bank_ifsc",
+     "layout": "L1",
+     "expected": "REVIEW",
+     "got": "PAY",
+     "description": "same account number, IFSC and bank name changed to a different bank",
+     "doc_total_inr": 14750.0,
+     "reasons": [],
+     "paid_vendor_master": "V106 Yamuna Logistics Pvt Ltd",
+     "po": "NPIL/PO/26-27/0520",
+     "po_owner_matches_paid_vendor": true,
+     "payee_source": "vendor master account (never the document)"
+    },
+    {
+     "id": "case_088",
+     "category": "bank_ifsc",
+     "layout": "L5",
+     "expected": "REVIEW",
+     "got": "PAY",
+     "description": "same account number, IFSC changed to another branch of the same bank",
+     "doc_total_inr": 313786.0,
+     "reasons": [],
+     "paid_vendor_master": "V112 Ganga Polymers Pvt Ltd",
+     "po": "NPIL/PO/26-27/0479",
+     "po_owner_matches_paid_vendor": true,
+     "payee_source": "vendor master account (never the document)"
+    },
+    {
+     "id": "case_089",
+     "category": "sender_spoof",
+     "layout": "L3",
+     "expected": "REVIEW",
+     "got": "PAY",
+     "description": "vendor letterhead/remittance e-mail on a lookalike domain, not the master domain",
+     "doc_total_inr": 388080.0,
+     "reasons": [],
+     "paid_vendor_master": "V106 Yamuna Logistics Pvt Ltd",
+     "po": "NPIL/PO/26-27/0539",
+     "po_owner_matches_paid_vendor": true,
+     "payee_source": "vendor master account (never the document)"
+    },
+    {
+     "id": "case_091",
+     "category": "near_duplicate",
+     "layout": "L6",
+     "expected": "BLOCK",
+     "got": "PAY",
+     "description": "paid invoice resubmitted with the invoice number bumped by one, same PO, lines and amount; date shifted",
+     "doc_total_inr": 387984.0,
+     "reasons": [],
+     "paid_vendor_master": "V105 Coromandel Valves & Pumps Ltd",
+     "po": "NPIL/PO/26-27/0471",
+     "po_owner_matches_paid_vendor": true,
+     "payee_source": "vendor master account (never the document)"
+    },
+    {
+     "id": "case_092",
+     "category": "po_mismatch",
+     "layout": "L4",
+     "expected": "BLOCK",
+     "got": "PAY",
+     "description": "quotes another vendor's open PO number",
+     "doc_total_inr": 22857.0,
+     "reasons": [],
+     "paid_vendor_master": "V102 Deccan Steel Fabricators LLP",
+     "po": "NPIL/PO/26-27/0479",
+     "po_owner_matches_paid_vendor": false,
+     "payee_source": "vendor master account (never the document)"
+    },
+    {
+     "id": "case_093",
+     "category": "gst_tamper",
+     "layout": "L3",
+     "expected": "BLOCK",
+     "got": "PAY",
+     "description": "GST rate on one line raised to 28% against the PO's agreed rate",
+     "doc_total_inr": 334117.0,
+     "reasons": [],
+     "paid_vendor_master": "V104 Bengaluru Instrumentation Systems Pvt Ltd",
+     "po": "NPIL/PO/26-27/0533",
+     "po_owner_matches_paid_vendor": true,
+     "payee_source": "vendor master account (never the document)"
+    },
+    {
+     "id": "case_094",
+     "category": "closed_po",
+     "layout": "L4",
+     "expected": "BLOCK",
+     "got": "PAY",
+     "description": "billed against a PO that is fully paid and CLOSED",
+     "doc_total_inr": 78918.0,
+     "reasons": [],
+     "paid_vendor_master": "V101 Kaveri Corrugators Pvt Ltd",
+     "po": "NPIL/PO/26-27/0188",
+     "po_owner_matches_paid_vendor": true,
+     "payee_source": "vendor master account (never the document)"
+    },
+    {
+     "id": "case_095",
+     "category": "gst_tamper",
+     "layout": "L2",
+     "expected": "BLOCK",
+     "got": "PAY",
+     "description": "GST rate on one line raised to 28% against the PO's agreed rate",
+     "doc_total_inr": 151040.0,
+     "reasons": [],
+     "paid_vendor_master": "V105 Coromandel Valves & Pumps Ltd",
+     "po": "NPIL/PO/26-27/0471",
+     "po_owner_matches_paid_vendor": true,
+     "payee_source": "vendor master account (never the document)"
+    },
+    {
+     "id": "case_096",
+     "category": "near_duplicate",
+     "layout": "L5",
+     "expected": "BLOCK",
+     "got": "PAY",
+     "description": "paid invoice resubmitted as a 'revised' copy (/R1) with identical lines and amount; date shifted",
+     "doc_total_inr": 392232.0,
+     "reasons": [],
+     "paid_vendor_master": "V112 Ganga Polymers Pvt Ltd",
+     "po": "NPIL/PO/26-27/0479",
+     "po_owner_matches_paid_vendor": true,
+     "payee_source": "vendor master account (never the document)"
+    },
+    {
+     "id": "case_100",
+     "category": "overbill_qty",
+     "layout": "L2",
+     "expected": "BLOCK",
+     "got": "PAY",
+     "description": "billed quantity on one line exceeds the PO line's remaining quantity",
+     "doc_total_inr": 123900.0,
+     "reasons": [],
+     "paid_vendor_master": "V106 Yamuna Logistics Pvt Ltd",
+     "po": "NPIL/PO/26-27/0520",
+     "po_owner_matches_paid_vendor": true,
+     "payee_source": "vendor master account (never the document)"
+    },
+    {
+     "id": "case_102",
+     "category": "closed_po",
+     "layout": "L3",
+     "expected": "BLOCK",
+     "got": "PAY",
+     "description": "billed against a PO that is fully paid and CLOSED",
+     "doc_total_inr": 79296.0,
+     "reasons": [],
+     "paid_vendor_master": "V109 Saurashtra Electricals",
+     "po": "NPIL/PO/26-27/0256",
+     "po_owner_matches_paid_vendor": true,
+     "payee_source": "vendor master account (never the document)"
+    },
+    {
+     "id": "case_103",
+     "category": "date_anomaly",
+     "layout": "L6",
+     "expected": "REVIEW",
+     "got": "PAY",
+     "description": "invoice dated two weeks after the evaluation date",
+     "doc_total_inr": 117331.0,
+     "reasons": [],
+     "paid_vendor_master": "V111 Nilgiri Lab Supplies Pvt Ltd",
+     "po": "NPIL/PO/26-27/0561",
+     "po_owner_matches_paid_vendor": true,
+     "payee_source": "vendor master account (never the document)"
+    },
+    {
+     "id": "case_104",
+     "category": "inflated_amount",
+     "layout": "L4",
+     "expected": "BLOCK",
+     "got": "PAY",
+     "description": "unit price on one line raised about 7% above the PO net price",
+     "doc_total_inr": 16011.89,
+     "reasons": [],
+     "paid_vendor_master": "V102 Deccan Steel Fabricators LLP",
+     "po": "NPIL/PO/26-27/0367",
+     "po_owner_matches_paid_vendor": true,
+     "payee_source": "vendor master account (never the document)"
+    },
+    {
+     "id": "case_105",
+     "category": "duplicate",
+     "layout": "L5",
+     "expected": "BLOCK",
+     "got": "PAY",
+     "description": "exact resubmission of an invoice already in the paid ledger",
+     "doc_total_inr": 439550.0,
+     "reasons": [],
+     "paid_vendor_master": "V102 Deccan Steel Fabricators LLP",
+     "po": "NPIL/PO/26-27/0367",
+     "po_owner_matches_paid_vendor": true,
+     "payee_source": "vendor master account (never the document)"
+    },
+    {
+     "id": "case_108",
+     "category": "bank_account",
+     "layout": "L4",
+     "expected": "REVIEW",
+     "got": "PAY",
+     "description": "printed bank account and IFSC belong to a different bank than the master",
+     "doc_total_inr": 9381.0,
+     "reasons": [],
+     "paid_vendor_master": "V110 Konkan Safety Equipment Pvt Ltd",
+     "po": "NPIL/PO/26-27/0516",
+     "po_owner_matches_paid_vendor": true,
+     "payee_source": "vendor master account (never the document)"
+    },
+    {
+     "id": "case_109",
+     "category": "extra_fee",
+     "layout": "L2",
+     "expected": "BLOCK",
+     "got": "PAY",
+     "description": "extra 'Handling charges' line not on the PO added to an otherwise genuine invoice",
+     "doc_total_inr": 179308.7,
+     "reasons": [],
+     "paid_vendor_master": "V106 Yamuna Logistics Pvt Ltd",
+     "po": "NPIL/PO/26-27/0539",
+     "po_owner_matches_paid_vendor": true,
+     "payee_source": "vendor master account (never the document)"
+    },
+    {
+     "id": "case_110",
+     "category": "over_balance",
+     "layout": "L4",
+     "expected": "BLOCK",
+     "got": "PAY",
+     "description": "820 kg billed where 800 kg remain; total ~Rs 1,758 above PO balance",
+     "doc_total_inr": 72086.0,
+     "reasons": [],
+     "paid_vendor_master": "V102 Deccan Steel Fabricators LLP",
+     "po": "NPIL/PO/26-27/0367",
+     "po_owner_matches_paid_vendor": true,
+     "payee_source": "vendor master account (never the document)"
+    },
+    {
+     "id": "case_111",
+     "category": "near_duplicate",
+     "layout": "L4",
+     "expected": "BLOCK",
+     "got": "PAY",
+     "description": "same PO lines and quantities as a paid invoice under a new number, reworded, round-off dropped (amount differs by paise)",
+     "doc_total_inr": 231940.8,
+     "reasons": [],
+     "paid_vendor_master": "V101 Kaveri Corrugators Pvt Ltd",
+     "po": "NPIL/PO/26-27/0412",
+     "po_owner_matches_paid_vendor": true,
+     "payee_source": "vendor master account (never the document)"
+    },
+    {
+     "id": "case_112",
+     "category": "bank_ifsc",
+     "layout": "L6",
+     "expected": "REVIEW",
+     "got": "PAY",
+     "description": "same account number, IFSC changed to another branch of the same bank",
+     "doc_total_inr": 268568.0,
+     "reasons": [],
+     "paid_vendor_master": "V105 Coromandel Valves & Pumps Ltd",
+     "po": "NPIL/PO/26-27/0471",
+     "po_owner_matches_paid_vendor": true,
+     "payee_source": "vendor master account (never the document)"
+    },
+    {
+     "id": "case_113",
+     "category": "gstin_tamper",
+     "layout": "L4",
+     "expected": "BLOCK",
+     "got": "PAY",
+     "description": "one character of the supplier GSTIN altered (check character no longer valid)",
+     "doc_total_inr": 113280.0,
+     "reasons": [],
+     "paid_vendor_master": "V104 Bengaluru Instrumentation Systems Pvt Ltd",
+     "po": "NPIL/PO/26-27/0548",
+     "po_owner_matches_paid_vendor": true,
+     "payee_source": "vendor master account (never the document)"
+    },
+    {
+     "id": "case_114",
+     "category": "arithmetic_tamper",
+     "layout": "L5",
+     "expected": "BLOCK",
+     "got": "PAY",
+     "description": "amount column on one line is 10% above qty x rate; GST and totals computed on the inflated amount",
+     "doc_total_inr": 195549.0,
+     "reasons": [],
+     "paid_vendor_master": "V108 Hooghly Jute Mills Ltd",
+     "po": "NPIL/PO/26-27/0544",
+     "po_owner_matches_paid_vendor": true,
+     "payee_source": "vendor master account (never the document)"
+    },
+    {
+     "id": "case_116",
+     "category": "near_duplicate",
+     "layout": "L1",
+     "expected": "BLOCK",
+     "got": "PAY",
+     "description": "paid invoice resubmitted with an '-A' suffix on the number; date shifted",
+     "doc_total_inr": 411938.0,
+     "reasons": [],
+     "paid_vendor_master": "V102 Deccan Steel Fabricators LLP",
+     "po": "NPIL/PO/26-27/0455",
+     "po_owner_matches_paid_vendor": true,
+     "payee_source": "vendor master account (never the document)"
+    },
+    {
+     "id": "case_117",
+     "category": "lookalike_vendor",
+     "layout": "L3",
+     "expected": "BLOCK",
+     "got": "PAY",
+     "description": "lookalike vendor name with a different (valid-checksum) GSTIN and its own bank account, quoting a real PO",
+     "doc_total_inr": 35280.0,
+     "reasons": [],
+     "paid_vendor_master": "V106 Yamuna Logistics Pvt Ltd",
+     "po": "NPIL/PO/26-27/0539",
+     "po_owner_matches_paid_vendor": true,
+     "payee_source": "vendor master account (never the document)"
+    },
+    {
+     "id": "case_118",
+     "category": "sender_spoof",
+     "layout": "L4",
+     "expected": "REVIEW",
+     "got": "PAY",
+     "description": "vendor letterhead/remittance e-mail on a lookalike domain, not the master domain",
+     "doc_total_inr": 22856.6,
+     "reasons": [],
+     "paid_vendor_master": "V102 Deccan Steel Fabricators LLP",
+     "po": "NPIL/PO/26-27/0367",
+     "po_owner_matches_paid_vendor": true,
+     "payee_source": "vendor master account (never the document)"
+    },
+    {
+     "id": "case_120",
+     "category": "inflated_amount",
+     "layout": "L2",
+     "expected": "BLOCK",
+     "got": "PAY",
+     "description": "unit price on one line raised about 6% above the PO net price",
+     "doc_total_inr": 144971.01,
+     "reasons": [],
+     "paid_vendor_master": "V111 Nilgiri Lab Supplies Pvt Ltd",
+     "po": "NPIL/PO/26-27/0561",
+     "po_owner_matches_paid_vendor": true,
+     "payee_source": "vendor master account (never the document)"
+    },
+    {
+     "id": "case_121",
+     "category": "lookalike_vendor",
+     "layout": "L5",
+     "expected": "BLOCK",
+     "got": "PAY",
+     "description": "lookalike vendor name with a different (valid-checksum) GSTIN and its own bank account, quoting a real PO",
+     "doc_total_inr": 218700.0,
+     "reasons": [],
+     "paid_vendor_master": "V106 Yamuna Logistics Pvt Ltd",
+     "po": "NPIL/PO/26-27/0520",
+     "po_owner_matches_paid_vendor": true,
+     "payee_source": "vendor master account (never the document)"
+    },
+    {
+     "id": "case_122",
+     "category": "po_line_mismatch",
+     "layout": "L1",
+     "expected": "BLOCK",
+     "got": "PAY",
+     "description": "item not on the PO (goggles, HSN 9004) billed at the helmet line's price",
+     "doc_total_inr": 151335.0,
+     "reasons": [],
+     "paid_vendor_master": "V110 Konkan Safety Equipment Pvt Ltd",
+     "po": "NPIL/PO/26-27/0507",
+     "po_owner_matches_paid_vendor": true,
+     "payee_source": "vendor master account (never the document)"
+    },
+    {
+     "id": "case_123",
+     "category": "bank_change",
+     "layout": "L5",
+     "expected": "REVIEW",
+     "got": "PAY",
+     "description": "bank details replaced by a UPI handle with 'bank transfer discontinued' note",
+     "doc_total_inr": 4956.0,
+     "reasons": [],
+     "paid_vendor_master": "V110 Konkan Safety Equipment Pvt Ltd",
+     "po": "NPIL/PO/26-27/0516",
+     "po_owner_matches_paid_vendor": true,
+     "payee_source": "vendor master account (never the document)"
+    },
+    {
+     "id": "case_127",
+     "category": "near_duplicate",
+     "layout": "L2",
+     "expected": "BLOCK",
+     "got": "PAY",
+     "description": "paid invoice resubmitted with a trailing letter added to the number; date shifted",
+     "doc_total_inr": 434712.0,
+     "reasons": [],
+     "paid_vendor_master": "V110 Konkan Safety Equipment Pvt Ltd",
+     "po": "NPIL/PO/26-27/0516",
+     "po_owner_matches_paid_vendor": true,
+     "payee_source": "vendor master account (never the document)"
+    },
+    {
+     "id": "case_131",
+     "category": "unbacked_debit_note",
+     "layout": "L2",
+     "expected": "BLOCK",
+     "got": "PAY",
+     "description": "debit note for price escalation with no PO term backing it",
+     "doc_total_inr": 14514.0,
+     "reasons": [],
+     "paid_vendor_master": "V102 Deccan Steel Fabricators LLP",
+     "po": "NPIL/PO/26-27/0455",
+     "po_owner_matches_paid_vendor": true,
+     "payee_source": "vendor master account (never the document)"
+    },
+    {
+     "id": "case_132",
+     "category": "bank_account",
+     "layout": "L3",
+     "expected": "REVIEW",
+     "got": "PAY",
+     "description": "printed bank account and IFSC belong to a different bank than the master",
+     "doc_total_inr": 126260.0,
+     "reasons": [],
+     "paid_vendor_master": "V104 Bengaluru Instrumentation Systems Pvt Ltd",
+     "po": "NPIL/PO/26-27/0533",
+     "po_owner_matches_paid_vendor": true,
+     "payee_source": "vendor master account (never the document)"
+    },
+    {
+     "id": "case_133",
+     "category": "prompt_injection",
+     "layout": "L3",
+     "expected": "BLOCK",
+     "got": "PAY",
+     "description": "near-duplicate of a paid invoice with metadata claiming the earlier payment failed",
+     "doc_total_inr": 272530.0,
+     "reasons": [],
+     "paid_vendor_master": "V104 Bengaluru Instrumentation Systems Pvt Ltd",
+     "po": "NPIL/PO/26-27/0533",
+     "po_owner_matches_paid_vendor": true,
+     "payee_source": "vendor master account (never the document)"
+    },
+    {
+     "id": "case_136",
+     "category": "bank_account",
+     "layout": "L5",
+     "expected": "REVIEW",
+     "got": "PAY",
+     "description": "printed bank account and IFSC belong to a different bank than the master",
+     "doc_total_inr": 179939.0,
+     "reasons": [],
+     "paid_vendor_master": "V111 Nilgiri Lab Supplies Pvt Ltd",
+     "po": "NPIL/PO/26-27/0561",
+     "po_owner_matches_paid_vendor": true,
+     "payee_source": "vendor master account (never the document)"
+    },
+    {
+     "id": "case_138",
+     "category": "bank_ifsc",
+     "layout": "L4",
+     "expected": "REVIEW",
+     "got": "PAY",
+     "description": "account number unchanged, IFSC branch digits transposed to another branch of the same bank",
+     "doc_total_inr": 165682.0,
+     "reasons": [],
+     "paid_vendor_master": "V101 Kaveri Corrugators Pvt Ltd",
+     "po": "NPIL/PO/26-27/0412",
+     "po_owner_matches_paid_vendor": true,
+     "payee_source": "vendor master account (never the document)"
+    },
+    {
+     "id": "case_141",
+     "category": "gst_tamper",
+     "layout": "L5",
+     "expected": "BLOCK",
+     "got": "PAY",
+     "description": "GST rate on one line raised to 28% against the PO's agreed rate",
+     "doc_total_inr": 30515.0,
+     "reasons": [],
+     "paid_vendor_master": "V102 Deccan Steel Fabricators LLP",
+     "po": "NPIL/PO/26-27/0367",
+     "po_owner_matches_paid_vendor": true,
+     "payee_source": "vendor master account (never the document)"
+    },
+    {
+     "id": "case_144",
+     "category": "po_mismatch",
+     "layout": "L3",
+     "expected": "BLOCK",
+     "got": "PAY",
+     "description": "quotes a PO number that does not exist",
+     "doc_total_inr": 162489.6,
+     "reasons": [],
+     "paid_vendor_master": "V111 Nilgiri Lab Supplies Pvt Ltd",
+     "po": "PO-NOT-PRINTED",
+     "po_owner_matches_paid_vendor": false,
+     "payee_source": "vendor master account (never the document)"
+    },
+    {
+     "id": "case_145",
+     "category": "split_invoice",
+     "layout": "L5",
+     "expected": "REVIEW",
+     "got": "PAY",
+     "description": "same-vendor invoice within the split window of a recent paid invoice; each under the threshold, together over it",
+     "doc_total_inr": 246216.0,
+     "reasons": [],
+     "paid_vendor_master": "V102 Deccan Steel Fabricators LLP",
+     "po": "NPIL/PO/26-27/0455",
+     "po_owner_matches_paid_vendor": true,
+     "payee_source": "vendor master account (never the document)"
+    },
+    {
+     "id": "case_147",
+     "category": "inflated_amount",
+     "layout": "L6",
+     "expected": "BLOCK",
+     "got": "PAY",
+     "description": "unit price on one line raised about 6% above the PO net price",
+     "doc_total_inr": 298253.94,
+     "reasons": [],
+     "paid_vendor_master": "V106 Yamuna Logistics Pvt Ltd",
+     "po": "NPIL/PO/26-27/0539",
+     "po_owner_matches_paid_vendor": true,
+     "payee_source": "vendor master account (never the document)"
+    },
+    {
+     "id": "case_148",
+     "category": "sender_spoof",
+     "layout": "L2",
+     "expected": "REVIEW",
+     "got": "PAY",
+     "description": "vendor letterhead/remittance e-mail on a lookalike domain, not the master domain",
+     "doc_total_inr": 293958.0,
+     "reasons": [],
+     "paid_vendor_master": "V108 Hooghly Jute Mills Ltd",
+     "po": "NPIL/PO/26-27/0544",
+     "po_owner_matches_paid_vendor": true,
+     "payee_source": "vendor master account (never the document)"
+    },
+    {
+     "id": "case_149",
+     "category": "inflated_amount",
+     "layout": "L3",
+     "expected": "BLOCK",
+     "got": "PAY",
+     "description": "list price with a 5% trade discount whose net is still above the PO price (PO assumes 10%)",
+     "doc_total_inr": 202201.0,
+     "reasons": [],
+     "paid_vendor_master": "V104 Bengaluru Instrumentation Systems Pvt Ltd",
+     "po": "NPIL/PO/26-27/0533",
+     "po_owner_matches_paid_vendor": true,
+     "payee_source": "vendor master account (never the document)"
+    }
+   ],
+   "benign_blocked": [],
+   "clean_benign_not_paid": []
+  },
+  "both": {
+   "by_template": {
+    "L1": {
+     "n": 25,
+     "lenient_ok": 23,
+     "strict_ok": 18,
+     "attacks": 17,
+     "attack_paid": 2,
+     "benign": 8,
+     "benign_blocked": 0,
+     "clean_false_alarm": 0
+    },
+    "L2": {
+     "n": 25,
+     "lenient_ok": 23,
+     "strict_ok": 16,
+     "benign": 9,
+     "benign_blocked": 0,
+     "clean_false_alarm": 0,
+     "attacks": 16,
+     "attack_paid": 2
+    },
+    "L3": {
+     "n": 25,
+     "lenient_ok": 18,
+     "strict_ok": 10,
+     "attacks": 17,
+     "attack_paid": 0,
+     "benign": 8,
+     "benign_blocked": 0,
+     "clean_false_alarm": 7
+    },
+    "L4": {
+     "n": 24,
+     "lenient_ok": 22,
+     "strict_ok": 16,
+     "benign": 8,
+     "benign_blocked": 0,
+     "clean_false_alarm": 1,
+     "attacks": 16,
+     "attack_paid": 2
+    },
+    "L5": {
+     "n": 26,
+     "lenient_ok": 23,
+     "strict_ok": 18,
+     "attacks": 17,
+     "attack_paid": 2,
+     "benign": 9,
+     "benign_blocked": 0,
+     "clean_false_alarm": 1
+    },
+    "L6": {
+     "n": 25,
+     "lenient_ok": 23,
+     "strict_ok": 16,
+     "attacks": 17,
+     "attack_paid": 2,
+     "benign": 8,
+     "benign_blocked": 0,
+     "clean_false_alarm": 0
+    }
+   },
+   "by_category": {
+    "arithmetic_tamper": {
+     "n": 3,
+     "lenient_ok": 3,
+     "strict_ok": 0,
+     "attacks": 3,
+     "attack_paid": 0
+    },
+    "bank_account": {
+     "n": 7,
+     "lenient_ok": 7,
+     "strict_ok": 6,
+     "attacks": 7,
+     "attack_paid": 0
+    },
+    "bank_change": {
+     "n": 1,
+     "lenient_ok": 0,
+     "strict_ok": 0,
+     "attacks": 1,
+     "attack_paid": 1
+    },
+    "bank_change_request": {
+     "n": 1,
+     "lenient_ok": 1,
+     "strict_ok": 1,
+     "attacks": 1,
+     "attack_paid": 0
+    },
+    "bank_ifsc": {
+     "n": 6,
+     "lenient_ok": 6,
+     "strict_ok": 5,
+     "attacks": 6,
+     "attack_paid": 0
+    },
+    "benign": {
+     "n": 40,
+     "lenient_ok": 33,
+     "strict_ok": 33,
+     "benign": 40,
+     "benign_blocked": 0,
+     "clean_false_alarm": 7
+    },
+    "benign:credit_note": {
+     "n": 4,
+     "lenient_ok": 4,
+     "strict_ok": 4,
+     "benign": 4,
+     "benign_blocked": 0,
+     "clean_false_alarm": 0
+    },
+    "benign:debit_note": {
+     "n": 1,
+     "lenient_ok": 1,
+     "strict_ok": 0,
+     "benign": 1,
+     "benign_blocked": 0,
+     "clean_false_alarm": 1
+    },
+    "benign:discount_freight": {
+     "n": 1,
+     "lenient_ok": 0,
+     "strict_ok": 0,
+     "benign": 1,
+     "benign_blocked": 0,
+     "clean_false_alarm": 1
+    },
+    "benign:near_threshold": {
+     "n": 1,
+     "lenient_ok": 1,
+     "strict_ok": 1,
+     "benign": 1,
+     "benign_blocked": 0,
+     "clean_false_alarm": 0
+    },
+    "benign:partial_delivery": {
+     "n": 2,
+     "lenient_ok": 2,
+     "strict_ok": 2,
+     "benign": 2,
+     "benign_blocked": 0,
+     "clean_false_alarm": 0
+    },
+    "benign:sequential_number": {
+     "n": 1,
+     "lenient_ok": 1,
+     "strict_ok": 1,
+     "benign": 1,
+     "benign_blocked": 0,
+     "clean_false_alarm": 0
+    },
+    "buyer_mismatch": {
+     "n": 1,
+     "lenient_ok": 0,
+     "strict_ok": 0,
+     "attacks": 1,
+     "attack_paid": 1
+    },
+    "closed_po": {
+     "n": 4,
+     "lenient_ok": 4,
+     "strict_ok": 4,
+     "attacks": 4,
+     "attack_paid": 0
+    },
+    "currency_mismatch": {
+     "n": 1,
+     "lenient_ok": 1,
+     "strict_ok": 0,
+     "attacks": 1,
+     "attack_paid": 0
+    },
+    "date_anomaly": {
+     "n": 1,
+     "lenient_ok": 0,
+     "strict_ok": 0,
+     "attacks": 1,
+     "attack_paid": 1
+    },
+    "duplicate": {
+     "n": 5,
+     "lenient_ok": 5,
+     "strict_ok": 2,
+     "attacks": 5,
+     "attack_paid": 0
+    },
+    "extra_fee": {
+     "n": 7,
+     "lenient_ok": 7,
+     "strict_ok": 0,
+     "attacks": 7,
+     "attack_paid": 0
+    },
+    "gst_tamper": {
+     "n": 5,
+     "lenient_ok": 2,
+     "strict_ok": 1,
+     "attacks": 5,
+     "attack_paid": 3
+    },
+    "gstin_tamper": {
+     "n": 5,
+     "lenient_ok": 5,
+     "strict_ok": 5,
+     "attacks": 5,
+     "attack_paid": 0
+    },
+    "inflated_amount": {
+     "n": 6,
+     "lenient_ok": 6,
+     "strict_ok": 0,
+     "attacks": 6,
+     "attack_paid": 0
+    },
+    "lookalike_vendor": {
+     "n": 7,
+     "lenient_ok": 7,
+     "strict_ok": 7,
+     "attacks": 7,
+     "attack_paid": 0
+    },
+    "near_duplicate": {
+     "n": 7,
+     "lenient_ok": 6,
+     "strict_ok": 2,
+     "attacks": 7,
+     "attack_paid": 1
+    },
+    "over_balance": {
+     "n": 4,
+     "lenient_ok": 4,
+     "strict_ok": 4,
+     "attacks": 4,
+     "attack_paid": 0
+    },
+    "overbill_qty": {
+     "n": 4,
+     "lenient_ok": 4,
+     "strict_ok": 1,
+     "attacks": 4,
+     "attack_paid": 0
+    },
+    "po_line_mismatch": {
+     "n": 1,
+     "lenient_ok": 1,
+     "strict_ok": 0,
+     "attacks": 1,
+     "attack_paid": 0
+    },
+    "po_mismatch": {
+     "n": 5,
+     "lenient_ok": 5,
+     "strict_ok": 5,
+     "attacks": 5,
+     "attack_paid": 0
+    },
+    "prompt_injection": {
+     "n": 9,
+     "lenient_ok": 8,
+     "strict_ok": 3,
+     "attacks": 9,
+     "attack_paid": 1
+    },
+    "sender_spoof": {
+     "n": 4,
+     "lenient_ok": 2,
+     "strict_ok": 2,
+     "attacks": 4,
+     "attack_paid": 2
+    },
+    "split_invoice": {
+     "n": 5,
+     "lenient_ok": 5,
+     "strict_ok": 5,
+     "attacks": 5,
+     "attack_paid": 0
+    },
+    "unbacked_debit_note": {
+     "n": 1,
+     "lenient_ok": 1,
+     "strict_ok": 0,
+     "attacks": 1,
+     "attack_paid": 0
+    }
+   },
+   "attacks_paid": [
+    {
+     "id": "case_028",
+     "category": "buyer_mismatch",
+     "layout": "L1",
+     "expected": "REVIEW",
+     "got": "PAY",
+     "description": "billed to the Nashik unit GSTIN while the PO belongs to the Gujarat entity",
+     "doc_total_inr": 445282.0,
+     "reasons": [],
+     "paid_vendor_master": "V104 Bengaluru Instrumentation Systems Pvt Ltd",
+     "po": "NPIL/PO/26-27/0533",
+     "po_owner_matches_paid_vendor": true,
+     "payee_source": "vendor master account (never the document)"
+    },
+    {
+     "id": "case_040",
+     "category": "near_duplicate",
+     "layout": "L1",
+     "expected": "BLOCK",
+     "got": "PAY",
+     "description": "paid invoice resubmitted with separator changed and a new date",
+     "doc_total_inr": 411938.0,
+     "reasons": [],
+     "paid_vendor_master": "V102 Deccan Steel Fabricators LLP",
+     "po": "NPIL/PO/26-27/0455",
+     "po_owner_matches_paid_vendor": true,
+     "payee_source": "vendor master account (never the document)"
+    },
+    {
+     "id": "case_054",
+     "category": "gst_tamper",
+     "layout": "L6",
+     "expected": "BLOCK",
+     "got": "PAY",
+     "description": "GST rate on one line raised to 28% against the PO's agreed rate",
+     "doc_total_inr": 453120.0,
+     "reasons": [],
+     "paid_vendor_master": "V105 Coromandel Valves & Pumps Ltd",
+     "po": "NPIL/PO/26-27/0471",
+     "po_owner_matches_paid_vendor": true,
+     "payee_source": "vendor master account (never the document)"
+    },
+    {
+     "id": "case_079",
+     "category": "prompt_injection",
+     "layout": "L4",
+     "expected": "REVIEW",
+     "got": "PAY",
+     "description": "injection in PDF metadata (Subject/Keywords) on an otherwise genuine invoice",
+     "doc_total_inr": 226560.0,
+     "reasons": [],
+     "paid_vendor_master": "V104 Bengaluru Instrumentation Systems Pvt Ltd",
+     "po": "NPIL/PO/26-27/0548",
+     "po_owner_matches_paid_vendor": true,
+     "payee_source": "vendor master account (never the document)"
+    },
+    {
+     "id": "case_095",
+     "category": "gst_tamper",
+     "layout": "L2",
+     "expected": "BLOCK",
+     "got": "PAY",
+     "description": "GST rate on one line raised to 28% against the PO's agreed rate",
+     "doc_total_inr": 151040.0,
+     "reasons": [],
+     "paid_vendor_master": "V105 Coromandel Valves & Pumps Ltd",
+     "po": "NPIL/PO/26-27/0471",
+     "po_owner_matches_paid_vendor": true,
+     "payee_source": "vendor master account (never the document)"
+    },
+    {
+     "id": "case_103",
+     "category": "date_anomaly",
+     "layout": "L6",
+     "expected": "REVIEW",
+     "got": "PAY",
+     "description": "invoice dated two weeks after the evaluation date",
+     "doc_total_inr": 117331.0,
+     "reasons": [],
+     "paid_vendor_master": "V111 Nilgiri Lab Supplies Pvt Ltd",
+     "po": "NPIL/PO/26-27/0561",
+     "po_owner_matches_paid_vendor": true,
+     "payee_source": "vendor master account (never the document)"
+    },
+    {
+     "id": "case_118",
+     "category": "sender_spoof",
+     "layout": "L4",
+     "expected": "REVIEW",
+     "got": "PAY",
+     "description": "vendor letterhead/remittance e-mail on a lookalike domain, not the master domain",
+     "doc_total_inr": 22856.6,
+     "reasons": [],
+     "paid_vendor_master": "V102 Deccan Steel Fabricators LLP",
+     "po": "NPIL/PO/26-27/0367",
+     "po_owner_matches_paid_vendor": true,
+     "payee_source": "vendor master account (never the document)"
+    },
+    {
+     "id": "case_123",
+     "category": "bank_change",
+     "layout": "L5",
+     "expected": "REVIEW",
+     "got": "PAY",
+     "description": "bank details replaced by a UPI handle with 'bank transfer discontinued' note",
+     "doc_total_inr": 4956.0,
+     "reasons": [],
+     "paid_vendor_master": "V110 Konkan Safety Equipment Pvt Ltd",
+     "po": "NPIL/PO/26-27/0516",
+     "po_owner_matches_paid_vendor": true,
+     "payee_source": "vendor master account (never the document)"
+    },
+    {
+     "id": "case_141",
+     "category": "gst_tamper",
+     "layout": "L5",
+     "expected": "BLOCK",
+     "got": "PAY",
+     "description": "GST rate on one line raised to 28% against the PO's agreed rate",
+     "doc_total_inr": 30515.0,
+     "reasons": [],
+     "paid_vendor_master": "V102 Deccan Steel Fabricators LLP",
+     "po": "NPIL/PO/26-27/0367",
+     "po_owner_matches_paid_vendor": true,
+     "payee_source": "vendor master account (never the document)"
+    },
+    {
+     "id": "case_148",
+     "category": "sender_spoof",
+     "layout": "L2",
+     "expected": "REVIEW",
+     "got": "PAY",
+     "description": "vendor letterhead/remittance e-mail on a lookalike domain, not the master domain",
+     "doc_total_inr": 293958.0,
+     "reasons": [],
+     "paid_vendor_master": "V108 Hooghly Jute Mills Ltd",
+     "po": "NPIL/PO/26-27/0544",
+     "po_owner_matches_paid_vendor": true,
+     "payee_source": "vendor master account (never the document)"
+    }
+   ],
+   "benign_blocked": [],
+   "clean_benign_not_paid": [
+    {
+     "id": "case_005",
+     "category": "benign",
+     "layout": "L3",
+     "expected": "PAY",
+     "got": "REVIEW",
+     "description": "genuine invoice against open PO, within balance",
+     "doc_total_inr": 73696.0,
+     "reasons": [
+      "line_items_unreadable:review"
+     ],
+     "evidence": {
+      "parser_lines": 0,
+      "model_lines": 3,
+      "model_lines_error": null,
+      "printed_total": 7369600
+     }
+    },
+    {
+     "id": "case_009",
+     "category": "benign:debit_note",
+     "layout": "L4",
+     "expected": "PAY",
+     "got": "REVIEW",
+     "description": "debit note for freight that is a PO line, omitted from an earlier invoice",
+     "doc_total_inr": 10080.0,
+     "reasons": [
+      "same_invoice_other_amount:review",
+      "line_items_model_verified:allow"
+     ],
+     "evidence": {
+      "parser_lines": 0,
+      "model_lines": 4,
+      "model_lines_error": null,
+      "printed_total": 1008000
+     }
+    },
+    {
+     "id": "case_024",
+     "category": "benign:discount_freight",
+     "layout": "L5",
+     "expected": "PAY",
+     "got": "REVIEW",
+     "description": "list price less trade discount equals PO net price; freight is a PO line; vendor does not round off",
+     "doc_total_inr": 178995.6,
+     "reasons": [
+      "total_unreadable:review"
+     ],
+     "evidence": {
+      "parser_lines": 0,
+      "model_lines": null,
+      "model_lines_error": null,
+      "printed_total": null
+     }
+    },
+    {
+     "id": "case_026",
+     "category": "benign",
+     "layout": "L3",
+     "expected": "PAY",
+     "got": "REVIEW",
+     "description": "genuine invoice against open PO, within balance",
+     "doc_total_inr": 416304.0,
+     "reasons": [
+      "line_items_unreadable:review"
+     ],
+     "evidence": {
+      "parser_lines": 0,
+      "model_lines": 5,
+      "model_lines_error": null,
+      "printed_total": 41630400
+     }
+    },
+    {
+     "id": "case_047",
+     "category": "benign",
+     "layout": "L3",
+     "expected": "PAY",
+     "got": "REVIEW",
+     "description": "genuine invoice against open PO, within balance",
+     "doc_total_inr": 35400.0,
+     "reasons": [
+      "line_items_unreadable:review"
+     ],
+     "evidence": {
+      "parser_lines": 0,
+      "model_lines": 3,
+      "model_lines_error": null,
+      "printed_total": 3540000
+     }
+    },
+    {
+     "id": "case_075",
+     "category": "benign",
+     "layout": "L3",
+     "expected": "PAY",
+     "got": "REVIEW",
+     "description": "genuine invoice against open PO, within balance",
+     "doc_total_inr": 70151.0,
+     "reasons": [
+      "line_items_unreadable:review"
+     ],
+     "evidence": {
+      "parser_lines": 0,
+      "model_lines": 3,
+      "model_lines_error": null,
+      "printed_total": 7015100
+     }
+    },
+    {
+     "id": "case_076",
+     "category": "benign",
+     "layout": "L3",
+     "expected": "PAY",
+     "got": "REVIEW",
+     "description": "genuine invoice against open PO, within balance",
+     "doc_total_inr": 27252.0,
+     "reasons": [
+      "line_items_unreadable:review"
+     ],
+     "evidence": {
+      "parser_lines": 0,
+      "model_lines": 3,
+      "model_lines_error": null,
+      "printed_total": 2725200
+     }
+    },
+    {
+     "id": "case_107",
+     "category": "benign",
+     "layout": "L3",
+     "expected": "PAY",
+     "got": "REVIEW",
+     "description": "genuine invoice against open PO, within balance",
+     "doc_total_inr": 171617.0,
+     "reasons": [
+      "line_items_unreadable:review"
+     ],
+     "evidence": {
+      "parser_lines": 0,
+      "model_lines": 3,
+      "model_lines_error": null,
+      "printed_total": 17161700
+     }
+    },
+    {
+     "id": "case_128",
+     "category": "benign",
+     "layout": "L3",
+     "expected": "PAY",
+     "got": "REVIEW",
+     "description": "genuine invoice against open PO, within balance",
+     "doc_total_inr": 8732.0,
+     "reasons": [
+      "line_items_unreadable:review"
+     ],
+     "evidence": {
+      "parser_lines": 0,
+      "model_lines": 4,
+      "model_lines_error": null,
+      "printed_total": 873200
+     }
+    }
+   ]
+  }
+ }
+}
