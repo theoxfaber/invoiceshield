@@ -113,6 +113,10 @@ pub struct Request {
     /// Untrusted: used only if `lines::verify_proposed` passes against the signed text layer.
     #[serde(default)]
     pub proposed_item_lines: Option<Vec<ItemLine>>,
+    /// Checker signals already verified by `trust.rs` (signed checker envelope). Never read from
+    /// the wire; when set, `checker_raw` is ignored.
+    #[serde(skip)]
+    pub checker_signals: Option<Vec<Signal>>,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
@@ -243,17 +247,20 @@ impl Governor {
             tamper: false,
             no_ledger: false,
         };
-        let signals = req
-            .checker_raw
-            .as_deref()
-            .map(parse_checker_signals)
-            .unwrap_or_else(|| {
-                vec![Signal {
-                    kind: "checker_missing".into(),
-                    severity: crate::verdict::Severity::Review,
-                    detail: "no checker report".into(),
-                }]
-            });
+        let signals = if let Some(s) = &req.checker_signals {
+            s.clone()
+        } else {
+            req.checker_raw
+                .as_deref()
+                .map(parse_checker_signals)
+                .unwrap_or_else(|| {
+                    vec![Signal {
+                        kind: "checker_missing".into(),
+                        severity: crate::verdict::Severity::Review,
+                        detail: "no checker report".into(),
+                    }]
+                })
+        };
 
         // 1. Bank fields in the proposal → BLOCK (agent tried to choose the payee).
         if let Some(obj) = req.proposal.as_object() {
@@ -474,6 +481,23 @@ impl Governor {
 
         // 6. Duplicates: exact key, IRN, same invoice with another amount.
         let key = normalize::invoice_no(&p.invoice_no);
+        // 6a. A human already REJECTED this invoice (post-review hardening): BLOCK, with no time
+        // window, until an operator/approver reopens that decision (audited).
+        let ck_now = content_key(req.evidence.text_layer.as_deref(), &p.invoice_no);
+        if let Some(e) =
+            self.ledger
+                .previously_rejected(&p.vendor_id, &key, p.irn.as_deref(), ck_now.as_deref())
+        {
+            ctx.add(
+                "previously_rejected",
+                Verdict::Block,
+                Control::Structural,
+                format!(
+                    "a human rejected this invoice under decision {}; it stays rejected until an operator or approver reopens that decision",
+                    e.decision_id
+                ),
+            );
+        }
         if let Some(e) = self
             .ledger
             .exact_duplicate(&p.vendor_id, &key, p.amount_paise)
@@ -994,6 +1018,7 @@ impl Governor {
                     near_key: normalize::near_dup_base(&p.invoice_no),
                     content_key: content.clone(),
                     lines_key: lines_key.clone(),
+                    reopened: false,
                 });
             }
         }
@@ -1040,6 +1065,23 @@ impl Governor {
 
     pub fn set_next_id(&mut self, n: u64) {
         self.next_id = n.max(1);
+    }
+
+    /// Reopen a human-rejected decision (operator/approver, out of band). Audited.
+    pub fn reopen_rejection(
+        &mut self,
+        decision_id: &str,
+        by: &str,
+        reason: &str,
+        now: i64,
+    ) -> bool {
+        let ok = self.ledger.reopen(decision_id);
+        if ok {
+            self.audit.append(
+                serde_json::json!({"reopen": decision_id, "by": by, "reason": reason, "ts": now}),
+            );
+        }
+        ok
     }
 
     /// Human decision on a pending REVIEW (out of band, never via the agent).

@@ -81,19 +81,66 @@ def _strip_reasoning(s: str) -> str:
     return re.sub(r"<think>.*?</think>", "", s or "", flags=re.S).strip()
 
 
+RENDER_LIMITS = {"cpu_secs": 20, "mem_bytes": 768 * 1024 * 1024, "fsize_bytes": 32 * 1024 * 1024, "nofile": 64}
+
+
+def render_env(tmpdir: str) -> dict:
+    """The ONLY environment pdftoppm gets: no API keys, tokens or other secrets of this process."""
+    return {"PATH": "/usr/bin:/bin", "HOME": tmpdir, "TMPDIR": tmpdir, "LANG": "C.UTF-8"}
+
+
 def render_pages(pdf: bytes, *, dpi: int = 110, max_pages: int = 2, timeout_s: float = 30.0) -> list[bytes]:
-    """PNG images of the first pages, rendered by poppler's pdftoppm in a child process with a
-    wall-clock limit. Any failure returns no images (the model then reads the text only). Production
-    should run this inside the extractor's sandbox (stated limit, docs/DECISIONS.md)."""
+    """PNG images of the first pages, rendered by poppler's pdftoppm. Any failure returns no images
+    (the model then reads the text only).
+
+    Post-review hardening (finding 3b): this runs in the public sandbox process that holds
+    BASETEN_API_KEY, on attacker-supplied PDFs. pdftoppm therefore runs through extractor/jail.py:
+    a scrubbed environment (render_env, nothing inherited), rlimits (CPU, address space, file
+    size, open files, no cores), a private 0700 temp dir, its own session/process group killed on
+    timeout, and the same user+network namespace attempt as the extractor (logged when refused).
+    """
+    import logging
+    import os
+    import shutil
+    import signal
     import subprocess
     import tempfile
     from pathlib import Path
+
+    from extractor import jail
+
+    tool = shutil.which("pdftoppm", path="/usr/bin:/bin")
+    if not tool:
+        return []
     try:
-        with tempfile.TemporaryDirectory() as t:
+        with tempfile.TemporaryDirectory(prefix="isr-") as t:
+            os.chmod(t, 0o700)
             src = Path(t) / "in.pdf"
             src.write_bytes(pdf)
-            subprocess.run(["pdftoppm", "-r", str(dpi), "-png", "-f", "1", "-l", str(max_pages), str(src), str(Path(t) / "p")],
-                           check=True, timeout=timeout_s, capture_output=True, env={"PATH": "/usr/bin:/bin"})
+            r_fd, w_fd = os.pipe()
+            cfg = {**RENDER_LIMITS, "isolate_network": True, "netns_fd": w_fd}
+            cmd = jail.argv(cfg, [tool, "-r", str(dpi), "-png", "-f", "1", "-l", str(max_pages), str(src), str(Path(t) / "p")])
+            proc = subprocess.Popen(cmd, cwd=t, env=render_env(t), stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL,
+                                    stderr=subprocess.PIPE, start_new_session=True, pass_fds=(w_fd,))
+            os.close(w_fd)
+            try:
+                _, err = proc.communicate(timeout=timeout_s)
+            except subprocess.TimeoutExpired:
+                try:
+                    os.killpg(proc.pid, signal.SIGKILL)
+                except ProcessLookupError:
+                    pass
+                proc.communicate()
+                return []
+            finally:
+                flag = os.read(r_fd, 1)
+                os.close(r_fd)
+                if flag != b"1":
+                    logging.getLogger("extractor.render").warning(
+                        "render_pages: NO network namespace for pdftoppm (unshare refused); rlimits and the "
+                        "scrubbed environment still apply")
+            if proc.returncode != 0:
+                return []
             return [p.read_bytes() for p in sorted(Path(t).glob("p*.png"))][:max_pages]
     except (OSError, subprocess.SubprocessError):
         return []

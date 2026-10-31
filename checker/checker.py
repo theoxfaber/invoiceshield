@@ -8,6 +8,7 @@ signals, and treats unparseable output as REVIEW.
 from __future__ import annotations
 
 import json
+import time
 from dataclasses import dataclass
 
 from agent.schemas import CheckerReport
@@ -70,3 +71,19 @@ def run_checker(provider: LLMProvider, ev: Evidence, *, sample: int = 0, reasoni
         # Hand the governor the raw text; its own parser turns it into a REVIEW signal.
         return CheckerOut(res.content or "", False, 0, err, res.latency_s, res.cached)
     return CheckerOut(to_governor_json(rep), True, len(rep.signals), None, res.latency_s, res.cached)
+
+
+def sign_checker_report(sk, raw: str, evidence_envelope: dict) -> dict:
+    """Sign the checker's raw output, bound to the document and the single-use nonce of the signed
+    evidence it was checked with (post-review hardening, finding 1). The governor reads checker
+    signals only from this envelope (`signed_checker`); an unsigned `checker_raw` is REVIEW.
+
+    `sk` is the checker's own Ed25519 key, never the extractor's. For the binding to stop a
+    compromised payment agent, the key must live with the checker, outside the agent's process.
+    """
+    from extractor import signing
+
+    ev = json.loads(evidence_envelope["payload"])
+    payload = {"v": 1, "kind": "checker", "key_id": signing.key_id(sk.public_key()), "doc_sha256": ev["doc_sha256"],
+               "evidence_nonce": ev["nonce"], "issued_at": int(time.time()), "raw": raw if isinstance(raw, str) else ""}
+    return signing.sign(sk, payload)

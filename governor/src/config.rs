@@ -29,6 +29,9 @@
 //! | `GOVERNOR_EVIDENCE_MAX_AGE_SECS` | no (default 300) | integer 1-86400 |
 //! | `GOVERNOR_EVIDENCE_MAX_SKEW_SECS` | no (default 30) | integer 0-3600 |
 //! | `GOVERNOR_DEV_UNSIGNED_EVIDENCE` | no | unset, `0` or `1`; `1` (tests only) requires `GOVERNOR_EVAL_CLOCK=1` |
+//! | `GOVERNOR_CHECKER_PUBKEY` | no (warned: every decision then gets a REVIEW checker signal) | comma-separated Ed25519 public keys of the checker; must differ from the extractor keys |
+//! | `GOVERNOR_CHECKER_UNSIGNED_OK` | no | unset, `0` or `1`; `1` reads an unsigned `checker_raw` (old wire format, warned) |
+//! | `GOVERNOR_ALLOW_NO_NETNS` | no | unset, `0` or `1`; `1` accepts evidence whose sandbox had no network namespace (warned); default REVIEW |
 //!
 //! `GOVERNOR_DB` and the anchor key are validated where they are opened (server.rs / anchor.rs),
 //! also with exit status 2.
@@ -63,6 +66,9 @@ impl std::fmt::Debug for Config {
             .field("evidence_max_age_secs", &self.trust.max_age_secs)
             .field("evidence_max_skew_secs", &self.trust.max_skew_secs)
             .field("dev_unsigned_evidence", &self.trust.dev_unsigned)
+            .field("checker_keys", &self.trust.checker_keys.len())
+            .field("checker_unsigned_ok", &self.trust.checker_unsigned_ok)
+            .field("allow_no_netns", &self.trust.allow_no_netns)
             .finish()
     }
 }
@@ -216,7 +222,34 @@ impl Config {
         };
         let max_age_secs = int_var("GOVERNOR_EVIDENCE_MAX_AGE_SECS", 300, 1, 86_400);
         let max_skew_secs = int_var("GOVERNOR_EVIDENCE_MAX_SKEW_SECS", 30, 0, 3_600);
-        let mut trust = TrustConfig::new(extractor_keys);
+        let mut flag = |k: &str| -> bool {
+            match get(k).as_deref() {
+                None | Some("") | Some("0") => false,
+                Some("1") => true,
+                Some(other) => {
+                    errs.push(format!("{k} must be 0 or 1 (got {other:?})"));
+                    false
+                }
+            }
+        };
+        let checker_unsigned_ok = flag("GOVERNOR_CHECKER_UNSIGNED_OK");
+        let allow_no_netns = flag("GOVERNOR_ALLOW_NO_NETNS");
+        let checker_keys =
+            match TrustConfig::parse_keys(&get("GOVERNOR_CHECKER_PUBKEY").unwrap_or_default()) {
+                Ok(k) => k,
+                Err(e) => {
+                    errs.push(format!("GOVERNOR_CHECKER_PUBKEY invalid: {e}"));
+                    vec![]
+                }
+            };
+        if checker_keys.iter().any(|c| extractor_keys.contains(c)) {
+            errs.push(
+                "GOVERNOR_CHECKER_PUBKEY must not reuse an extractor key (separate signers)".into(),
+            );
+        }
+        let mut trust = TrustConfig::new(extractor_keys).with_checker_keys(checker_keys);
+        trust.checker_unsigned_ok = checker_unsigned_ok;
+        trust.allow_no_netns = allow_no_netns;
         trust.dev_unsigned = dev_unsigned;
         trust.max_age_secs = max_age_secs;
         trust.max_skew_secs = max_skew_secs;
@@ -376,5 +409,52 @@ mod tests {
         ])
         .expect("dev config");
         assert!(c.trust.dev_unsigned && c.trust.keys.is_empty());
+    }
+
+    /// Post-review hardening: checker key, unsigned-checker and no-netns policies are explicit
+    /// and default to fail-closed.
+    #[test]
+    fn checker_and_netns_policy_default_fail_closed() {
+        let mp = master_path();
+        let k = "0123456789abcdef";
+        let c = cfg(&[
+            ("GOVERNOR_API_KEY", k),
+            ("GOVERNOR_EXTRACTOR_PUBKEY", PK),
+            ("GOVERNOR_MASTER", &mp),
+        ])
+        .unwrap();
+        assert!(c.trust.checker_keys.is_empty());
+        assert!(!c.trust.checker_unsigned_ok && !c.trust.allow_no_netns);
+        // RFC 8032 test-vector 2 public key as the checker key.
+        let ck = "3d4017c3e843895a92b70aa74d1b7ebc9c982ccf2ec4968cc0cd55f12af4660c";
+        let c = cfg(&[
+            ("GOVERNOR_API_KEY", k),
+            ("GOVERNOR_EXTRACTOR_PUBKEY", PK),
+            ("GOVERNOR_MASTER", &mp),
+            ("GOVERNOR_CHECKER_PUBKEY", ck),
+            ("GOVERNOR_ALLOW_NO_NETNS", "1"),
+            ("GOVERNOR_CHECKER_UNSIGNED_OK", "1"),
+        ])
+        .unwrap();
+        assert_eq!(c.trust.checker_keys.len(), 1);
+        assert!(c.trust.checker_unsigned_ok && c.trust.allow_no_netns);
+        let errs = cfg(&[
+            ("GOVERNOR_API_KEY", k),
+            ("GOVERNOR_EXTRACTOR_PUBKEY", PK),
+            ("GOVERNOR_MASTER", &mp),
+            ("GOVERNOR_CHECKER_PUBKEY", PK),
+            ("GOVERNOR_ALLOW_NO_NETNS", "yes"),
+        ])
+        .unwrap_err();
+        assert!(
+            errs.iter()
+                .any(|e| e.contains("must not reuse an extractor key")),
+            "{errs:?}"
+        );
+        assert!(
+            errs.iter()
+                .any(|e| e.starts_with("GOVERNOR_ALLOW_NO_NETNS must be 0 or 1")),
+            "{errs:?}"
+        );
     }
 }

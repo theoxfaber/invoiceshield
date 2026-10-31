@@ -92,6 +92,9 @@ class Signer:
         self._sk = signing.generate()
         self.public_hex = signing.public_hex(self._sk.public_key())
         self.key_id = signing.key_id(self._sk.public_key())
+        # Separate checker key (post-review hardening: checker output is signed and bound).
+        self._ck = signing.generate()
+        self.checker_public_hex = signing.public_hex(self._ck.public_key())
 
     def body(self, b: dict, invoice_no: str) -> dict:
         payload = {
@@ -99,8 +102,11 @@ class Signer:
             "extractor_version": self._version, "issued_at": int(time.time()), "nonce": secrets.token_hex(16),
             "status": "ok", "sandbox": {"wall_s": None, "network_namespace": None}, "evidence": b["evidence"],
         }
+        from checker.checker import sign_checker_report
+
+        env = self._signing.sign(self._sk, payload)
         return {"proposal": {**b["proposal"], "invoice_no": invoice_no, "document_sha256": b["doc_sha256"]},
-                "signed_evidence": self._signing.sign(self._sk, payload), "checker_raw": b["checker_raw"]}
+                "signed_evidence": env, "signed_checker": sign_checker_report(self._ck, b["checker_raw"], env)}
 
 
 def unsigned_body(b: dict, invoice_no: str) -> dict:
@@ -171,6 +177,10 @@ async def run_level(bodies: list[dict], concurrency: int, seconds: float, warmup
     signer = Signer() if signed else None
     if signer:
         env["GOVERNOR_EXTRACTOR_PUBKEY"] = signer.public_hex
+        env["GOVERNOR_CHECKER_PUBKEY"] = signer.checker_public_hex
+        # The synthetic envelopes do not come from a real sandbox run (network_namespace=None), so
+        # the load test accepts that explicitly instead of signing a sandbox fact it did not observe.
+        env["GOVERNOR_ALLOW_NO_NETNS"] = "1"
     else:
         env["GOVERNOR_DEV_UNSIGNED_EVIDENCE"] = "1"
     proc = subprocess.Popen([str(BIN)], env=env, stderr=log, stdout=subprocess.DEVNULL)

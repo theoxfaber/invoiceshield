@@ -25,7 +25,7 @@ use std::path::Path;
 use std::time::Duration;
 
 /// Latest schema version this binary knows. Stored in `PRAGMA user_version`.
-pub const SCHEMA_VERSION: i64 = 2;
+pub const SCHEMA_VERSION: i64 = 3;
 
 /// Versioned migrations, applied in order inside one IMMEDIATE transaction each.
 /// Never edit a released step; add a new one.
@@ -129,6 +129,36 @@ WHEN NEW.approver = (SELECT maker FROM master_changes WHERE change_id = NEW.chan
 BEGIN SELECT RAISE(ABORT, 'maker-checker: the maker cannot approve its own change'); END;
 "#,
     ),
+    (
+        3,
+        r#"
+-- Post-review hardening (docs/REVIEW_FIXES.md).
+-- Finding 4: every accepted evidence nonce, so a restart (or a second process on this DB) cannot
+-- reopen the replay window. Rows older than the evidence max age are pruned: such evidence is
+-- refused as stale anyway.
+CREATE TABLE used_nonces (
+    nonce     TEXT PRIMARY KEY,
+    issued_at INTEGER NOT NULL
+);
+CREATE INDEX used_nonces_issued_at ON used_nonces(issued_at);
+-- A human-REJECTED invoice stays rejected forever (rule `previously_rejected`, BLOCK) unless an
+-- operator/approver reopens it here. Append-only; the ledger row itself never changes.
+CREATE TABLE rejection_reopens (
+    decision_id TEXT PRIMARY KEY REFERENCES decisions(decision_id),
+    reopened_by TEXT NOT NULL,
+    reason      TEXT NOT NULL CHECK (length(reason) > 0),
+    ts          INTEGER NOT NULL
+);
+CREATE TRIGGER reopen_only_rejected BEFORE INSERT ON rejection_reopens
+WHEN (SELECT status FROM ledger WHERE decision_id = NEW.decision_id) IS NOT 'rejected'
+BEGIN SELECT RAISE(ABORT, 'reopen: only a human-rejected entry can be reopened'); END;
+CREATE TRIGGER reopen_not_proposer BEFORE INSERT ON rejection_reopens
+WHEN NEW.reopened_by = (SELECT proposed_by FROM decisions WHERE decision_id = NEW.decision_id)
+BEGIN SELECT RAISE(ABORT, 'maker-checker: the proposer cannot reopen its own rejected decision'); END;
+CREATE TRIGGER rejection_reopens_no_update BEFORE UPDATE ON rejection_reopens
+BEGIN SELECT RAISE(ABORT, 'rejection_reopens is append-only'); END;
+"#,
+    ),
 ];
 
 #[derive(Debug)]
@@ -186,6 +216,16 @@ pub enum ActionOutcome {
     /// The database refused the write (a UNIQUE constraint on the live ledger). Nothing was
     /// written; the caller must treat it as "not paid".
     DbRejected(String),
+}
+
+/// Result of reopening a human-rejected decision.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum ReopenOutcome {
+    Reopened,
+    /// Unknown decision, not rejected by a human, or already reopened.
+    NotRejected,
+    /// The identity reopening it is the one that proposed the payment.
+    SelfReopen,
 }
 
 /// Result of a REVIEW resolution attempt.
@@ -309,6 +349,15 @@ fn load_ledger(c: &Connection) -> Result<Ledger> {
     for row in rows {
         entries.push(serde_json::from_str::<Entry>(&row?)?);
     }
+    let mut st = c.prepare("SELECT decision_id FROM rejection_reopens")?;
+    let reopened: std::collections::HashSet<String> = st
+        .query_map([], |r| r.get::<_, String>(0))?
+        .collect::<rusqlite::Result<_>>()?;
+    for e in entries.iter_mut() {
+        if e.status == EntryStatus::Rejected && reopened.contains(&e.decision_id) {
+            e.reopened = true;
+        }
+    }
     Ok(Ledger { entries })
 }
 
@@ -378,6 +427,52 @@ fn insert_audit(tx: &Transaction, r: &AuditRecord) -> rusqlite::Result<usize> {
             r.hash
         ],
     )
+}
+
+enum NonceOutcome {
+    Fresh,
+    Replayed,
+    Full,
+}
+
+/// Record a signed evidence nonce as used. Prunes rows that can no longer be accepted (issued
+/// before `wall - max_age`, which trust.rs refuses as stale).
+fn persist_nonce(
+    tx: &Transaction,
+    n: &crate::trust::AcceptedNonce,
+    wall: i64,
+    max_age: i64,
+    max_nonces: usize,
+) -> rusqlite::Result<NonceOutcome> {
+    tx.execute(
+        "DELETE FROM used_nonces WHERE issued_at < ?1",
+        [wall - max_age],
+    )?;
+    let seen: bool = tx
+        .query_row(
+            "SELECT 1 FROM used_nonces WHERE nonce = ?1",
+            [&n.nonce],
+            |_| Ok(true),
+        )
+        .optional()?
+        .unwrap_or(false);
+    if seen {
+        return Ok(NonceOutcome::Replayed);
+    }
+    let held: i64 = tx.query_row("SELECT COUNT(*) FROM used_nonces", [], |r| r.get(0))?;
+    if held as usize >= max_nonces {
+        return Ok(NonceOutcome::Full);
+    }
+    tx.execute(
+        "INSERT INTO used_nonces (nonce, issued_at) VALUES (?1, ?2)",
+        params![n.nonce, n.issued_at],
+    )?;
+    Ok(NonceOutcome::Fresh)
+}
+
+/// Number of evidence nonces held in the durable store (tests, metrics).
+pub fn nonces_persisted(c: &Connection) -> Result<i64> {
+    Ok(c.query_row("SELECT COUNT(*) FROM used_nonces", [], |r| r.get(0))?)
 }
 
 fn bump_generation(tx: &Transaction) -> rusqlite::Result<i64> {
@@ -554,7 +649,32 @@ impl Store {
                     .duration_since(std::time::UNIX_EPOCH)
                     .map(|d| d.as_secs() as i64)
                     .unwrap_or(0);
-                self.gov.evaluate_signed_json(raw, now, wall, t)
+                match t.verify_accept(raw, wall) {
+                    Err(r) => self.gov.reject(r.rule, r.verdict, r.detail, now),
+                    Ok((req, None)) => self.gov.evaluate(&req, now),
+                    Ok((req, Some(n))) => {
+                        // Finding 4: the nonce is recorded in the same transaction as the decision.
+                        match persist_nonce(&tx, &n, wall, t.cfg.max_age_secs, t.cfg.max_nonces)? {
+                            NonceOutcome::Fresh => self.gov.evaluate(&req, now),
+                            NonceOutcome::Replayed => self.gov.reject(
+                                "evidence_replayed",
+                                Verdict::Block,
+                                format!(
+                                    "nonce {} was already used (durable nonce store)",
+                                    &n.nonce[..16.min(n.nonce.len())]
+                                ),
+                                now,
+                            ),
+                            NonceOutcome::Full => self.gov.reject(
+                                "evidence_nonce_store_full",
+                                Verdict::Review,
+                                "too many live nonces in the durable store; refusing to decide"
+                                    .into(),
+                                now,
+                            ),
+                        }
+                    }
+                }
             }
             None => self.gov.evaluate_json(raw, now),
         };
@@ -703,13 +823,78 @@ impl Store {
         Ok(ResolveOutcome::Resolved)
     }
 
+    /// Reopen a human-REJECTED decision (operator/approver, audited). Until this is done, the
+    /// same invoice (vendor + number, IRN, or same document text) is BLOCKed `previously_rejected`
+    /// forever, whatever the 30/90-day windows say.
+    pub fn reopen_as(
+        &mut self,
+        id: &str,
+        by: &str,
+        reason: &str,
+        now: i64,
+    ) -> Result<ReopenOutcome> {
+        let r = self.reopen_inner(id, by, reason, now);
+        if !matches!(r, Ok(ReopenOutcome::Reopened)) {
+            self.generation = -1;
+        }
+        r
+    }
+
+    fn reopen_inner(
+        &mut self,
+        id: &str,
+        by: &str,
+        reason: &str,
+        now: i64,
+    ) -> Result<ReopenOutcome> {
+        let tx = self
+            .conn
+            .transaction_with_behavior(TransactionBehavior::Immediate)?;
+        let proposed_by: Option<Option<String>> = tx
+            .query_row(
+                "SELECT proposed_by FROM decisions WHERE decision_id = ?1",
+                [id],
+                |r| r.get(0),
+            )
+            .optional()?;
+        let Some(proposed_by) = proposed_by else {
+            return Ok(ReopenOutcome::NotRejected);
+        };
+        if proposed_by.as_deref() == Some(by) {
+            return Ok(ReopenOutcome::SelfReopen);
+        }
+        Self::sync(
+            &tx,
+            &mut self.gov,
+            &mut self.generation,
+            &self.base_master,
+            self.state_key.as_ref(),
+        )?;
+        self.generation = -1;
+        let aud0 = self.gov.audit.records.len();
+        if !self.gov.reopen_rejection(id, by, reason, now) {
+            return Ok(ReopenOutcome::NotRejected);
+        }
+        tx.execute(
+            "INSERT INTO rejection_reopens (decision_id, reopened_by, reason, ts) VALUES (?1, ?2, ?3, ?4)",
+            params![id, by, reason, now],
+        )?;
+        for r in &self.gov.audit.records[aud0..] {
+            insert_audit(&tx, r)?;
+        }
+        let g = bump_generation(&tx)?;
+        tx.commit()?;
+        self.generation = g;
+        Ok(ReopenOutcome::Reopened)
+    }
+
     /// Eval-only: forget everything (the server exposes it only with GOVERNOR_EVAL_CLOCK=1).
     pub fn reset(&mut self) -> Result<()> {
         let tx = self
             .conn
             .transaction_with_behavior(TransactionBehavior::Immediate)?;
         tx.execute_batch(
-            "DELETE FROM idempotency; DELETE FROM ledger; DELETE FROM review_resolutions; DELETE FROM master_change_approvals;
+            "DELETE FROM idempotency; DELETE FROM rejection_reopens; DELETE FROM ledger; DELETE FROM review_resolutions; DELETE FROM master_change_approvals;
              DELETE FROM master_changes; DELETE FROM audit; DELETE FROM decisions; UPDATE meta SET v = 1 WHERE k = 'next_id';",
         )?;
         bump_generation(&tx)?;

@@ -93,7 +93,7 @@ class GovernorProc:
     """
 
     def __init__(self, master: Path = MASTER, *, dev_unsigned: bool = False, extractor: ExtractorProc | None = None,
-                 extra_env: dict | None = None):
+                 extra_env: dict | None = None, allow_no_netns: bool | None = None):
         self.key = secrets.token_hex(16)
         self.port = _free_port()
         self.dev_unsigned = dev_unsigned
@@ -104,6 +104,20 @@ class GovernorProc:
         env.pop("GOVERNOR_DEV_UNSIGNED_EVIDENCE", None)
         if self.extractor:
             env["GOVERNOR_EXTRACTOR_PUBKEY"] = self.extractor.public_key_hex
+        # Checker key (post-review hardening, finding 1): checker output reaches the governor only
+        # signed with it and bound to the evidence nonce. Ephemeral, in this process's memory. In
+        # this harness the checker runs in the same process as the code that calls it; a production
+        # deployment runs the checker (and this key) as its own service, like the extractor.
+        from extractor import signing as _signing
+        self._checker_key = None if dev_unsigned else _signing.generate()
+        env.pop("GOVERNOR_CHECKER_PUBKEY", None)
+        if self._checker_key is not None:
+            env["GOVERNOR_CHECKER_PUBKEY"] = _signing.public_hex(self._checker_key.public_key())
+        # Network-namespace policy (finding 2): fail closed unless explicitly allowed. None inherits
+        # GOVERNOR_ALLOW_NO_NETNS from the environment (tests/conftest.py sets it only on hosts that
+        # cannot create a namespace, and says so).
+        if allow_no_netns is not None:
+            env["GOVERNOR_ALLOW_NO_NETNS"] = "1" if allow_no_netns else "0"
         if dev_unsigned:
             env["GOVERNOR_DEV_UNSIGNED_EVIDENCE"] = "1"
         env.update(extra_env or {})
@@ -145,7 +159,17 @@ class GovernorProc:
             p["document_sha256"] = document_sha256
         body = {"proposal": p, "signed_evidence": envelope}
         if checker_raw is not None:
-            body["checker_raw"] = checker_raw
+            signed = None
+            if self._checker_key is not None:
+                from checker.checker import sign_checker_report
+                try:
+                    signed = sign_checker_report(self._checker_key, checker_raw, envelope)
+                except (ValueError, KeyError, TypeError):
+                    signed = None  # malformed evidence envelope (tests); the governor rejects it anyway
+            if signed is not None:
+                body["signed_checker"] = signed
+            else:
+                body["checker_raw"] = checker_raw  # not readable by a strict governor (REVIEW)
         if proposed_item_lines is not None:
             # Untrusted (model output); the governor verifies it against the signed text layer.
             body["proposed_item_lines"] = proposed_item_lines
