@@ -173,3 +173,6 @@ SAM 3.1 was in the Oct 26 plan for document region masks. It was never run (no G
 
 ## Sat Oct 31, 2026: no MCP proxy; claim reworded
 No MCP wrapper is built. The README states the governor is an HTTP service, not an MCP server; no document claims MCP support. Revisit only as a post-event next step.
+
+## Sat Oct 31, 2026, ~15:40 IST: Held-out v3 harness root, committed before the one run
+`tools/heldout_eval.py` gains `--set v3` (root `/workspace/blind-cases-v3`, extracted from the sealed tarball whose hashes are in `eval/sealed/v3.SEALED.md`). v3 reuses the v2 schema (its MANIFEST says so), so it uses the **same v2 adapter unchanged** (master, ledger seeds, fooled-agent proposal, date rule). The run meta now records start time, model sample index and checker reasoning. Harness only: no gate, extractor, checker or governor file differs from `freeze-v3` (`git diff freeze-v3 -- . ':!tools/heldout_eval.py' ':!docs/DECISIONS.md'` is empty). `labels/` not opened before all verdicts are written.

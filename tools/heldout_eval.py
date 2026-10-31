@@ -4,6 +4,8 @@ Sets:
   v2   /workspace/blind-cases-v2: the second held-out set, authored after run 1 by a separate AI agent
        with no repo access; attack categories were informed by run 1's failure classes. The harness
        never opens labels/ while running; `--score` reads labels.jsonl only after the run.
+  v3   /workspace/blind-cases-v3: sealed held-out set (eval/sealed/v3.SEALED.md), v2 schema, same adapter as v2.
+       Run once on the freeze-v3 gate code (added 2026-10-31 before the run; harness only).
   v1   /workspace/blind-cases (the first set). Its one blind run is run1 (680be4d). Any run here is a
        POST-FIX RE-RUN ON A SET WE HAD ALREADY SEEN: NO LONGER BLIND.
 
@@ -50,7 +52,9 @@ REPO = pathlib.Path(__file__).resolve().parents[1]
 IST = dt.timezone(dt.timedelta(hours=5, minutes=30))
 CLEAR = json.dumps({"signals": []})
 VERDICT = {"allow": "PAY", "review": "REVIEW", "block": "BLOCK"}
-ROOTS = {"v2": pathlib.Path("/workspace/blind-cases-v2"), "v1": pathlib.Path("/workspace/blind-cases")}
+ROOTS = {"v3": pathlib.Path("/workspace/blind-cases-v3"), "v2": pathlib.Path("/workspace/blind-cases-v2"),
+         "v1": pathlib.Path("/workspace/blind-cases")}
+V2_SCHEMA = ("v2", "v3")  # v3 reuses the v2 schema (blind-cases-v3/MANIFEST.md); same adapter, no new rules
 V1_SHA = "14a370497e59bfd8a66e6d177bb2cbae999ba5d73a4f2b1b49f9ccb82df62bb1"
 LIMIT: list[str] | None = None  # v1 smoke tests only (--only); refused on v2
 
@@ -192,15 +196,15 @@ def v2_proposal(fx: dict, ev: dict, case_id: str) -> dict:
 def load_cases(which: str) -> tuple[list[dict], dict]:
     cases, meta = _load_cases(which)
     if LIMIT:
-        if which == "v2":
-            raise SystemExit("--only is refused on v2 (one full run only)")
+        if which in V2_SCHEMA:
+            raise SystemExit(f"--only is refused on {which} (one full run only)")
         cases = [c for c in cases if c["id"] in LIMIT]
     return cases, meta
 
 
 def _load_cases(which: str) -> tuple[list[dict], dict]:
     root = ROOTS[which]
-    if which == "v2":
+    if which in V2_SCHEMA:
         meta = v2_integrity(root)
         if meta["mismatched"]:
             raise SystemExit(f"integrity failure: {meta['mismatched']}")
@@ -231,7 +235,7 @@ class Ex:
 
 
 def buyer_of(which, c):
-    return c["ctx"]["buyer_entity_gstin"] if which == "v2" else c["policy"]["buyer"]["gstin"]
+    return c["ctx"]["buyer_entity_gstin"] if which in V2_SCHEMA else c["policy"]["buyer"]["gstin"]
 
 
 def case_inputs(which, c) -> dict:
@@ -239,7 +243,7 @@ def case_inputs(which, c) -> dict:
     proposal and model prompts. The governor still receives a freshly signed envelope."""
     env = Ex.get(buyer_of(which, c)).extract(c["pdf"].read_bytes(), {})
     ev = json.loads(env["payload"]).get("evidence") or {}
-    if which == "v2":
+    if which in V2_SCHEMA:
         prop = v2_proposal(c["fx"], ev, c["id"])
     else:
         from tools.blind_eval import proposal as v1_prop
@@ -280,7 +284,7 @@ def prefetch(which: str, workers: int) -> None:
 def gate_once(which, c, inp, arm, calls) -> dict:
     with tempfile.TemporaryDirectory() as t:
         mpath = pathlib.Path(t) / "master.json"
-        if which == "v2":
+        if which in V2_SCHEMA:
             master, seeds = v2_master(c["fx"], c["ctx"]), v2_seeds(c["fx"])
         else:
             from tools.blind_eval import build_master
@@ -300,7 +304,7 @@ def gate_once(which, c, inp, arm, calls) -> dict:
             for ts, prop, ev in seeds:
                 seed_v.append(VERDICT[gov.evaluate(prop, ev, CLEAR, now=ts)["verdict"]])
                 last = max(last, ts)
-            if which == "v2":
+            if which in V2_SCHEMA:
                 day = doc_date(inp["ev"].get("text_layer", "")) or c["ctx"]["received_on"]
                 now = epoch(day, 12)
             else:
@@ -326,6 +330,15 @@ def checker_only(raw: str | None) -> dict:
     return {"verdict": checker_verdict(raw, raw is not None), "reasons": []}
 
 
+NOTES = {
+    "v1": "POST-FIX RE-RUN ON A SET WE HAD ALREADY SEEN: NO LONGER BLIND",
+    "v2": ("second held-out set, authored after run 1 by a separate AI agent with no repo access; attack "
+           "categories were informed by run 1's failure classes. Run once."),
+    "v3": ("third held-out set, sealed before any run (eval/sealed/v3.SEALED.md); authored by an AI agent given only "
+           "SCHEMA.md and THREAT_MODEL.md, no repo access, no results seen. Run once on freeze-v3 gate code; BLIND."),
+}
+
+
 def run(which: str, out: str, commit: str, resume: bool = False, budget_s: float | None = None) -> int:
     """`resume`: keep rows already in the output file and run only the missing cases (re-runs on
     seen sets, so a run can be split across short sessions; never used for a blind run).
@@ -338,6 +351,7 @@ def run(which: str, out: str, commit: str, resume: bool = False, budget_s: float
         rows = [json.loads(x) for x in path.read_text().splitlines() if x.strip()]
     done_ids = {r["id"] for r in rows}
     t_start = time.time()
+    started_ist = dt.datetime.now(IST).isoformat(timespec="seconds")
     for c in cases:
         if c["id"] in done_ids:
             continue
@@ -364,10 +378,9 @@ def run(which: str, out: str, commit: str, resume: bool = False, budget_s: float
         print(row["id"], {a: row.get(a, {}).get("verdict") for a in ("rules", "checker_only", "both")}, row.get("error", ""), flush=True)
         path.write_text("\n".join(json.dumps(r, ensure_ascii=False) for r in rows) + "\n")
     meta.update({"set": which, "commit": commit, "cases": len(rows), "harness_errors": sum("error" in r for r in rows),
-                 "ran_at_ist": dt.datetime.now(IST).isoformat(timespec="seconds"),
-                 "note": ("POST-FIX RE-RUN ON A SET WE HAD ALREADY SEEN: NO LONGER BLIND" if which == "v1" else
-                          "second held-out set, authored after run 1 by a separate AI agent with no repo access; attack "
-                          "categories were informed by run 1's failure classes. Run once.")})
+                 "started_at_ist": started_ist, "ran_at_ist": dt.datetime.now(IST).isoformat(timespec="seconds"),
+                 "model_sample_index": 0, "checker_reasoning": "low",
+                 "note": NOTES[which]})
     (REPO / "eval" / "results" / f"{out}.meta.json").write_text(json.dumps(meta, indent=1) + "\n")
     return 0
 
@@ -375,8 +388,8 @@ def run(which: str, out: str, commit: str, resume: bool = False, budget_s: float
 def score(which: str, out: str) -> int:
     rows = [json.loads(x) for x in (REPO / "eval" / "results" / f"{out}.jsonl").read_text().splitlines() if x.strip()]
     labels = {}
-    if which == "v2":
-        for x in (ROOTS["v2"] / "labels" / "labels.jsonl").read_text().splitlines():
+    if which in V2_SCHEMA:
+        for x in (ROOTS[which] / "labels" / "labels.jsonl").read_text().splitlines():
             if x.strip():
                 lab = json.loads(x)
                 labels[lab["case_id"]] = lab
@@ -417,7 +430,7 @@ def score(which: str, out: str) -> int:
 def main(argv=None) -> int:
     global LIMIT
     ap = argparse.ArgumentParser()
-    ap.add_argument("--set", choices=["v1", "v2"], required=True)
+    ap.add_argument("--set", choices=["v1", "v2", "v3"], required=True)
     ap.add_argument("--prefetch", action="store_true")
     ap.add_argument("--workers", type=int, default=8)
     ap.add_argument("--run", action="store_true")
