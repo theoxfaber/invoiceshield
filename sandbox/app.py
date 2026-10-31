@@ -15,8 +15,12 @@ Hard caps (all env-configurable, see docs/SANDBOX.md):
     (SANDBOX_IP_PER_DAY);
   * global daily request cap (SANDBOX_DAILY_CAP); past it every request gets HTTP 429;
   * model call caps: a daily cap (SANDBOX_MODEL_CALLS_PER_DAY) and a LIFETIME cap derived from a
-    spend ceiling: floor(SANDBOX_SPEND_CAP_USD / SANDBOX_USD_PER_MODEL_CALL) calls, persisted in the
-    state file so a restart does not reset it. The spend ceiling is clamped below $10 (HARD_SPEND_CEILING_USD).
+    spend ceiling: floor(SANDBOX_SPEND_CAP_USD / SANDBOX_USD_PER_MODEL_CALL) calls. On a host without a
+    persistent disk (Render free) the count lives in Postgres (SANDBOX_DATABASE_URL, atomic reserve in
+    one transaction, daily model-call count too); with SANDBOX_REQUIRE_DURABLE=1 no model is called unless
+    that store answered, so a restart or an unreachable store never resets or bypasses the cap. Without a
+    database URL the count is persisted in the state file (compose volume). The spend ceiling is clamped
+    below $10 (HARD_SPEND_CEILING_USD).
     Past either cap no model is called and the request goes on without a checker report, which the
     governor answers with REVIEW (fail closed);
   * upload size (SANDBOX_MAX_BYTES, default 2 MB) and the extraction sandbox's own page/CPU limits.
@@ -62,11 +66,13 @@ def env_int(name: str, default: int) -> int:
         return default
 
 
+DATABASE_URL = os.environ.get("SANDBOX_DATABASE_URL") or os.environ.get("DATABASE_URL") or ""
+REQUIRE_DURABLE = os.environ.get("SANDBOX_REQUIRE_DURABLE", "0") == "1"
 IP_PER_MIN = env_int("SANDBOX_IP_PER_MIN", 4)
 IP_BURST = env_int("SANDBOX_IP_BURST", 4)
 IP_PER_DAY = env_int("SANDBOX_IP_PER_DAY", 40)
 DAILY_CAP = env_int("SANDBOX_DAILY_CAP", 500)
-MODEL_CALLS_PER_DAY = env_int("SANDBOX_MODEL_CALLS_PER_DAY", 100)
+MODEL_CALLS_PER_DAY = env_int("SANDBOX_MODEL_CALLS_PER_DAY", 50)
 
 
 def env_float(name: str, default: float) -> float:
@@ -81,11 +87,12 @@ def env_float(name: str, default: float) -> float:
 # proposal with page images, up to 6000 output tokens); check it against the provider's bill and lower
 # SANDBOX_SPEND_CAP_USD if real calls cost more. The ceiling can only be lowered, never raised past $10.
 HARD_SPEND_CEILING_USD = 9.50
-SPEND_CAP_USD = min(env_float("SANDBOX_SPEND_CAP_USD", 9.00), HARD_SPEND_CEILING_USD)
+SPEND_CAP_USD = min(env_float("SANDBOX_SPEND_CAP_USD", 5.00), HARD_SPEND_CEILING_USD)
 USD_PER_MODEL_CALL = max(env_float("SANDBOX_USD_PER_MODEL_CALL", 0.02), 0.001)
 MODEL_CALLS_TOTAL = int(SPEND_CAP_USD / USD_PER_MODEL_CALL)
 MAX_BYTES = env_int("SANDBOX_MAX_BYTES", 2 * 1024 * 1024)
 TRUST_PROXY = os.environ.get("SANDBOX_TRUST_PROXY", "0") == "1"
+CLIENT_IP_HEADER = os.environ.get("SANDBOX_CLIENT_IP_HEADER", "").strip()
 USE_MODEL = os.environ.get("SANDBOX_USE_MODEL", "1") == "1" and bool(os.environ.get("BASETEN_API_KEY"))
 MAX_TRACKED_IPS = 50_000
 
@@ -135,7 +142,22 @@ class Limits:
             return None
 
     def take_model_calls(self, n: int, counter: "Counter") -> bool:
-        """Reserve n model calls against the daily and the lifetime (spend) cap; False = do not call."""
+        """Reserve n model calls against the daily and the lifetime (spend) cap; False = do not call.
+        With a durable store both caps are checked and counted there, in one transaction; any store
+        error, or SANDBOX_REQUIRE_DURABLE=1 without a working store, means no call (fail closed)."""
+        if counter.store is not None or REQUIRE_DURABLE:
+            if counter.store is None:
+                return False
+            with self.lock:
+                self._roll()
+                day = self.day
+            used = counter.store.reserve_model_calls(n, day, MODEL_CALLS_PER_DAY, MODEL_CALLS_TOTAL)  # outside the lock
+            if used is None:
+                return False
+            with self.lock:
+                if self.day == day:
+                    self.model_calls = used
+            return True
         with self.lock:
             self._roll()
             if self.model_calls + n > MODEL_CALLS_PER_DAY:
@@ -154,14 +176,93 @@ class Limits:
                     "usd_per_model_call_estimate": USD_PER_MODEL_CALL}
 
 
+class PgStore:
+    """Durable counters in Postgres (one table of bigint counters). Every method fails closed:
+    reserve_model_calls returns None (no model call) on any error; add() drops the update; get()
+    returns None. One connection, reopened on error, used under a lock."""
+
+    TABLE = "sandbox_counter"
+
+    def __init__(self, url: str, connect_timeout: int = 5):
+        self.url, self.timeout = url, connect_timeout
+        self.lock = threading.Lock()
+        self.conn = None
+        self.last_error: str | None = None
+
+    def _connect(self):
+        if self.conn is not None and not self.conn.closed:
+            return self.conn
+        import psycopg  # sandbox/requirements.txt; missing driver = store unavailable = fail closed
+        self.conn = psycopg.connect(self.url, connect_timeout=self.timeout, autocommit=True)
+        self.conn.execute(f"CREATE TABLE IF NOT EXISTS {self.TABLE} (k text PRIMARY KEY, v bigint NOT NULL DEFAULT 0)")
+        return self.conn
+
+    def _run(self, fn):
+        with self.lock:
+            try:
+                out = fn(self._connect())
+                self.last_error = None
+                return out
+            except Exception as e:  # noqa: BLE001 - any store problem is reported and fails closed
+                self.last_error = type(e).__name__
+                try:
+                    if self.conn is not None:
+                        self.conn.close()
+                except Exception:  # noqa: BLE001
+                    pass
+                self.conn = None
+                return None
+
+    def ping(self) -> bool:
+        return self._run(lambda c: c.execute("SELECT 1").fetchone()[0] == 1) is True
+
+    def reserve_model_calls(self, n: int, day: str, daily_cap: int, lifetime_cap: int) -> int | None:
+        """Atomically reserve n calls against both caps. Returns today's count after the reserve,
+        or None when a cap would be passed or the store failed (both mean: do not call the model)."""
+        dkey = f"model_calls_day:{day}"
+
+        def tx(c):
+            with c.transaction():
+                c.execute(f"INSERT INTO {self.TABLE} (k, v) VALUES ('model_calls_total', 0), (%s, 0) ON CONFLICT (k) DO NOTHING", (dkey,))
+                rows = dict(c.execute(f"SELECT k, v FROM {self.TABLE} WHERE k IN ('model_calls_total', %s) ORDER BY k FOR UPDATE", (dkey,)).fetchall())
+                total, today_n = int(rows["model_calls_total"]), int(rows[dkey])
+                if total + n > lifetime_cap or today_n + n > daily_cap:
+                    return False
+                c.execute(f"UPDATE {self.TABLE} SET v = v + %s WHERE k IN ('model_calls_total', %s)", (n, dkey))
+                return today_n + n
+        out = self._run(tx)
+        return out if isinstance(out, int) and not isinstance(out, bool) else None
+
+    def add(self, **kw) -> bool:
+        items = [(k, int(v)) for k, v in kw.items() if v]
+        if not items:
+            return True
+
+        def tx(c):
+            with c.transaction():
+                for k, v in items:
+                    c.execute(f"INSERT INTO {self.TABLE} (k, v) VALUES (%s, %s) ON CONFLICT (k) DO UPDATE SET v = {self.TABLE}.v + EXCLUDED.v", (k, v))
+            return True
+        return self._run(tx) is True
+
+    def get(self, day: str) -> dict | None:
+        def q(c):
+            rows = dict(c.execute(f"SELECT k, v FROM {self.TABLE} WHERE k NOT LIKE 'model_calls_day:%%' OR k = %s", ("model_calls_day:" + day,)).fetchall())
+            rows["model_calls_today"] = rows.pop("model_calls_day:" + day, 0)
+            return {k: int(v) for k, v in rows.items()}
+        return self._run(q)
+
+
 class Counter:
     FIELDS = ("attempts", "paid", "review", "block", "paid_to_wrong_account", "foreign_bank_details_printed",
               "foreign_bank_details_paid_to_master", "model_capped",
               "model_calls_total")
 
-    def __init__(self, path: Path):
+    def __init__(self, path: Path, database_url: str | None = None):
         self.path = path
         self.lock = threading.Lock()
+        url = DATABASE_URL if database_url is None else database_url
+        self.store = PgStore(url) if url else None
         self.c = {k: 0 for k in self.FIELDS}
         self.c["since"] = dt.datetime.now(dt.timezone.utc).isoformat(timespec="seconds")
         try:
@@ -171,6 +272,9 @@ class Counter:
             pass
 
     def add(self, **kw):
+        if self.store is not None:
+            self.store.add(**kw)
+            return
         with self.lock:
             for k, v in kw.items():
                 self.c[k] = self.c.get(k, 0) + v
@@ -190,9 +294,17 @@ class Counter:
                 return False  # cannot persist the spend count: fail closed, no model call
             return True
 
-    def get(self) -> dict:
+    def get(self, day: str | None = None) -> dict:
+        if self.store is not None:
+            saved = self.store.get(day or today())
+            out = {k: 0 for k in self.FIELDS}
+            if saved is None:
+                return {**out, "durable_store": "unavailable (no model calls until it answers)"}
+            out.update({k: v for k, v in saved.items() if k in self.FIELDS})
+            return {**out, "model_calls_today": saved.get("model_calls_today", 0), "durable_store": "postgres"}
         with self.lock:
-            return dict(self.c)
+            store = "unavailable (SANDBOX_REQUIRE_DURABLE=1 and no database: no model calls)" if REQUIRE_DURABLE else "file"
+            return {**self.c, "durable_store": store}
 
 
 def fold(s: str) -> str:
@@ -292,10 +404,17 @@ class Handler(BaseHTTPRequestHandler):
         pass
 
     def client_ip(self) -> str:
+        """Behind a proxy (SANDBOX_TRUST_PROXY=1): the header the edge sets and does not let clients
+        forge (SANDBOX_CLIENT_IP_HEADER, e.g. CF-Connecting-IP on Render), else the RIGHTMOST
+        X-Forwarded-For entry (the one our proxy appended; the leftmost is whatever the client sent).
+        A configured header that is missing falls back to the socket address (one shared bucket)."""
         if TRUST_PROXY:
-            xff = self.headers.get("X-Forwarded-For", "")
+            if CLIENT_IP_HEADER:
+                v = self.headers.get(CLIENT_IP_HEADER, "").strip()
+                return v[:64] if v else self.client_address[0]
+            xff = [x.strip() for x in self.headers.get("X-Forwarded-For", "").split(",") if x.strip()]
             if xff:
-                return xff.split(",")[0].strip()
+                return xff[-1][:64]
         return self.client_address[0]
 
     def send(self, code: int, obj, ctype="application/json"):
@@ -315,7 +434,11 @@ class Handler(BaseHTTPRequestHandler):
         if self.path == "/app.js":
             return self.send(200, (REPO / "sandbox" / "app.js").read_bytes(), "text/javascript; charset=utf-8")
         if self.path == "/api/counter":
-            return self.send(200, {**self.counter.get(), **self.limits.snapshot(), "samples": sorted(SAMPLES)})
+            snap = self.limits.snapshot()
+            c = self.counter.get(snap["day_utc"])
+            if "model_calls_today" in c:
+                snap["model_calls_today"] = c.pop("model_calls_today")
+            return self.send(200, {**c, **snap, "model_enabled": USE_MODEL, "samples": sorted(SAMPLES)})
         if self.path == "/healthz":
             return self.send(200, {"ok": True})
         return self.send(404, {"error": "not found"})
@@ -355,6 +478,10 @@ class Handler(BaseHTTPRequestHandler):
 def main() -> int:
     Handler.pipeline = Pipeline()
     port = env_int("PORT", 8000)
+    store = Handler.counter.store
+    durable = "postgres " + ("reachable" if store.ping() else f"UNREACHABLE ({store.last_error}): no model calls until it answers") if store else (
+        "none, SANDBOX_REQUIRE_DURABLE=1: no model calls" if REQUIRE_DURABLE else f"state file {STATE}")
+    print(f"sandbox durable counter: {durable}", flush=True)
     srv = ThreadingHTTPServer((os.environ.get("SANDBOX_BIND", "0.0.0.0"), port), Handler)
     print(f"sandbox on :{port} (model {'on' if USE_MODEL else 'off'}; caps: {DAILY_CAP}/day, {MODEL_CALLS_PER_DAY} model calls/day, {MODEL_CALLS_TOTAL} model calls lifetime = ${SPEND_CAP_USD:.2f} at ${USD_PER_MODEL_CALL}/call)", flush=True)
     try:

@@ -1,0 +1,52 @@
+# Render Blueprint for the public "Fool the Shield" sandbox (docs/SANDBOX.md). Free plan only.
+# Synthetic data only; the model key is set in the dashboard (sync: false), never in this file.
+# The spend counter lives in the free Postgres below because a free web service has no persistent
+# disk; SANDBOX_REQUIRE_DURABLE=1 means no model call unless that database answered (fail closed).
+services:
+  - type: web
+    name: invoiceshield-sandbox
+    runtime: docker
+    plan: free
+    region: oregon
+    dockerfilePath: ./sandbox/Dockerfile
+    dockerContext: .
+    dockerCommand: python -m sandbox.app
+    healthCheckPath: /healthz
+    autoDeploy: false
+    envVars:
+      - key: SANDBOX_TRUST_PROXY
+        value: "1"
+      - key: SANDBOX_CLIENT_IP_HEADER   # set by Cloudflare in front of Render; clients cannot forge it
+        value: CF-Connecting-IP
+      - key: SANDBOX_REQUIRE_DURABLE
+        value: "1"
+      - key: SANDBOX_DATABASE_URL
+        fromDatabase:
+          name: invoiceshield-sandbox-db
+          property: connectionString
+      - key: SANDBOX_USE_MODEL
+        value: "1"
+      - key: SANDBOX_SPEND_CAP_USD
+        value: "5.00"
+      - key: SANDBOX_USD_PER_MODEL_CALL
+        value: "0.02"
+      - key: SANDBOX_MODEL_CALLS_PER_DAY
+        value: "50"
+      - key: SANDBOX_DAILY_CAP
+        value: "300"
+      - key: SANDBOX_IP_PER_MIN
+        value: "4"
+      - key: SANDBOX_IP_BURST
+        value: "4"
+      - key: SANDBOX_IP_PER_DAY
+        value: "40"
+      - key: BASETEN_API_KEY
+        sync: false
+
+databases:
+  - name: invoiceshield-sandbox-db
+    plan: free
+    region: oregon
+    databaseName: sandbox
+    user: sandbox
+    ipAllowList: []   # internal connections from the web service only

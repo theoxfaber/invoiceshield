@@ -6,7 +6,7 @@ Rust governor, which decides PAY / REVIEW / BLOCK. A "fooled" AP agent proposes 
 document asks for. Nothing is ever paid: there is no payment rail, and on PAY the payee is the vendor
 master's beneficiary id.
 
-**Status (2026-10-31): local smoke test only. Not deployed anywhere.** Deploying it is a separate decision.
+**Status (2026-10-31): deployment in progress (Render free web service + free Postgres, `render.yaml`).** See "Deployment" below.
 
 ## Hard limits
 
@@ -18,11 +18,18 @@ master's beneficiary id.
 | Per-IP daily cap | 40 requests | `SANDBOX_IP_PER_DAY` | HTTP 429 |
 | Global daily cap | 500 requests | `SANDBOX_DAILY_CAP` | HTTP 429 for everyone until 00:00 UTC |
 | Tracked IPs | 50,000 per day | (constant) | new IPs get HTTP 429 (fail closed) |
-| Daily model calls | 100 | `SANDBOX_MODEL_CALLS_PER_DAY` | no model call; no checker report, so the governor answers **REVIEW** |
-| Lifetime model calls (spend cap) | floor(9.00 / 0.02) = 450 calls | `SANDBOX_SPEND_CAP_USD` (clamped to at most 9.50), `SANDBOX_USD_PER_MODEL_CALL` | no model call ever again for this state file; every request is **REVIEW** at most |
+| Daily model calls | 50 | `SANDBOX_MODEL_CALLS_PER_DAY` | no model call; no checker report, so the governor answers **REVIEW** |
+| Lifetime model calls (spend cap) | floor(5.00 / 0.02) = 250 calls | `SANDBOX_SPEND_CAP_USD` (clamped to at most 9.50), `SANDBOX_USD_PER_MODEL_CALL` | no model call ever again for this store; every request is **REVIEW** at most |
+| Durable store unreachable | fail closed | `SANDBOX_DATABASE_URL`, `SANDBOX_REQUIRE_DURABLE=1` | no model call; every request is **REVIEW** at most |
 
-- **Spend stays under $10.** The lifetime cap is counted in the state file (`SANDBOX_STATE`, a volume in
-  compose), so a restart does not reset it. The spend ceiling cannot be raised past $9.50 by configuration
+- **Spend stays under $10.** On a public host the lifetime and daily model-call counts live in Postgres
+  (`SANDBOX_DATABASE_URL`; table `sandbox_counter`), reserved atomically in one transaction (`SELECT ... FOR
+  UPDATE`) before any model call, so a restart, a spin-down or a fresh container does not reset them, and
+  concurrent instances cannot overshoot. With `SANDBOX_REQUIRE_DURABLE=1` (set in `render.yaml` and the
+  sandbox image) no model is called unless that store answered: no database URL, a missing driver, a
+  connection error or an error mid-transaction all mean no checker report, so the governor answers REVIEW.
+  The public counter (attempts, paid, ...) is kept in the same table. Without a database URL (local
+  compose) the counts are kept in the state file (`SANDBOX_STATE`, a volume in compose). The spend ceiling cannot be raised past $9.50 by configuration
   (`HARD_SPEND_CEILING_USD` in the code). If the count cannot be written, the call is refused (fail closed).
   The $0.02 per call figure is a pessimistic estimate, not a measured price: check it against the provider's
   bill after the first calls and lower `SANDBOX_SPEND_CAP_USD` (or raise the per-call figure) if calls cost more.
@@ -34,6 +41,10 @@ master's beneficiary id.
 - **Isolation per attempt.** The governor runs in eval mode with an in-memory ledger reset before every
   attempt (one lock), so attempts do not affect each other.
 - **No request logging** of IPs beyond the in-memory counters (which roll over daily).
+- **Client IP behind a proxy.** With `SANDBOX_TRUST_PROXY=1` the rate limiter keys on
+  `SANDBOX_CLIENT_IP_HEADER` (`CF-Connecting-IP` on Render, set by Cloudflare and not forgeable by the
+  client); without that header setting it uses the rightmost `X-Forwarded-For` entry, never the leftmost,
+  which the client controls (Render appends to a client-sent `X-Forwarded-For`).
 
 ## Public counter
 
@@ -49,6 +60,27 @@ python -m sandbox.app                                   # http://127.0.0.1:8000 
 docker compose --profile sandbox up --build sandbox     # http://127.0.0.1:8001, state in the sandbox-data volume
 ```
 
+Durable-counter tests: `tests/test_sandbox_durable.py`. The fail-closed tests always run; the real-Postgres
+tests (restart, daily cap, 4 concurrent instances never passing the cap, public counter) run when
+`SANDBOX_TEST_DATABASE_URL` points at a scratch database:
+
+```bash
+pip install -r sandbox/requirements.txt
+SANDBOX_TEST_DATABASE_URL=postgresql://postgres@127.0.0.1:5432/postgres python -m pytest tests/test_sandbox_durable.py
+```
+
+Note: `docker-compose.yml` still passes its own local defaults (9.00 USD, 100 calls/day) to the compose
+sandbox; the public deployment uses `render.yaml`.
+
 CI (`.github/workflows/ci.yml`, job `compose`) starts it through compose with no model key, checks
 `/api/counter`, and posts two synthetic samples (`bank-swap`, `genuine-1`): neither may be PAY, and the
 counter must show 2 attempts and 0 paid.
+
+## Deployment
+
+`render.yaml` (Render Blueprint, free plan): one Docker web service built from `sandbox/Dockerfile`
+(`python -m sandbox.app`, `PORT` from Render, `SANDBOX_TRUST_PROXY=1`, health check `/healthz`) and one
+free Postgres for the durable counter (internal connection only). `BASETEN_API_KEY` is set as a secret
+environment variable in the Render dashboard (`sync: false`), never in the repo. Render's free Postgres
+expires 30 days after creation; when it does, the store is unreachable and the sandbox fails closed
+(no model calls, REVIEW at most) until a new database URL is set.
