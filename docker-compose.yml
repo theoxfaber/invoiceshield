@@ -1,5 +1,6 @@
 # Local stack: extractor-key (one-shot: creates the extractor's Ed25519 key, publishes only the public key)
-# + governor (decides; trusts that public key) + extractor (signs evidence; Phase 2) + demo (offline replay + UI).
+# + governor (decides; trusts that public key) + extractor (signs evidence; Phase 2) + demo (offline replay + UI)
+# + sandbox (profile "sandbox": the capped public try-it page, docs/SANDBOX.md).
 #   export GOVERNOR_API_KEY=$(openssl rand -hex 16)
 #   docker compose up --build governor demo        # http://127.0.0.1:8080/healthz, http://127.0.0.1:8000/demo-v3.html
 #   docker compose --profile extractor up --build   # adds the extraction service (same key the governor trusts)
@@ -95,7 +96,43 @@ services:
       start_period: 60s
       retries: 3
 
+  # Public "Fool the Shield" sandbox (sandbox/app.py, docs/SANDBOX.md). Synthetic data only; local
+  # smoke by default (127.0.0.1). The governor API key is generated inside the process; the model key
+  # comes only from the server environment (unset = no model calls, so no request can be PAY).
+  #   docker compose --profile sandbox up --build sandbox      # http://127.0.0.1:8001
+  sandbox:
+    <<: *image
+    profiles: ["sandbox"]
+    command: ["python", "-m", "sandbox.app"]
+    environment:
+      PORT: "8001"
+      SANDBOX_STATE: /data/sandbox-counter.json
+      BASETEN_API_KEY: ${BASETEN_API_KEY:-}
+      SANDBOX_USE_MODEL: ${SANDBOX_USE_MODEL:-1}
+      SANDBOX_SPEND_CAP_USD: ${SANDBOX_SPEND_CAP_USD:-9.00}
+      SANDBOX_USD_PER_MODEL_CALL: ${SANDBOX_USD_PER_MODEL_CALL:-0.02}
+      SANDBOX_MODEL_CALLS_PER_DAY: ${SANDBOX_MODEL_CALLS_PER_DAY:-100}
+      SANDBOX_DAILY_CAP: ${SANDBOX_DAILY_CAP:-500}
+      SANDBOX_IP_PER_MIN: ${SANDBOX_IP_PER_MIN:-4}
+      SANDBOX_IP_PER_DAY: ${SANDBOX_IP_PER_DAY:-40}
+      SANDBOX_TRUST_PROXY: ${SANDBOX_TRUST_PROXY:-0}
+    ports:
+      - "127.0.0.1:8001:8001"
+    volumes:
+      - sandbox-data:/data
+    read_only: true
+    tmpfs: [/tmp]
+    cap_drop: [ALL]
+    security_opt: ["no-new-privileges:true"]
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8001/healthz', timeout=2)"]
+      interval: 5s
+      timeout: 3s
+      start_period: 30s
+      retries: 6
+
 volumes:
   governor-data:
   extractor-key:
   extractor-pub:
+  sandbox-data:

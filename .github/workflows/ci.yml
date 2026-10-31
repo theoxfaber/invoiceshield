@@ -18,7 +18,7 @@ env:
 
 jobs:
   rust:
-    name: Rust (fmt, clippy, test, release build)
+    name: Rust (fmt whole crate, clippy, test, release build)
     runs-on: ubuntu-latest
     defaults:
       run:
@@ -31,10 +31,7 @@ jobs:
       - uses: Swatinem/rust-cache@v2
         with:
           workspaces: governor
-      - name: rustfmt (ops-owned files, gating)
-        run: rustfmt --edition 2021 --check src/config.rs src/observability.rs
-      - name: cargo fmt --check (whole crate, advisory until Phases 1-3 merge; see docs/BUILD_LOG.md)
-        continue-on-error: true
+      - name: cargo fmt --check (whole crate, gating)
         run: cargo fmt --check
       - name: clippy -D warnings
         run: cargo clippy --all-targets --locked -- -D warnings
@@ -131,3 +128,34 @@ jobs:
           test "$(docker exec gov id -u)" = 10001
           docker logs gov | head -5
           docker rm -f gov
+
+  compose:
+    name: Docker compose smoke (governor + sandbox, no model key)
+    runs-on: ubuntu-latest
+    env:
+      GOVERNOR_API_KEY: ci-key-0123456789abcdef
+    steps:
+      - uses: actions/checkout@v4
+      - name: docker compose config
+        run: docker compose --profile sandbox config -q
+      - name: Governor via compose (extractor-key one-shot, then governor healthy)
+        run: |
+          docker compose up -d --build --wait --wait-timeout 600 governor
+          curl -fsS http://127.0.0.1:8080/healthz
+          curl -fsS http://127.0.0.1:8080/readyz
+      - name: Sandbox via compose (synthetic samples; no BASETEN_API_KEY, so every request is REVIEW at most)
+        run: |
+          docker compose --profile sandbox up -d --wait --wait-timeout 300 sandbox
+          curl -fsS http://127.0.0.1:8001/api/counter | tee counter.json
+          python3 -c "import json; c=json.load(open('counter.json')); assert c['spend_cap_usd'] < 10, c; assert c['model_calls_lifetime_cap'] >= 0"
+          curl -fsS -X POST "http://127.0.0.1:8001/api/try?sample=bank-swap" | tee try.json
+          python3 -c "import json; r=json.load(open('try.json')); assert r['verdict'] in ('REVIEW','BLOCK'), r['verdict']; assert r['model']['used'] is False"
+          curl -fsS -X POST "http://127.0.0.1:8001/api/try?sample=genuine-1" | tee try2.json
+          python3 -c "import json; r=json.load(open('try2.json')); assert r['verdict'] == 'REVIEW', r['verdict']"
+          curl -fsS http://127.0.0.1:8001/api/counter | python3 -c "import json,sys; c=json.load(sys.stdin); assert c['attempts'] == 2 and c['paid'] == 0 and c['paid_to_wrong_account'] == 0, c"
+      - name: Logs
+        if: always()
+        run: docker compose --profile sandbox logs --no-color | tail -200
+      - name: Down
+        if: always()
+        run: docker compose --profile sandbox down -v

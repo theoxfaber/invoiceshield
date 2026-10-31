@@ -1,5 +1,7 @@
 # InvoiceShield
 
+[![CI](https://github.com/theoxfaber/invoiceshield/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/theoxfaber/invoiceshield/actions/workflows/ci.yml)
+
 **A fail-closed payment gate for AI accounts-payable agents.** The agent can propose *which vendor, which invoice, how much*. It cannot say where the money goes: the payee always comes from your vendor master, and a deterministic Rust gate decides PAY, REVIEW (a human looks) or BLOCK before anything reaches a payment rail.
 
 > Built during the Meta Global AI Developer Hackathon (Oct 26 – Nov 4, 2026). All vendors, GSTINs, accounts and invoices in this repo are fictional; any match with a real business, account or domain is coincidental. No real payment, bank, customer or pilot is involved. Not financial, tax or legal advice.

@@ -1,0 +1,28 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>InvoiceShield sandbox: try to get paid</title>
+<style>
+body{font:16px/1.5 system-ui,sans-serif;max-width:760px;margin:2rem auto;padding:0 1rem;color:#1b1b1b}
+h1{font-size:1.5rem}.note{background:#f4f1e8;border-left:4px solid #b58900;padding:.6rem .9rem;margin:1rem 0}
+.counter{display:flex;gap:1.5rem;flex-wrap:wrap;margin:1rem 0}.counter div{min-width:7rem}.counter b{display:block;font-size:1.6rem}
+button{margin:.2rem .3rem .2rem 0;padding:.4rem .8rem;cursor:pointer}pre{background:#111;color:#eee;padding:1rem;overflow:auto;white-space:pre-wrap}
+.PAY{color:#1a7f37}.REVIEW{color:#9a6700}.BLOCK{color:#cf222e}
+</style></head><body>
+<h1>InvoiceShield sandbox: try to get a payment out of the gate</h1>
+<p>Upload an invoice PDF and an AI accounts-payable agent will try to pay exactly what it asks. A deterministic
+Rust gate decides <b>PAY</b>, <b>REVIEW</b> or <b>BLOCK</b>. The payee can only ever be the vendor's account in the
+vendor master, so the number to watch is <b>paid to a wrong account</b>.</p>
+<div class="note">Synthetic data only: every vendor, GSTIN, PO and account here is fictional. Nothing is ever paid (there is no
+payment rail). This runs on a free hosting tier that <b>spins down when idle</b>, so the first request after a quiet spell
+can take up to a minute. Limits: a few attempts per minute and a daily cap per visitor, a global daily cap, and a daily
+model-call budget; past that budget the model is not called and every invoice goes to REVIEW.
+Do not upload real invoices or personal data.</div>
+<div class="counter" id="counter"></div>
+<h2>Try it</h2>
+<p><input type="file" id="file" accept="application/pdf"> <button id="go">Submit PDF</button></p>
+<p>Or a synthetic sample: <span id="samples"></span></p>
+<pre id="out">Result appears here.</pre>
+<p><small>Vendors on file are listed in the repository's synthetic master (dataset/fixtures/master.json). Source and
+method: the InvoiceShield repository README and docs/SANDBOX.md.</small></p>
+<script src="/app.js"></script>
+</body></html>
