@@ -1,7 +1,7 @@
 //! Review item 3 (2026-10-31): GST head vs states, same document under a new number, credit
 //! notes, checked arithmetic.
 use invoiceshield_governor::engine::{content_key, state_code, Evidence, Governor, Request};
-use invoiceshield_governor::master::{Master, Policy, PoLine, PurchaseOrder, Vendor};
+use invoiceshield_governor::master::{Master, PoLine, Policy, PurchaseOrder, Vendor};
 use invoiceshield_governor::Verdict;
 use serde_json::json;
 
@@ -11,27 +11,80 @@ const MH: &str = "27ZZACM0002B1Z3"; // vendor in Maharashtra (27)
 const BUYER: &str = "24ZZACB7319B1Z5";
 
 fn vendor(id: &str, gstin: &str) -> Vendor {
-    Vendor { vendor_id: id.into(), legal_name: id.into(), gstin: Some(gstin.into()), pan: None, beneficiary_id: format!("BEN_{id}"),
-        bank_account: "77770000000101".into(), ifsc: "BARB0MAKARP".into(), bank_name: "Bank".into(), email_domains: vec![], category: "x".into() }
+    Vendor {
+        vendor_id: id.into(),
+        legal_name: id.into(),
+        gstin: Some(gstin.into()),
+        pan: None,
+        beneficiary_id: format!("BEN_{id}"),
+        bank_account: "77770000000101".into(),
+        ifsc: "BARB0MAKARP".into(),
+        bank_name: "Bank".into(),
+        email_domains: vec![],
+        category: "x".into(),
+    }
 }
 
 fn master(buyer: Option<&str>) -> Master {
-    let mut m = Master { policy: Policy { buyer_gstin: buyer.map(Into::into), ..Policy::default() }, ..Default::default() };
+    let mut m = Master {
+        policy: Policy {
+            buyer_gstin: buyer.map(Into::into),
+            ..Policy::default()
+        },
+        ..Default::default()
+    };
     for (id, g, po) in [("V1", GJ, "PO-1"), ("V2", MH, "PO-2")] {
         m.vendors.insert(id.into(), vendor(id, g));
-        m.pos.insert(po.into(), PurchaseOrder { po_ref: po.into(), owner_vendor_id: id.into(), category: "x".into(), currency: "INR".into(),
-            open_balance_paise: 1_50_000_00, lines: vec![PoLine { item: "Goods".into(), aliases: vec![], qty: 1, unit_price_minor: 1_50_000_00, currency: None, unit: "lot".into() }] });
+        m.pos.insert(
+            po.into(),
+            PurchaseOrder {
+                po_ref: po.into(),
+                owner_vendor_id: id.into(),
+                category: "x".into(),
+                currency: "INR".into(),
+                open_balance_paise: 1_50_000_00,
+                lines: vec![PoLine {
+                    item: "Goods".into(),
+                    aliases: vec![],
+                    qty: 1,
+                    unit_price_minor: 1_50_000_00,
+                    currency: None,
+                    unit: "lot".into(),
+                }],
+            },
+        );
     }
     m
 }
 
 fn ev(gstin: &str, heads: &[&str]) -> Evidence {
-    Evidence { text_layer_gstin: Some(gstin.into()), has_text_layer: true, tax_kinds: heads.iter().map(|s| s.to_string()).collect(), ..Default::default() }
+    Evidence {
+        text_layer_gstin: Some(gstin.into()),
+        has_text_layer: true,
+        tax_kinds: heads.iter().map(|s| s.to_string()).collect(),
+        ..Default::default()
+    }
 }
 
-fn eval(g: &mut Governor, v: &str, inv: &str, amount: i64, po: &str, e: Evidence, now: i64) -> invoiceshield_governor::Decision {
+fn eval(
+    g: &mut Governor,
+    v: &str,
+    inv: &str,
+    amount: i64,
+    po: &str,
+    e: Evidence,
+    now: i64,
+) -> invoiceshield_governor::Decision {
     let p = json!({"vendor_id": v, "invoice_no": inv, "amount_paise": amount, "po_ref": po});
-    g.evaluate(&Request { proposal: p, evidence: e, checker_raw: Some(CLEAN.into()), ..Default::default() }, now)
+    g.evaluate(
+        &Request {
+            proposal: p,
+            evidence: e,
+            checker_raw: Some(CLEAN.into()),
+            ..Default::default()
+        },
+        now,
+    )
 }
 
 fn rules(d: &invoiceshield_governor::Decision) -> Vec<String> {
@@ -47,7 +100,15 @@ fn state_codes() {
 #[test]
 fn intra_state_with_igst_reviews() {
     let mut g = Governor::new(master(Some(BUYER)));
-    let d = eval(&mut g, "V1", "A-1", 50_000_00, "PO-1", ev(GJ, &["IGST"]), 1_000);
+    let d = eval(
+        &mut g,
+        "V1",
+        "A-1",
+        50_000_00,
+        "PO-1",
+        ev(GJ, &["IGST"]),
+        1_000,
+    );
     assert_eq!(d.verdict, Verdict::Review);
     assert!(rules(&d).contains(&"tax_type_mismatch".into()));
 }
@@ -55,24 +116,56 @@ fn intra_state_with_igst_reviews() {
 #[test]
 fn intra_state_with_cgst_sgst_passes() {
     let mut g = Governor::new(master(Some(BUYER)));
-    let d = eval(&mut g, "V1", "A-1", 50_000_00, "PO-1", ev(GJ, &["CGST", "SGST"]), 1_000);
+    let d = eval(
+        &mut g,
+        "V1",
+        "A-1",
+        50_000_00,
+        "PO-1",
+        ev(GJ, &["CGST", "SGST"]),
+        1_000,
+    );
     assert_eq!(d.verdict, Verdict::Allow, "{:?}", d.reasons);
 }
 
 #[test]
 fn inter_state_with_cgst_sgst_reviews_and_with_igst_passes() {
     let mut g = Governor::new(master(Some(BUYER)));
-    let d = eval(&mut g, "V2", "B-1", 50_000_00, "PO-2", ev(MH, &["CGST", "SGST"]), 1_000);
+    let d = eval(
+        &mut g,
+        "V2",
+        "B-1",
+        50_000_00,
+        "PO-2",
+        ev(MH, &["CGST", "SGST"]),
+        1_000,
+    );
     assert!(rules(&d).contains(&"tax_type_mismatch".into()));
     let mut g = Governor::new(master(Some(BUYER)));
-    let d = eval(&mut g, "V2", "B-1", 50_000_00, "PO-2", ev(MH, &["IGST"]), 1_000);
+    let d = eval(
+        &mut g,
+        "V2",
+        "B-1",
+        50_000_00,
+        "PO-2",
+        ev(MH, &["IGST"]),
+        1_000,
+    );
     assert_eq!(d.verdict, Verdict::Allow, "{:?}", d.reasons);
 }
 
 #[test]
 fn no_buyer_gstin_reviews_tax_type_unverifiable() {
     let mut g = Governor::new(master(None));
-    let d = eval(&mut g, "V1", "A-1", 50_000_00, "PO-1", ev(GJ, &["IGST"]), 1_000);
+    let d = eval(
+        &mut g,
+        "V1",
+        "A-1",
+        50_000_00,
+        "PO-1",
+        ev(GJ, &["IGST"]),
+        1_000,
+    );
     assert_eq!(d.verdict, Verdict::Review);
     assert!(rules(&d).contains(&"tax_type_unverifiable".into()));
     // no GST charged: nothing to check
@@ -87,9 +180,27 @@ fn doc_ev(inv: &str, date: &str, total: i64) -> Evidence {
     e.text_layer = Some(doc(inv, date));
     e.printed_total_paise = Some(total);
     e.item_lines = vec![
-        ItemLine { description: "Goods supplied".into(), amount_paise: total - 2 * (total * 9 / 118), qty: None, unit_price_minor: None, is_tax: false },
-        ItemLine { description: "CGST".into(), amount_paise: total * 9 / 118, qty: None, unit_price_minor: None, is_tax: true },
-        ItemLine { description: "SGST".into(), amount_paise: total * 9 / 118, qty: None, unit_price_minor: None, is_tax: true },
+        ItemLine {
+            description: "Goods supplied".into(),
+            amount_paise: total - 2 * (total * 9 / 118),
+            qty: None,
+            unit_price_minor: None,
+            is_tax: false,
+        },
+        ItemLine {
+            description: "CGST".into(),
+            amount_paise: total * 9 / 118,
+            qty: None,
+            unit_price_minor: None,
+            is_tax: true,
+        },
+        ItemLine {
+            description: "SGST".into(),
+            amount_paise: total * 9 / 118,
+            qty: None,
+            unit_price_minor: None,
+            is_tax: true,
+        },
     ];
     e
 }
@@ -113,15 +224,41 @@ fn same_document_under_a_bumped_number_reviews() {
 #[test]
 fn next_month_same_amount_is_not_a_content_duplicate() {
     let mut g = Governor::new(master(Some(BUYER)));
-    eval(&mut g, "V1", "VO/26/1101", 50_000_00, "PO-1", doc_ev("VO/26/1101", "2026-09-12", 50_000_00), 1_000);
-    let d = eval(&mut g, "V1", "VO/26/1102", 30_000_00, "PO-1", doc_ev("VO/26/1102", "2026-10-12", 30_000_00), 40 * 86_400);
-    assert!(!rules(&d).contains(&"near_duplicate_content".into()), "{:?}", d.reasons);
+    eval(
+        &mut g,
+        "V1",
+        "VO/26/1101",
+        50_000_00,
+        "PO-1",
+        doc_ev("VO/26/1101", "2026-09-12", 50_000_00),
+        1_000,
+    );
+    let d = eval(
+        &mut g,
+        "V1",
+        "VO/26/1102",
+        30_000_00,
+        "PO-1",
+        doc_ev("VO/26/1102", "2026-10-12", 30_000_00),
+        40 * 86_400,
+    );
+    assert!(
+        !rules(&d).contains(&"near_duplicate_content".into()),
+        "{:?}",
+        d.reasons
+    );
 }
 
 #[test]
 fn content_key_ignores_the_number_and_needs_text() {
-    assert_eq!(content_key(Some(&doc("X/1", "d")), "X/1"), content_key(Some(&doc("X/2", "d")), "X/2"));
-    assert_ne!(content_key(Some(&doc("X/1", "d1")), "X/1"), content_key(Some(&doc("X/1", "d2")), "X/1"));
+    assert_eq!(
+        content_key(Some(&doc("X/1", "d")), "X/1"),
+        content_key(Some(&doc("X/2", "d")), "X/2")
+    );
+    assert_ne!(
+        content_key(Some(&doc("X/1", "d1")), "X/1"),
+        content_key(Some(&doc("X/1", "d2")), "X/1")
+    );
     assert_eq!(content_key(Some("short"), "X/1"), None);
     assert_eq!(content_key(None, "X/1"), None);
 }
@@ -135,7 +272,10 @@ fn credit_note_with_negative_amount_reviews_not_blocks_and_writes_no_ledger() {
     assert_eq!(d.verdict, Verdict::Review, "{:?}", d.reasons);
     assert_eq!(rules(&d), vec!["credit_note_not_payable".to_string()]);
     assert!(g.ledger.entries.is_empty());
-    assert!(!g.resolve_review(&d.decision_id, true, "approver", 2_000), "nothing to approve into a payment");
+    assert!(
+        !g.resolve_review(&d.decision_id, true, "approver", 2_000),
+        "nothing to approve into a payment"
+    );
 }
 
 #[test]
@@ -168,7 +308,11 @@ fn ledger_overflow_fails_closed() {
     assert_ne!(d1.verdict, Verdict::Block, "{:?}", d1.reasons);
     let d2 = eval(&mut g, "V1", "BIG-2", 100, "PO-1", ev(GJ, &[]), 2_000);
     assert_ne!(d2.verdict, Verdict::Allow, "{:?}", d2.reasons);
-    assert!(rules(&d2).contains(&"arithmetic_overflow".into()), "{:?}", d2.reasons);
+    assert!(
+        rules(&d2).contains(&"arithmetic_overflow".into()),
+        "{:?}",
+        d2.reasons
+    );
 }
 
 #[test]

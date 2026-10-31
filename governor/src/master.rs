@@ -130,7 +130,13 @@ fn default_near_dup_window() -> i64 {
 /// USD limits are the INR ones at the eval rate 84.00, rounded down to whole dollars
 /// (so USD is never looser than INR): ₹1,00,000 → $1,190; ₹5,00,000 → $5,952.
 pub fn default_currency_limits() -> BTreeMap<String, Limits> {
-    BTreeMap::from([("USD".to_string(), Limits { approval_threshold_minor: 1_190_00, payout_cap_minor: 5_952_00 })])
+    BTreeMap::from([(
+        "USD".to_string(),
+        Limits {
+            approval_threshold_minor: 1_190_00,
+            payout_cap_minor: 5_952_00,
+        },
+    )])
 }
 
 impl Policy {
@@ -139,7 +145,10 @@ impl Policy {
         if let Some(l) = self.currency_limits.get(currency) {
             return Some(*l);
         }
-        (currency == "INR").then_some(Limits { approval_threshold_minor: self.approval_threshold_paise, payout_cap_minor: self.payout_cap_paise })
+        (currency == "INR").then_some(Limits {
+            approval_threshold_minor: self.approval_threshold_paise,
+            payout_cap_minor: self.payout_cap_paise,
+        })
     }
 }
 
@@ -195,13 +204,22 @@ impl Master {
         }
         let raw: Raw = serde_json::from_str(s)?;
         Ok(Master {
-            vendors: raw.vendors.into_iter().map(|v| (v.vendor_id.clone(), v)).collect(),
+            vendors: raw
+                .vendors
+                .into_iter()
+                .map(|v| (v.vendor_id.clone(), v))
+                .collect(),
             pos: raw.pos.into_iter().map(|p| (p.po_ref.clone(), p)).collect(),
             policy: raw.policy.unwrap_or_default(),
-            registered_accounts: raw.registered_accounts.into_iter().fold(BTreeMap::new(), |mut m, a| {
-                m.entry(a.vendor_id.clone()).or_insert_with(Vec::new).push(a);
-                m
-            }),
+            registered_accounts: raw.registered_accounts.into_iter().fold(
+                BTreeMap::new(),
+                |mut m, a| {
+                    m.entry(a.vendor_id.clone())
+                        .or_insert_with(Vec::new)
+                        .push(a);
+                    m
+                },
+            ),
         })
     }
 }

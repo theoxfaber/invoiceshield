@@ -47,9 +47,19 @@ pub fn sign(key: &SigningKey, seq: u64, head_hash: &str, ts: i64) -> Anchor {
 }
 
 pub fn check_sig(a: &Anchor, trusted: &VerifyingKey) -> bool {
-    let Ok(bytes) = hex::decode(&a.sig) else { return false };
-    let Ok(arr) = <[u8; 64]>::try_from(bytes.as_slice()) else { return false };
-    a.v == 1 && trusted.verify(&message(a.seq, &a.head_hash, a.ts), &Signature::from_bytes(&arr)).is_ok()
+    let Ok(bytes) = hex::decode(&a.sig) else {
+        return false;
+    };
+    let Ok(arr) = <[u8; 64]>::try_from(bytes.as_slice()) else {
+        return false;
+    };
+    a.v == 1
+        && trusted
+            .verify(
+                &message(a.seq, &a.head_hash, a.ts),
+                &Signature::from_bytes(&arr),
+            )
+            .is_ok()
 }
 
 pub fn generate_key() -> SigningKey {
@@ -60,13 +70,15 @@ pub fn generate_key() -> SigningKey {
 
 pub fn key_from_hex(h: &str) -> Result<SigningKey, String> {
     let b = hex::decode(h.trim()).map_err(|e| format!("anchor key is not hex: {e}"))?;
-    let seed = <[u8; 32]>::try_from(b.as_slice()).map_err(|_| "anchor key must be 32 bytes (64 hex chars)".to_string())?;
+    let seed = <[u8; 32]>::try_from(b.as_slice())
+        .map_err(|_| "anchor key must be 32 bytes (64 hex chars)".to_string())?;
     Ok(SigningKey::from_bytes(&seed))
 }
 
 pub fn pubkey_from_hex(h: &str) -> Result<VerifyingKey, String> {
     let b = hex::decode(h.trim()).map_err(|e| format!("pubkey is not hex: {e}"))?;
-    let arr = <[u8; 32]>::try_from(b.as_slice()).map_err(|_| "pubkey must be 32 bytes".to_string())?;
+    let arr =
+        <[u8; 32]>::try_from(b.as_slice()).map_err(|_| "pubkey must be 32 bytes".to_string())?;
     VerifyingKey::from_bytes(&arr).map_err(|e| e.to_string())
 }
 
@@ -84,7 +96,10 @@ pub fn key_from_env() -> Result<Option<SigningKey>, String> {
 
 /// Append one anchor as a JSON line and fsync. The file is only ever opened for append.
 pub fn append(path: &Path, a: &Anchor) -> std::io::Result<()> {
-    let mut f = std::fs::OpenOptions::new().create(true).append(true).open(path)?;
+    let mut f = std::fs::OpenOptions::new()
+        .create(true)
+        .append(true)
+        .open(path)?;
     let mut line = serde_json::to_vec(a).expect("anchor json");
     line.push(b'\n');
     f.write_all(&line)?;
@@ -102,7 +117,12 @@ pub fn read_all(path: &Path) -> std::io::Result<Vec<Anchor>> {
         if line.trim().is_empty() {
             continue;
         }
-        out.push(serde_json::from_str(&line).map_err(|e| std::io::Error::new(std::io::ErrorKind::InvalidData, format!("anchor line {}: {e}", i + 1)))?);
+        out.push(serde_json::from_str(&line).map_err(|e| {
+            std::io::Error::new(
+                std::io::ErrorKind::InvalidData,
+                format!("anchor line {}: {e}", i + 1),
+            )
+        })?);
     }
     Ok(out)
 }
@@ -118,31 +138,57 @@ pub struct VerifyReport {
 }
 
 /// Check the stored chain on its own and against every anchor signed by `trusted`.
-pub fn verify_chain(records: &[AuditRecord], anchors: &[Anchor], trusted: &VerifyingKey) -> VerifyReport {
-    let first_broken = AuditLog { records: records.to_vec() }.verify();
+pub fn verify_chain(
+    records: &[AuditRecord],
+    anchors: &[Anchor],
+    trusted: &VerifyingKey,
+) -> VerifyReport {
+    let first_broken = AuditLog {
+        records: records.to_vec(),
+    }
+    .verify();
     let mut errs = vec![];
     let mut last_seq: Option<u64> = None;
     for (i, a) in anchors.iter().enumerate() {
         if !check_sig(a, trusted) {
-            errs.push(format!("anchor {i} (seq {}): bad signature or not signed by the pinned key", a.seq));
+            errs.push(format!(
+                "anchor {i} (seq {}): bad signature or not signed by the pinned key",
+                a.seq
+            ));
             continue;
         }
         if let Some(prev) = last_seq {
             if a.seq < prev {
-                errs.push(format!("anchor {i}: seq {} goes backwards (previous {prev})", a.seq));
+                errs.push(format!(
+                    "anchor {i}: seq {} goes backwards (previous {prev})",
+                    a.seq
+                ));
             }
         }
         last_seq = Some(a.seq);
         match records.get(a.seq as usize) {
-            None => errs.push(format!("anchor {i}: chain has {} records but the anchor covers seq {} (truncated)", records.len(), a.seq)),
+            None => errs.push(format!(
+                "anchor {i}: chain has {} records but the anchor covers seq {} (truncated)",
+                records.len(),
+                a.seq
+            )),
             Some(r) if r.seq != a.seq || r.hash != a.head_hash => errs.push(format!(
-                "anchor {i}: record {} hash {} != anchored {} (chain rewritten)", a.seq, short(&r.hash), short(&a.head_hash)
+                "anchor {i}: record {} hash {} != anchored {} (chain rewritten)",
+                a.seq,
+                short(&r.hash),
+                short(&a.head_hash)
             )),
             Some(_) => {}
         }
     }
     let ok = first_broken.is_none() && errs.is_empty();
-    VerifyReport { records: records.len(), first_broken, anchors_checked: anchors.len(), anchor_errors: errs, ok }
+    VerifyReport {
+        records: records.len(),
+        first_broken,
+        anchors_checked: anchors.len(),
+        anchor_errors: errs,
+        ok,
+    }
 }
 
 fn short(h: &str) -> &str {
@@ -154,24 +200,39 @@ fn short(h: &str) -> &str {
 /// for logging and never block a payment decision.
 pub async fn post(url: &str, a: &Anchor) -> Result<u16, String> {
     use tokio::io::{AsyncReadExt, AsyncWriteExt};
-    let rest = url.strip_prefix("http://").ok_or("only http:// anchor URLs are supported (put a TLS relay in front)")?;
+    let rest = url
+        .strip_prefix("http://")
+        .ok_or("only http:// anchor URLs are supported (put a TLS relay in front)")?;
     let (hostport, path) = match rest.find('/') {
         Some(i) => (&rest[..i], &rest[i..]),
         None => (rest, "/"),
     };
-    let addr = if hostport.contains(':') { hostport.to_string() } else { format!("{hostport}:80") };
+    let addr = if hostport.contains(':') {
+        hostport.to_string()
+    } else {
+        format!("{hostport}:80")
+    };
     let body = serde_json::to_string(a).map_err(|e| e.to_string())?;
     let fut = async {
-        let mut s = tokio::net::TcpStream::connect(&addr).await.map_err(|e| e.to_string())?;
+        let mut s = tokio::net::TcpStream::connect(&addr)
+            .await
+            .map_err(|e| e.to_string())?;
         let req = format!(
             "POST {path} HTTP/1.1\r\nHost: {hostport}\r\nContent-Type: application/json\r\nContent-Length: {}\r\nConnection: close\r\n\r\n{body}",
             body.len()
         );
-        s.write_all(req.as_bytes()).await.map_err(|e| e.to_string())?;
+        s.write_all(req.as_bytes())
+            .await
+            .map_err(|e| e.to_string())?;
         let mut resp = vec![];
         s.read_to_end(&mut resp).await.map_err(|e| e.to_string())?;
         let head = String::from_utf8_lossy(&resp);
-        head.split_whitespace().nth(1).and_then(|c| c.parse::<u16>().ok()).ok_or_else(|| "bad HTTP response".to_string())
+        head.split_whitespace()
+            .nth(1)
+            .and_then(|c| c.parse::<u16>().ok())
+            .ok_or_else(|| "bad HTTP response".to_string())
     };
-    tokio::time::timeout(std::time::Duration::from_secs(5), fut).await.map_err(|_| "timeout".to_string())?
+    tokio::time::timeout(std::time::Duration::from_secs(5), fut)
+        .await
+        .map_err(|_| "timeout".to_string())?
 }

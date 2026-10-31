@@ -74,33 +74,53 @@ pub fn apply_bank_change(
     now: i64,
     cooling_off_secs: i64,
 ) -> Result<String, ChangeRefused> {
-    let v = master.vendors.get(&req.vendor_id).ok_or(ChangeRefused::UnknownVendor)?;
-    let on_file = numbers_on_file.get(&req.vendor_id).map(|n| digits(n)).filter(|n| !n.is_empty())
+    let v = master
+        .vendors
+        .get(&req.vendor_id)
+        .ok_or(ChangeRefused::UnknownVendor)?;
+    let on_file = numbers_on_file
+        .get(&req.vendor_id)
+        .map(|n| digits(n))
+        .filter(|n| !n.is_empty())
         .ok_or(ChangeRefused::NoNumberOnFile)?;
     let cb = req.callback.as_ref().ok_or(ChangeRefused::NoCallback)?;
     if digits(&cb.number_dialled) != on_file {
         return Err(ChangeRefused::CallbackNotToNumberOnFile);
     }
     if cb.confirmed_account.trim() != req.new_account.trim()
-        || !cb.confirmed_ifsc.trim().eq_ignore_ascii_case(req.new_ifsc.trim())
+        || !cb
+            .confirmed_ifsc
+            .trim()
+            .eq_ignore_ascii_case(req.new_ifsc.trim())
     {
         return Err(ChangeRefused::CallbackDetailsDiffer);
     }
     let maker = req.requested_by.trim().to_lowercase();
-    let mut approvers: Vec<String> = req.approvals.iter().map(|a| a.trim().to_lowercase())
-        .filter(|a| !a.is_empty() && *a != maker).collect();
+    let mut approvers: Vec<String> = req
+        .approvals
+        .iter()
+        .map(|a| a.trim().to_lowercase())
+        .filter(|a| !a.is_empty() && *a != maker)
+        .collect();
     approvers.sort();
     approvers.dedup();
     if approvers.len() < 2 {
-        return Err(ChangeRefused::NeedTwoDistinctApprovers { have: approvers.len() });
+        return Err(ChangeRefused::NeedTwoDistinctApprovers {
+            have: approvers.len(),
+        });
     }
     let ready_at = req.requested_at + cooling_off_secs;
     if now < ready_at {
-        return Err(ChangeRefused::CoolingOff { remaining_secs: ready_at - now });
+        return Err(ChangeRefused::CoolingOff {
+            remaining_secs: ready_at - now,
+        });
     }
     let before = json!({"bank_account": v.bank_account, "ifsc": v.ifsc, "bank_name": v.bank_name,
                         "beneficiary_id": v.beneficiary_id});
-    let v = master.vendors.get_mut(&req.vendor_id).expect("checked above");
+    let v = master
+        .vendors
+        .get_mut(&req.vendor_id)
+        .expect("checked above");
     v.bank_account = req.new_account.trim().to_string();
     v.ifsc = req.new_ifsc.trim().to_uppercase();
     v.bank_name = req.new_bank_name.clone();

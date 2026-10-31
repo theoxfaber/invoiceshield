@@ -143,7 +143,10 @@ fn numbers(hay: &str) -> Vec<Num> {
         }
         let s = i;
         let mut j = i;
-        while j < b.len() && (b[j].is_ascii_digit() || (b[j] == b',' && j + 1 < b.len() && b[j + 1].is_ascii_digit())) {
+        while j < b.len()
+            && (b[j].is_ascii_digit()
+                || (b[j] == b',' && j + 1 < b.len() && b[j + 1].is_ascii_digit()))
+        {
             j += 1;
         }
         let mut frac = None;
@@ -160,7 +163,12 @@ fn numbers(hay: &str) -> Vec<Num> {
         let groups: Vec<&str> = int_str.split(',').collect();
         if valid_grouping(&groups) {
             let (minor, int) = parse_num(&groups.concat(), frac);
-            out.push(Num { pos: s, end: e, minor, int });
+            out.push(Num {
+                pos: s,
+                end: e,
+                minor,
+                int,
+            });
         } else {
             // invalid grouping: each comma-separated run is its own number (the last keeps the decimals)
             let mut off = s;
@@ -170,7 +178,12 @@ fn numbers(hay: &str) -> Vec<Num> {
                 let (minor, int) = parse_num(g, if last { frac } else { None });
                 let gend = if last { e } else { off + g.len() };
                 if !g.is_empty() {
-                    out.push(Num { pos: off, end: gend, minor, int });
+                    out.push(Num {
+                        pos: off,
+                        end: gend,
+                        minor,
+                        int,
+                    });
                 }
                 off += g.len() + 1;
             }
@@ -182,12 +195,18 @@ fn numbers(hay: &str) -> Vec<Num> {
 
 fn positions_of_amount_in(nums: &[Num], minor: i64) -> Vec<usize> {
     let m = minor.checked_abs().unwrap_or(-1);
-    nums.iter().filter(|n| n.minor == Some(m)).map(|n| n.pos).collect()
+    nums.iter()
+        .filter(|n| n.minor == Some(m))
+        .map(|n| n.pos)
+        .collect()
 }
 
 fn positions_of_int_in(nums: &[Num], v: i64) -> Vec<usize> {
     let m = v.checked_abs().unwrap_or(-1);
-    nums.iter().filter(|n| n.int == Some(m)).map(|n| n.pos).collect()
+    nums.iter()
+        .filter(|n| n.int == Some(m))
+        .map(|n| n.pos)
+        .collect()
 }
 
 #[cfg(test)]
@@ -263,7 +282,9 @@ fn description_positions(hay: &str, comp: &(String, Vec<usize>), d: &str) -> Vec
         let (a, rest) = dc.split_at(k);
         for (p, _) in cs.match_indices(a) {
             let a_end = p + a.len();
-            let Some(&hay_a_end) = map.get(a_end - 1) else { continue };
+            let Some(&hay_a_end) = map.get(a_end - 1) else {
+                continue;
+            };
             if let Some(q) = cs[a_end..].find(rest) {
                 let qs = a_end + q;
                 if map[qs].saturating_sub(hay_a_end) <= WRAP {
@@ -288,7 +309,15 @@ fn window_before(hay: &str, pos: usize, n: usize) -> &str {
     &hay[s..pos]
 }
 
-const TOTAL_LABELS: &[&str] = &["total", "taxable", "payable", "balance", "amount due", "net amount", "in words"];
+const TOTAL_LABELS: &[&str] = &[
+    "total",
+    "taxable",
+    "payable",
+    "balance",
+    "amount due",
+    "net amount",
+    "in words",
+];
 
 fn total_labelled(hay: &str, pos: usize) -> bool {
     let w = window_before(hay, pos, LABEL_WINDOW);
@@ -303,8 +332,16 @@ fn negative_marked(hay: &str, pos: usize) -> bool {
 const TAX_WORDS: &[&str] = &["cgst", "sgst", "igst", "utgst", "gst", "cess"];
 /// Spelled-out GST heads as Indian invoices print them.
 const TAX_PHRASES: &[&str] = &[
-    "integrated gst", "central gst", "state gst", "union territory gst", "integrated tax", "central tax", "state tax",
-    "state/ut tax", "ut tax", "compensation cess",
+    "integrated gst",
+    "central gst",
+    "state gst",
+    "union territory gst",
+    "integrated tax",
+    "central tax",
+    "state tax",
+    "state/ut tax",
+    "ut tax",
+    "compensation cess",
 ];
 
 /// True when the folded description names a tax head: a GST head word, optionally followed by a
@@ -324,30 +361,51 @@ pub fn names_tax(desc_folded: &str) -> bool {
 
 fn names_tax_head(d: &str) -> bool {
     TAX_WORDS.iter().any(|t| {
-        d.strip_prefix(t).is_some_and(|rest| rest.is_empty() || !rest.as_bytes()[0].is_ascii_alphabetic())
-    }) || TAX_PHRASES.iter().any(|t| d.strip_prefix(t).is_some_and(|rest| rest.is_empty() || !rest.as_bytes()[0].is_ascii_alphabetic()))
+        d.strip_prefix(t)
+            .is_some_and(|rest| rest.is_empty() || !rest.as_bytes()[0].is_ascii_alphabetic())
+    }) || TAX_PHRASES.iter().any(|t| {
+        d.strip_prefix(t)
+            .is_some_and(|rest| rest.is_empty() || !rest.as_bytes()[0].is_ascii_alphabetic())
+    })
 }
 
 fn discount_like(desc_folded: &str) -> bool {
-    ["discount", "less", "rebate", "round", "credit", "adjust"].iter().any(|w| desc_folded.contains(w))
+    ["discount", "less", "rebate", "round", "credit", "adjust"]
+        .iter()
+        .any(|w| desc_folded.contains(w))
 }
 
 /// Verify model-proposed lines against the signed text layer and printed total.
 /// Ok(lines the rules should run on) when every check passes; Err(list of problems) otherwise.
 /// Zero-amount lines ("Round Off 0.00", "Less Disc 0.00") are dropped: they cannot change the
 /// sum, the PO check or the payment, and a model listing them is not an error.
-pub fn verify_proposed(lines: &[ItemLine], text_layer: Option<&str>, printed_total: Option<i64>) -> Result<Vec<ItemLine>, Vec<String>> {
+pub fn verify_proposed(
+    lines: &[ItemLine],
+    text_layer: Option<&str>,
+    printed_total: Option<i64>,
+) -> Result<Vec<ItemLine>, Vec<String>> {
     let mut problems = vec![];
     let Some(text) = text_layer.filter(|t| !t.trim().is_empty()) else {
-        return Err(vec!["no signed text layer to verify the lines against".into()]);
+        return Err(vec![
+            "no signed text layer to verify the lines against".into()
+        ]);
     };
     let Some(total) = printed_total else {
-        return Err(vec!["the invoice prints no total to verify the lines against".into()]);
+        return Err(vec![
+            "the invoice prints no total to verify the lines against".into(),
+        ]);
     };
     if lines.is_empty() || lines.len() > MAX_LINES {
-        return Err(vec![format!("{} lines proposed (allowed 1..={MAX_LINES})", lines.len())]);
+        return Err(vec![format!(
+            "{} lines proposed (allowed 1..={MAX_LINES})",
+            lines.len()
+        )]);
     }
-    let kept: Vec<ItemLine> = lines.iter().filter(|l| l.amount_paise != 0).cloned().collect();
+    let kept: Vec<ItemLine> = lines
+        .iter()
+        .filter(|l| l.amount_paise != 0)
+        .cloned()
+        .collect();
     if kept.is_empty() {
         return Err(vec!["every proposed line has a zero amount".into()]);
     }
@@ -364,64 +422,108 @@ pub fn verify_proposed(lines: &[ItemLine], text_layer: Option<&str>, printed_tot
             continue;
         }
         if l.is_tax && !names_tax(&d) {
-            problems.push(format!("line {n}: flagged as tax but \"{}\" is not a tax line", l.description));
+            problems.push(format!(
+                "line {n}: flagged as tax but \"{}\" is not a tax line",
+                l.description
+            ));
         }
         let desc_pos = description_positions(&hay, &comp, &d);
         if desc_pos.is_empty() {
-            problems.push(format!("line {n}: description \"{}\" is not printed on the document", l.description));
+            problems.push(format!(
+                "line {n}: description \"{}\" is not printed on the document",
+                l.description
+            ));
             continue;
         }
         let amt_pos = positions_of_amount_in(&nums, l.amount_paise);
         if amt_pos.is_empty() {
-            problems.push(format!("line {n}: amount {} is not printed on the document", l.amount_paise));
+            problems.push(format!(
+                "line {n}: amount {} is not printed on the document",
+                l.amount_paise
+            ));
             continue;
         }
-        let near = |p: &usize| desc_pos.iter().any(|&dp| *p > dp && *p <= dp + d.len() + NEAR);
-        let usable: Vec<usize> = amt_pos.iter().copied().filter(near)
-            .filter(|&p| l.is_tax || !total_labelled(&hay, p)).collect();
+        let near = |p: &usize| {
+            desc_pos
+                .iter()
+                .any(|&dp| *p > dp && *p <= dp + d.len() + NEAR)
+        };
+        let usable: Vec<usize> = amt_pos
+            .iter()
+            .copied()
+            .filter(near)
+            .filter(|&p| l.is_tax || !total_labelled(&hay, p))
+            .collect();
         if usable.is_empty() {
-            problems.push(format!("line {n}: amount {} is not printed in \"{}\"'s row (or only as a total)", l.amount_paise, l.description));
+            problems.push(format!(
+                "line {n}: amount {} is not printed in \"{}\"'s row (or only as a total)",
+                l.amount_paise, l.description
+            ));
             continue;
         }
-        if l.amount_paise < 0 && !discount_like(&d) && !usable.iter().any(|&p| negative_marked(&hay, p)) {
-            problems.push(format!("line {n}: negative amount without a printed minus sign or discount wording"));
+        if l.amount_paise < 0
+            && !discount_like(&d)
+            && !usable.iter().any(|&p| negative_marked(&hay, p))
+        {
+            problems.push(format!(
+                "line {n}: negative amount without a printed minus sign or discount wording"
+            ));
         }
         if let Some(q) = l.qty {
             if q <= 0 || positions_of_int_in(&nums, q).is_empty() {
-                problems.push(format!("line {n}: quantity {q} is not printed on the document"));
+                problems.push(format!(
+                    "line {n}: quantity {q} is not printed on the document"
+                ));
             }
         }
         if let Some(u) = l.unit_price_minor {
             if u <= 0 || positions_of_amount_in(&nums, u).is_empty() {
-                problems.push(format!("line {n}: unit price {u} is not printed on the document"));
+                problems.push(format!(
+                    "line {n}: unit price {u} is not printed on the document"
+                ));
             }
         }
         if let (Some(q), Some(u)) = (l.qty, l.unit_price_minor) {
             let gross = q.checked_mul(u);
             let tol = q.abs().max(1);
-            let exact = gross.and_then(|v| v.checked_sub(l.amount_paise.abs())).is_some_and(|diff| diff.abs() <= tol);
+            let exact = gross
+                .and_then(|v| v.checked_sub(l.amount_paise.abs()))
+                .is_some_and(|diff| diff.abs() <= tol);
             // A printed line discount: qty x rate less a percentage printed in the same row
             // (between the description and the amount) must give the amount exactly (± one minor
             // unit per unit). The line can only bill less than qty x rate, never more.
-            let discounted = !exact && gross.is_some_and(|g| g > l.amount_paise.abs()) && desc_pos.iter().any(|&dp| {
-                usable.iter().filter(|&&ap| ap > dp).any(|&ap| {
-                    percents_between(&hay, &nums, dp, ap).iter().any(|&bp| {
-                        gross.and_then(|g| g.checked_mul(10_000 - bp)).map(|v| v / 10_000)
-                            .and_then(|net| net.checked_sub(l.amount_paise.abs())).is_some_and(|diff| diff.abs() <= tol)
+            let discounted = !exact
+                && gross.is_some_and(|g| g > l.amount_paise.abs())
+                && desc_pos.iter().any(|&dp| {
+                    usable.iter().filter(|&&ap| ap > dp).any(|&ap| {
+                        percents_between(&hay, &nums, dp, ap).iter().any(|&bp| {
+                            gross
+                                .and_then(|g| g.checked_mul(10_000 - bp))
+                                .map(|v| v / 10_000)
+                                .and_then(|net| net.checked_sub(l.amount_paise.abs()))
+                                .is_some_and(|diff| diff.abs() <= tol)
+                        })
                     })
-                })
-            });
+                });
             if !exact && !discounted {
-                problems.push(format!("line {n}: quantity x unit price does not give the amount"));
+                problems.push(format!(
+                    "line {n}: quantity x unit price does not give the amount"
+                ));
             }
         }
     }
     match sum {
         None => problems.push("line amounts overflow".into()),
-        Some(s) if s != total => problems.push(format!("lines add up to {s} but the invoice prints {total}")),
+        Some(s) if s != total => problems.push(format!(
+            "lines add up to {s} but the invoice prints {total}"
+        )),
         _ => {}
     }
-    if problems.is_empty() { Ok(kept) } else { Err(problems) }
+    if problems.is_empty() {
+        Ok(kept)
+    } else {
+        Err(problems)
+    }
 }
 
 #[cfg(test)]
@@ -429,14 +531,26 @@ mod tests {
     use super::*;
 
     fn line(d: &str, a: i64, q: Option<i64>, u: Option<i64>, tax: bool) -> ItemLine {
-        ItemLine { description: d.into(), amount_paise: a, qty: q, unit_price_minor: u, is_tax: tax }
+        ItemLine {
+            description: d.into(),
+            amount_paise: a,
+            qty: q,
+            unit_price_minor: u,
+            is_tax: tax,
+        }
     }
 
     const TEXT: &str = "TAX INVOICE\nSl\nDescription\nQty\nRate\nTaxable Value\n1\nCorrugated box 5-ply\n4819\n1000\nNOS\n42.50\n18\n42,500.00\n2\nPrinted label A6\n4821\n5000\n1.20\n6,000.00\nTaxable Total\n₹ 48,500.00\nCGST\n₹ 4,365.00\nSGST\n₹ 4,365.00\nGRAND TOTAL\n₹ 57,230.00\n";
 
     fn good() -> Vec<ItemLine> {
         vec![
-            line("Corrugated box 5-ply", 42_500_00, Some(1000), Some(42_50), false),
+            line(
+                "Corrugated box 5-ply",
+                42_500_00,
+                Some(1000),
+                Some(42_50),
+                false,
+            ),
             line("Printed label A6", 6_000_00, Some(5000), Some(1_20), false),
             line("CGST", 4_365_00, None, None, true),
             line("SGST", 4_365_00, None, None, true),
@@ -445,7 +559,10 @@ mod tests {
 
     #[test]
     fn verbatim_lines_that_add_up_verify() {
-        assert_eq!(verify_proposed(&good(), Some(TEXT), Some(57_230_00)).map(|v| v.len()), Ok(4));
+        assert_eq!(
+            verify_proposed(&good(), Some(TEXT), Some(57_230_00)).map(|v| v.len()),
+            Ok(4)
+        );
     }
 
     #[test]
@@ -478,7 +595,11 @@ mod tests {
             line("SGST", 4_365_00, None, None, true),
         ];
         let e = verify_proposed(&l, Some(TEXT), Some(57_230_00)).unwrap_err();
-        assert!(e.iter().any(|p| p.contains("only as a total") || p.contains("not printed")), "{e:?}");
+        assert!(
+            e.iter()
+                .any(|p| p.contains("only as a total") || p.contains("not printed")),
+            "{e:?}"
+        );
     }
 
     #[test]
@@ -513,15 +634,27 @@ mod tests {
 
     #[test]
     fn huge_amounts_do_not_overflow_the_sum() {
-        let l = vec![line("Corrugated box 5-ply", i64::MAX, None, None, false), line("Printed label A6", i64::MAX, None, None, false)];
+        let l = vec![
+            line("Corrugated box 5-ply", i64::MAX, None, None, false),
+            line("Printed label A6", i64::MAX, None, None, false),
+        ];
         let e = verify_proposed(&l, Some(TEXT), Some(1)).unwrap_err();
-        assert!(e.iter().any(|p| p.contains("overflow") || p.contains("not printed")), "{e:?}");
+        assert!(
+            e.iter()
+                .any(|p| p.contains("overflow") || p.contains("not printed")),
+            "{e:?}"
+        );
     }
 
     #[test]
     fn indian_grouping_is_read() {
         assert_eq!(group_indian(1_23_45_678), "1,23,45,678");
         assert_eq!(group_western(12_345_678), "12,345,678");
-        assert!(names_tax("cgst @9%") && names_tax("igst") && !names_tax("gstin filing fee") && !names_tax("expedite fee"));
+        assert!(
+            names_tax("cgst @9%")
+                && names_tax("igst")
+                && !names_tax("gstin filing fee")
+                && !names_tax("expedite fee")
+        );
     }
 }

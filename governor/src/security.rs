@@ -41,12 +41,20 @@ impl std::fmt::Debug for SecurityConfig {
 }
 
 impl SecurityConfig {
-    pub fn from_lookup(get: &dyn Fn(&str) -> Option<String>, eval_clock: bool) -> Result<SecurityConfig, Vec<String>> {
+    pub fn from_lookup(
+        get: &dyn Fn(&str) -> Option<String>,
+        eval_clock: bool,
+    ) -> Result<SecurityConfig, Vec<String>> {
         let mut errs = vec![];
         let keys = KeyRing::from_lookup(get).map_err(|e| errs.extend(e)).ok();
-        let limits = LimitsConfig::from_lookup(get, eval_clock).map_err(|e| errs.extend(e)).ok();
+        let limits = LimitsConfig::from_lookup(get, eval_clock)
+            .map_err(|e| errs.extend(e))
+            .ok();
         let nonempty = |k: &str| get(k).filter(|v| !v.is_empty());
-        let tls = match (nonempty("GOVERNOR_TLS_CERT_FILE"), nonempty("GOVERNOR_TLS_KEY_FILE")) {
+        let tls = match (
+            nonempty("GOVERNOR_TLS_CERT_FILE"),
+            nonempty("GOVERNOR_TLS_KEY_FILE"),
+        ) {
             (None, None) => None,
             (Some(c), Some(k)) => {
                 // Load once now so a bad certificate stops startup with a clear message.
@@ -59,13 +67,19 @@ impl SecurityConfig {
                 }
             }
             _ => {
-                errs.push("set both GOVERNOR_TLS_CERT_FILE and GOVERNOR_TLS_KEY_FILE, or neither".into());
+                errs.push(
+                    "set both GOVERNOR_TLS_CERT_FILE and GOVERNOR_TLS_KEY_FILE, or neither".into(),
+                );
                 None
             }
         };
         let phones = match nonempty("GOVERNOR_VENDOR_PHONES") {
             None => BTreeMap::new(),
-            Some(p) => match std::fs::read_to_string(&p).map_err(|e| e.to_string()).and_then(|t| serde_json::from_str::<BTreeMap<String, String>>(&t).map_err(|e| e.to_string())) {
+            Some(p) => match std::fs::read_to_string(&p)
+                .map_err(|e| e.to_string())
+                .and_then(|t| {
+                    serde_json::from_str::<BTreeMap<String, String>>(&t).map_err(|e| e.to_string())
+                }) {
                 Ok(m) => m,
                 Err(e) => {
                     errs.push(format!("GOVERNOR_VENDOR_PHONES: {p:?} must be a JSON object {{vendor_id: phone}}: {e}"));
@@ -98,7 +112,9 @@ impl SecurityConfig {
             Ok(Some(s)) => match hex::decode(s.value.trim()) {
                 Ok(b) if b.len() == 32 => {
                     if s.loose_permissions {
-                        warnings.push("GOVERNOR_STATE_KEY_FILE is readable by group/others; chmod 600".into());
+                        warnings.push(
+                            "GOVERNOR_STATE_KEY_FILE is readable by group/others; chmod 600".into(),
+                        );
                     }
                     let mut k = [0u8; 32];
                     k.copy_from_slice(&b);
@@ -111,7 +127,9 @@ impl SecurityConfig {
             },
         };
         if cooling_off_secs < 3600 && !eval_clock {
-            warnings.push(format!("GOVERNOR_MASTER_CHANGE_COOLING_OFF_SECS={cooling_off_secs} is under an hour"));
+            warnings.push(format!(
+                "GOVERNOR_MASTER_CHANGE_COOLING_OFF_SECS={cooling_off_secs} is under an hour"
+            ));
         }
         if tls.is_none() && !eval_clock {
             warnings.push("TLS off: put the governor behind a TLS-terminating proxy on a private network, or set GOVERNOR_TLS_CERT_FILE/KEY_FILE".into());
@@ -119,7 +137,15 @@ impl SecurityConfig {
         match (errs.is_empty(), keys, limits) {
             (true, Some(keys), Some(limits)) => {
                 warnings.extend(keys.warnings.iter().cloned());
-                Ok(SecurityConfig { keys, limits, tls, phones, cooling_off_secs, state_key, warnings })
+                Ok(SecurityConfig {
+                    keys,
+                    limits,
+                    tls,
+                    phones,
+                    cooling_off_secs,
+                    state_key,
+                    warnings,
+                })
             }
             _ => Err(errs),
         }

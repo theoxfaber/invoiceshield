@@ -27,7 +27,18 @@ pub struct PendingReview {
 /// Upper bound on one listing; the page shows the oldest first.
 pub const MAX_LIST: usize = 200;
 
-type Row = (String, Option<String>, i64, String, String, String, i64, String, String, Option<String>);
+type Row = (
+    String,
+    Option<String>,
+    i64,
+    String,
+    String,
+    String,
+    i64,
+    String,
+    String,
+    Option<String>,
+);
 
 impl Store {
     /// REVIEW decisions whose ledger entry is still `pending`, oldest first, at most `limit`
@@ -41,13 +52,46 @@ impl Store {
               ORDER BY d.ts, d.decision_id LIMIT ?1",
         )?;
         let rows = st.query_map([limit], |r| -> rusqlite::Result<Row> {
-            Ok((r.get(0)?, r.get(1)?, r.get(2)?, r.get(3)?, r.get(4)?, r.get(5)?, r.get(6)?, r.get(7)?, r.get(8)?, r.get(9)?))
+            Ok((
+                r.get(0)?,
+                r.get(1)?,
+                r.get(2)?,
+                r.get(3)?,
+                r.get(4)?,
+                r.get(5)?,
+                r.get(6)?,
+                r.get(7)?,
+                r.get(8)?,
+                r.get(9)?,
+            ))
         })?;
         let mut out = Vec::new();
         for row in rows {
-            let (decision_id, proposed_by, ts, body, vendor_id, invoice_key, amount_minor, currency, po_ref, irn) = row?;
+            let (
+                decision_id,
+                proposed_by,
+                ts,
+                body,
+                vendor_id,
+                invoice_key,
+                amount_minor,
+                currency,
+                po_ref,
+                irn,
+            ) = row?;
             let decision: Decision = serde_json::from_str(&body)?;
-            out.push(PendingReview { decision_id, proposed_by, ts, vendor_id, invoice_key, amount_minor, currency, po_ref, irn, decision });
+            out.push(PendingReview {
+                decision_id,
+                proposed_by,
+                ts,
+                vendor_id,
+                invoice_key,
+                amount_minor,
+                currency,
+                po_ref,
+                irn,
+                decision,
+            });
         }
         Ok(out)
     }
@@ -60,7 +104,8 @@ mod tests {
     use crate::{Master, Verdict};
 
     fn master() -> Master {
-        let p = std::path::PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../dataset/fixtures/master.json");
+        let p = std::path::PathBuf::from(env!("CARGO_MANIFEST_DIR"))
+            .join("../dataset/fixtures/master.json");
         Master::from_json(&std::fs::read_to_string(p).unwrap()).unwrap()
     }
 
@@ -83,22 +128,69 @@ mod tests {
     #[test]
     fn lists_only_pending_reviews_and_drops_resolved_ones() {
         let mut s = Store::open_in_memory(master()).unwrap();
-        let allow = fresh(s.act_as(&body("INV-Q-1", 1_000, "PO-2026-0101"), 1_000, None, Some("ap-agent")).unwrap());
+        let allow = fresh(
+            s.act_as(
+                &body("INV-Q-1", 1_000, "PO-2026-0101"),
+                1_000,
+                None,
+                Some("ap-agent"),
+            )
+            .unwrap(),
+        );
         assert_eq!(allow.verdict, Verdict::Allow);
-        let r1 = fresh(s.act_as(&body("INV-Q-2", 80_000, "PO-2026-0101"), 1_001, None, Some("ap-agent")).unwrap());
-        let r2 = fresh(s.act_as(&body("INV-Q-3", 50_000, "PO-2026-0102"), 1_002, None, Some("ap-agent")).unwrap());
+        let r1 = fresh(
+            s.act_as(
+                &body("INV-Q-2", 80_000, "PO-2026-0101"),
+                1_001,
+                None,
+                Some("ap-agent"),
+            )
+            .unwrap(),
+        );
+        let r2 = fresh(
+            s.act_as(
+                &body("INV-Q-3", 50_000, "PO-2026-0102"),
+                1_002,
+                None,
+                Some("ap-agent"),
+            )
+            .unwrap(),
+        );
         assert_eq!((r1.verdict, r2.verdict), (Verdict::Review, Verdict::Review));
         let q = s.pending_reviews(50).unwrap();
-        assert_eq!(q.iter().map(|p| p.decision_id.as_str()).collect::<Vec<_>>(), vec![r1.decision_id.as_str(), r2.decision_id.as_str()]);
+        assert_eq!(
+            q.iter().map(|p| p.decision_id.as_str()).collect::<Vec<_>>(),
+            vec![r1.decision_id.as_str(), r2.decision_id.as_str()]
+        );
         assert_eq!(q[0].proposed_by.as_deref(), Some("ap-agent"));
-        assert_eq!((q[0].vendor_id.as_str(), q[0].amount_minor, q[0].currency.as_str()), ("V001", 8_000_000, "INR"));
-        assert!(!q[0].decision.reasons.is_empty(), "reason codes travel with the queue entry");
+        assert_eq!(
+            (
+                q[0].vendor_id.as_str(),
+                q[0].amount_minor,
+                q[0].currency.as_str()
+            ),
+            ("V001", 8_000_000, "INR")
+        );
+        assert!(
+            !q[0].decision.reasons.is_empty(),
+            "reason codes travel with the queue entry"
+        );
         assert_eq!(s.pending_reviews(1).unwrap().len(), 1);
         // the proposer cannot clear it; a different approver can
-        assert_eq!(s.resolve_as(&r1.decision_id, true, "ap-agent", 1_003).unwrap(), ResolveOutcome::SelfApproval);
+        assert_eq!(
+            s.resolve_as(&r1.decision_id, true, "ap-agent", 1_003)
+                .unwrap(),
+            ResolveOutcome::SelfApproval
+        );
         assert_eq!(s.pending_reviews(50).unwrap().len(), 2);
-        assert_eq!(s.resolve_as(&r1.decision_id, true, "ravi", 1_004).unwrap(), ResolveOutcome::Resolved);
-        assert_eq!(s.resolve_as(&r2.decision_id, false, "ravi", 1_005).unwrap(), ResolveOutcome::Resolved);
+        assert_eq!(
+            s.resolve_as(&r1.decision_id, true, "ravi", 1_004).unwrap(),
+            ResolveOutcome::Resolved
+        );
+        assert_eq!(
+            s.resolve_as(&r2.decision_id, false, "ravi", 1_005).unwrap(),
+            ResolveOutcome::Resolved
+        );
         assert!(s.pending_reviews(50).unwrap().is_empty());
     }
 }

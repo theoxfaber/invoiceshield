@@ -15,13 +15,17 @@ fn fresh(o: ActionOutcome) -> invoiceshield_governor::Decision {
 }
 
 fn count(c: &Connection, table: &str) -> i64 {
-    c.query_row(&format!("SELECT COUNT(*) FROM {table}"), [], |r| r.get(0)).unwrap()
+    c.query_row(&format!("SELECT COUNT(*) FROM {table}"), [], |r| r.get(0))
+        .unwrap()
 }
 
 #[test]
 fn in_memory_store_works_and_is_migrated() {
     let mut s = Store::open_in_memory(master()).unwrap();
-    let v: i64 = s.conn().query_row("PRAGMA user_version", [], |r| r.get(0)).unwrap();
+    let v: i64 = s
+        .conn()
+        .query_row("PRAGMA user_version", [], |r| r.get(0))
+        .unwrap();
     assert_eq!(v, SCHEMA_VERSION);
     let d = fresh(s.act(&body("INV-1", 1_000), 0, None).unwrap());
     assert_eq!(d.verdict, Verdict::Allow, "{:?}", d.reasons);
@@ -35,7 +39,10 @@ fn file_db_uses_wal() {
     let dir = tmpdir("wal");
     let db = dir.join("g.db");
     let s = Store::open(db.to_str().unwrap(), master()).unwrap();
-    let mode: String = s.conn().query_row("PRAGMA journal_mode", [], |r| r.get(0)).unwrap();
+    let mode: String = s
+        .conn()
+        .query_row("PRAGMA journal_mode", [], |r| r.get(0))
+        .unwrap();
     assert_eq!(mode.to_lowercase(), "wal");
 }
 
@@ -54,8 +61,14 @@ fn restart_keeps_state_and_duplicate_still_blocked() {
     }; // "server" dropped
 
     let mut s = Store::open(db.to_str().unwrap(), master()).unwrap();
-    assert_eq!(s.get_decision(&paid_id).unwrap().unwrap().verdict, Verdict::Allow);
-    assert_eq!(s.get_decision(&review_id).unwrap().unwrap().verdict, Verdict::Review);
+    assert_eq!(
+        s.get_decision(&paid_id).unwrap().unwrap().verdict,
+        Verdict::Allow
+    );
+    assert_eq!(
+        s.get_decision(&review_id).unwrap().unwrap().verdict,
+        Verdict::Review
+    );
     assert_eq!(s.audit_head().unwrap().unwrap(), head);
     assert_eq!(s.ledger().unwrap().entries.len(), 1);
     // Restored in memory exactly, chain still verifies after a JSON round trip.
@@ -112,15 +125,26 @@ fn unique_index_refuses_second_live_entry() {
     let mut s = Store::open_in_memory(master()).unwrap();
     let d = fresh(s.act(&body("INV-U", 1_000), 0, None).unwrap());
     let c = s.conn();
-    c.execute("INSERT INTO decisions (decision_id, verdict, body, ts) VALUES ('x1','allow','{}',0)", []).unwrap();
+    c.execute(
+        "INSERT INTO decisions (decision_id, verdict, body, ts) VALUES ('x1','allow','{}',0)",
+        [],
+    )
+    .unwrap();
     let dup = c.execute(
         "INSERT INTO ledger (decision_id, vendor_id, invoice_key, amount_paise, currency, irn, po_ref, status, ts, entry)
          SELECT 'x1', vendor_id, invoice_key, amount_paise, currency, NULL, po_ref, 'paid', 1, entry FROM ledger WHERE decision_id = ?1",
         [&d.decision_id],
     );
-    assert!(dup.is_err(), "a second live ledger row for the same invoice must be impossible");
+    assert!(
+        dup.is_err(),
+        "a second live ledger row for the same invoice must be impossible"
+    );
     // The key includes currency: the same number and amount in another currency is a different payment.
-    c.execute("INSERT INTO decisions (decision_id, verdict, body, ts) VALUES ('x2','allow','{}',0)", []).unwrap();
+    c.execute(
+        "INSERT INTO decisions (decision_id, verdict, body, ts) VALUES ('x2','allow','{}',0)",
+        [],
+    )
+    .unwrap();
     c.execute(
         "INSERT INTO ledger (decision_id, vendor_id, invoice_key, amount_paise, currency, irn, po_ref, status, ts, entry)
          SELECT 'x2', vendor_id, invoice_key, amount_paise, 'USD', NULL, po_ref, 'paid', 1, entry FROM ledger WHERE decision_id = ?1",
@@ -128,8 +152,15 @@ fn unique_index_refuses_second_live_entry() {
     )
     .unwrap();
     // A paid entry cannot be flipped or edited.
-    assert!(c.execute("UPDATE ledger SET status = 'rejected' WHERE decision_id = ?1", [&d.decision_id]).is_err());
-    assert!(c.execute("UPDATE audit SET payload = '{}' WHERE seq = 0", []).is_err());
+    assert!(c
+        .execute(
+            "UPDATE ledger SET status = 'rejected' WHERE decision_id = ?1",
+            [&d.decision_id]
+        )
+        .is_err());
+    assert!(c
+        .execute("UPDATE audit SET payload = '{}' WHERE seq = 0", [])
+        .is_err());
 }
 
 #[test]
@@ -139,7 +170,10 @@ fn stale_process_cannot_pay_twice() {
     let db = dir.join("g.db");
     let mut a = Store::open(db.to_str().unwrap(), master()).unwrap();
     let mut b = Store::open(db.to_str().unwrap(), master()).unwrap();
-    assert_eq!(fresh(a.act(&body("INV-S", 1_000), 0, None).unwrap()).verdict, Verdict::Allow);
+    assert_eq!(
+        fresh(a.act(&body("INV-S", 1_000), 0, None).unwrap()).verdict,
+        Verdict::Allow
+    );
     // b's in-memory ledger is stale; it refreshes inside the write transaction.
     let d = fresh(b.act(&body("INV-S", 1_000), 1, None).unwrap());
     assert_eq!(d.verdict, Verdict::Block);
@@ -172,7 +206,13 @@ async fn concurrent_identical_requests_pay_once() {
     let c = persist::connect(db.to_str().unwrap()).unwrap();
     assert_eq!(count(&c, "ledger"), 1);
     assert_eq!(count(&c, "decisions"), 24);
-    assert_eq!(AuditLog { records: persist::load_audit(&c).unwrap() }.verify(), None);
+    assert_eq!(
+        AuditLog {
+            records: persist::load_audit(&c).unwrap()
+        }
+        .verify(),
+        None
+    );
 }
 
 #[test]
@@ -189,11 +229,23 @@ fn resolve_persists() {
     {
         let mut s = Store::open(db.to_str().unwrap(), master()).unwrap();
         assert!(s.resolve(&id, false, "ap.lead", 10).unwrap());
-        assert!(!s.resolve(&id, true, "ap.lead", 11).unwrap(), "already resolved");
+        assert!(
+            !s.resolve(&id, true, "ap.lead", 11).unwrap(),
+            "already resolved"
+        );
     }
     let s = Store::open(db.to_str().unwrap(), master()).unwrap();
-    let e = s.ledger().unwrap().entries.into_iter().find(|e| e.decision_id == id).unwrap();
-    assert_eq!(e.status, invoiceshield_governor::ledger::EntryStatus::Rejected);
+    let e = s
+        .ledger()
+        .unwrap()
+        .entries
+        .into_iter()
+        .find(|e| e.decision_id == id)
+        .unwrap();
+    assert_eq!(
+        e.status,
+        invoiceshield_governor::ledger::EntryStatus::Rejected
+    );
     assert_eq!(s.audit_records().unwrap().len(), 2);
 }
 
@@ -202,8 +254,14 @@ fn newer_schema_is_refused() {
     let dir = tmpdir("schema");
     let db = dir.join("g.db");
     drop(Store::open(db.to_str().unwrap(), master()).unwrap());
-    Connection::open(&db).unwrap().execute_batch(&format!("PRAGMA user_version = {}", SCHEMA_VERSION + 1)).unwrap();
-    assert!(matches!(Store::open(db.to_str().unwrap(), master()), Err(persist::StoreError::SchemaTooNew(_))));
+    Connection::open(&db)
+        .unwrap()
+        .execute_batch(&format!("PRAGMA user_version = {}", SCHEMA_VERSION + 1))
+        .unwrap();
+    assert!(matches!(
+        Store::open(db.to_str().unwrap(), master()),
+        Err(persist::StoreError::SchemaTooNew(_))
+    ));
 }
 
 #[test]
@@ -223,7 +281,10 @@ fn chain_with(n: usize) -> (std::path::PathBuf, Store) {
     let db = dir.join("g.db");
     let mut s = Store::open(db.to_str().unwrap(), master()).unwrap();
     for i in 0..n {
-        fresh(s.act(&body(&format!("INV-A{i}"), 1_000), i as i64, None).unwrap());
+        fresh(
+            s.act(&body(&format!("INV-A{i}"), 1_000), i as i64, None)
+                .unwrap(),
+        );
     }
     (db, s)
 }
@@ -252,12 +313,21 @@ fn anchors_verify_and_detect_whole_chain_rewrite() {
         forged.append(r.payload.clone());
     }
     for r in &forged.records {
-        c.execute("UPDATE audit SET prev_hash = ?1, payload = ?2, hash = ?3 WHERE seq = ?4",
-            rusqlite::params![r.prev_hash, r.payload.to_string(), r.hash, r.seq as i64]).unwrap();
+        c.execute(
+            "UPDATE audit SET prev_hash = ?1, payload = ?2, hash = ?3 WHERE seq = ?4",
+            rusqlite::params![r.prev_hash, r.payload.to_string(), r.hash, r.seq as i64],
+        )
+        .unwrap();
     }
     let stored = persist::load_audit(&c).unwrap();
     // The hash chain alone cannot see it...
-    assert_eq!(AuditLog { records: stored.clone() }.verify(), None);
+    assert_eq!(
+        AuditLog {
+            records: stored.clone()
+        }
+        .verify(),
+        None
+    );
     // ...the anchor can.
     let rep = anchor::verify_chain(&stored, &anchors, &pk);
     assert!(!rep.ok);
@@ -275,17 +345,26 @@ fn anchors_detect_edit_truncation_and_forged_anchor() {
     // Single-record edit without recomputing: the chain itself breaks.
     let mut edited = recs.clone();
     edited[1].payload["verdict"] = serde_json::json!("allow_forged");
-    assert_eq!(anchor::verify_chain(&edited, std::slice::from_ref(&a), &pk).first_broken, Some(1));
+    assert_eq!(
+        anchor::verify_chain(&edited, std::slice::from_ref(&a), &pk).first_broken,
+        Some(1)
+    );
 
     // Truncation below the anchored head.
     let rep = anchor::verify_chain(&recs[..2], std::slice::from_ref(&a), &pk);
-    assert!(!rep.ok && rep.anchor_errors[0].contains("truncated"), "{rep:?}");
+    assert!(
+        !rep.ok && rep.anchor_errors[0].contains("truncated"),
+        "{rep:?}"
+    );
 
     // An anchor signed by another key (attacker re-anchoring a rewritten chain) is rejected.
     let evil = anchor::generate_key();
     let fake = anchor::sign(&evil, 2, &recs[2].hash, 6);
     let rep = anchor::verify_chain(&recs, std::slice::from_ref(&fake), &pk);
-    assert!(!rep.ok && rep.anchor_errors[0].contains("signature"), "{rep:?}");
+    assert!(
+        !rep.ok && rep.anchor_errors[0].contains("signature"),
+        "{rep:?}"
+    );
     // Swapping in the pinned pubkey field does not help: the signature is checked, not the field.
     let mut spoof = fake;
     spoof.pubkey = hex::encode(pk.to_bytes());
@@ -318,7 +397,11 @@ fn backup_and_restore_round_trip() {
     assert_eq!(r.audit_head().unwrap(), head_at_backup);
     assert_eq!(r.ledger().unwrap().entries.len(), 2);
     let d = fresh(r.act(&body("INV-B1", 1_000), 3, None).unwrap());
-    assert_eq!(d.verdict, Verdict::Block, "duplicate must still be blocked after restore");
+    assert_eq!(
+        d.verdict,
+        Verdict::Block,
+        "duplicate must still be blocked after restore"
+    );
     // B3 was written after the backup, so the restored DB has never seen it.
     let d = fresh(r.act(&body("INV-B3", 1_000), 4, None).unwrap());
     assert_eq!(d.verdict, Verdict::Allow, "{:?}", d.reasons);
@@ -338,7 +421,10 @@ fn restore_refuses_a_backup_with_a_broken_chain() {
     fresh(s.act(&body("INV-X2", 1_000), 1, None).unwrap());
     s.backup_to(&bak).unwrap();
     let c = Connection::open(&bak).unwrap();
-    c.execute_batch("DROP TRIGGER audit_append_only; UPDATE audit SET payload = '{\"x\":1}' WHERE seq = 0;").unwrap();
+    c.execute_batch(
+        "DROP TRIGGER audit_append_only; UPDATE audit SET payload = '{\"x\":1}' WHERE seq = 0;",
+    )
+    .unwrap();
     drop(c);
     assert!(persist::restore(&bak, dir.join("r.db").to_str().unwrap()).is_err());
 }

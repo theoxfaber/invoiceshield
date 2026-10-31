@@ -62,15 +62,23 @@ impl TrustConfig {
 
     /// Parse a comma-separated list of public keys, each 64 hex chars or base64 of 32 bytes.
     pub fn parse_keys(s: &str) -> Result<Vec<VerifyingKey>, String> {
-        s.split(',').map(str::trim).filter(|x| !x.is_empty()).map(|x| {
-            let raw = if x.len() == 64 && x.chars().all(|c| c.is_ascii_hexdigit()) {
-                hex::decode(x).map_err(|e| e.to_string())?
-            } else {
-                base64::engine::general_purpose::STANDARD.decode(x).map_err(|e| e.to_string())?
-            };
-            let arr: [u8; 32] = raw.try_into().map_err(|_| "public key must be 32 bytes".to_string())?;
-            VerifyingKey::from_bytes(&arr).map_err(|e| e.to_string())
-        }).collect()
+        s.split(',')
+            .map(str::trim)
+            .filter(|x| !x.is_empty())
+            .map(|x| {
+                let raw = if x.len() == 64 && x.chars().all(|c| c.is_ascii_hexdigit()) {
+                    hex::decode(x).map_err(|e| e.to_string())?
+                } else {
+                    base64::engine::general_purpose::STANDARD
+                        .decode(x)
+                        .map_err(|e| e.to_string())?
+                };
+                let arr: [u8; 32] = raw
+                    .try_into()
+                    .map_err(|_| "public key must be 32 bytes".to_string())?;
+                VerifyingKey::from_bytes(&arr).map_err(|e| e.to_string())
+            })
+            .collect()
     }
 }
 
@@ -115,7 +123,11 @@ pub struct Rejection {
 }
 
 fn rej(rule: &'static str, verdict: Verdict, detail: impl Into<String>) -> Rejection {
-    Rejection { rule, verdict, detail: detail.into() }
+    Rejection {
+        rule,
+        verdict,
+        detail: detail.into(),
+    }
 }
 
 pub struct TrustVerifier {
@@ -126,7 +138,11 @@ pub struct TrustVerifier {
 
 impl TrustVerifier {
     pub fn new(cfg: TrustConfig) -> Self {
-        TrustVerifier { cfg, seen: HashMap::new(), order: VecDeque::new() }
+        TrustVerifier {
+            cfg,
+            seen: HashMap::new(),
+            order: VecDeque::new(),
+        }
     }
 
     pub fn nonces_held(&self) -> usize {
@@ -148,8 +164,16 @@ impl TrustVerifier {
     pub fn verify(&mut self, raw: &str, wall_now: i64) -> Result<Request, Rejection> {
         let mut body: serde_json::Value = serde_json::from_str(raw)
             .map_err(|e| rej("request_unparseable", Verdict::Review, e.to_string()))?;
-        let obj = body.as_object_mut().ok_or_else(|| rej("request_unparseable", Verdict::Review, "body is not an object"))?;
-        let claimed_hash = obj.get_mut("proposal").and_then(|p| p.as_object_mut())
+        let obj = body.as_object_mut().ok_or_else(|| {
+            rej(
+                "request_unparseable",
+                Verdict::Review,
+                "body is not an object",
+            )
+        })?;
+        let claimed_hash = obj
+            .get_mut("proposal")
+            .and_then(|p| p.as_object_mut())
             .and_then(|p| p.remove("document_sha256"));
         let Some(env) = obj.remove("signed_evidence") else {
             if self.cfg.dev_unsigned {
@@ -163,12 +187,22 @@ impl TrustVerifier {
         obj.remove("evidence"); // never read caller-supplied evidence next to a signed envelope
 
         let bad_sig = |d: &str| rej("evidence_signature_invalid", Verdict::Block, d.to_string());
-        let env: Envelope = serde_json::from_value(env).map_err(|e| bad_sig(&format!("malformed envelope: {e}")))?;
-        let pre: serde_json::Value = serde_json::from_str(&env.payload).map_err(|_| bad_sig("payload is not JSON"))?;
+        let env: Envelope = serde_json::from_value(env)
+            .map_err(|e| bad_sig(&format!("malformed envelope: {e}")))?;
+        let pre: serde_json::Value =
+            serde_json::from_str(&env.payload).map_err(|_| bad_sig("payload is not JSON"))?;
         let kid = pre.get("key_id").and_then(|v| v.as_str()).unwrap_or("");
-        let key = self.cfg.keys.get(kid).ok_or_else(|| bad_sig(&format!("unknown extractor key id {kid:?}")))?;
-        let sig_bytes = base64::engine::general_purpose::STANDARD.decode(env.sig.trim()).map_err(|_| bad_sig("signature is not base64"))?;
-        let sig_arr: [u8; 64] = sig_bytes.try_into().map_err(|_| bad_sig("signature must be 64 bytes"))?;
+        let key = self
+            .cfg
+            .keys
+            .get(kid)
+            .ok_or_else(|| bad_sig(&format!("unknown extractor key id {kid:?}")))?;
+        let sig_bytes = base64::engine::general_purpose::STANDARD
+            .decode(env.sig.trim())
+            .map_err(|_| bad_sig("signature is not base64"))?;
+        let sig_arr: [u8; 64] = sig_bytes
+            .try_into()
+            .map_err(|_| bad_sig("signature must be 64 bytes"))?;
         key.verify_strict(env.payload.as_bytes(), &Signature::from_bytes(&sig_arr))
             .map_err(|_| bad_sig("Ed25519 signature does not verify against the extractor key"))?;
 
@@ -176,63 +210,146 @@ impl TrustVerifier {
         let p: SignedPayload = serde_json::from_value(pre)
             .map_err(|e| rej("evidence_payload_invalid", Verdict::Review, e.to_string()))?;
         if p.v != PAYLOAD_VERSION {
-            return Err(rej("evidence_payload_invalid", Verdict::Review, format!("payload version {} not supported", p.v)));
+            return Err(rej(
+                "evidence_payload_invalid",
+                Verdict::Review,
+                format!("payload version {} not supported", p.v),
+            ));
         }
         if p.issued_at < wall_now - self.cfg.max_age_secs {
-            return Err(rej("evidence_stale", Verdict::Review,
-                format!("evidence issued {}s ago (max {}s)", wall_now - p.issued_at, self.cfg.max_age_secs)));
+            return Err(rej(
+                "evidence_stale",
+                Verdict::Review,
+                format!(
+                    "evidence issued {}s ago (max {}s)",
+                    wall_now - p.issued_at,
+                    self.cfg.max_age_secs
+                ),
+            ));
         }
         if p.issued_at > wall_now + self.cfg.max_skew_secs {
-            return Err(rej("evidence_from_future", Verdict::Review,
-                format!("evidence issued {}s in the future (max skew {}s)", p.issued_at - wall_now, self.cfg.max_skew_secs)));
+            return Err(rej(
+                "evidence_from_future",
+                Verdict::Review,
+                format!(
+                    "evidence issued {}s in the future (max skew {}s)",
+                    p.issued_at - wall_now,
+                    self.cfg.max_skew_secs
+                ),
+            ));
         }
-        if p.nonce.len() < 32 || p.nonce.len() > 128 || !p.nonce.chars().all(|c| c.is_ascii_hexdigit()) {
-            return Err(rej("evidence_payload_invalid", Verdict::Review, "nonce must be 32-128 hex chars"));
+        if p.nonce.len() < 32
+            || p.nonce.len() > 128
+            || !p.nonce.chars().all(|c| c.is_ascii_hexdigit())
+        {
+            return Err(rej(
+                "evidence_payload_invalid",
+                Verdict::Review,
+                "nonce must be 32-128 hex chars",
+            ));
         }
         self.prune(wall_now);
         if self.seen.contains_key(&p.nonce) {
-            return Err(rej("evidence_replayed", Verdict::Block, format!("nonce {} was already used", &p.nonce[..16])));
+            return Err(rej(
+                "evidence_replayed",
+                Verdict::Block,
+                format!("nonce {} was already used", &p.nonce[..16]),
+            ));
         }
         if self.seen.len() >= self.cfg.max_nonces {
-            return Err(rej("evidence_nonce_store_full", Verdict::Review, "too many live nonces; refusing to decide"));
+            return Err(rej(
+                "evidence_nonce_store_full",
+                Verdict::Review,
+                "too many live nonces; refusing to decide",
+            ));
         }
         self.seen.insert(p.nonce.clone(), p.issued_at);
         self.order.push_back((p.issued_at, p.nonce.clone()));
         // keep `order` sorted enough for pruning: issued_at values arrive roughly in order;
         // an out-of-order one only lives a little longer than needed (still bounded by max_nonces).
 
-        let claimed = claimed_hash.as_ref().and_then(|v| v.as_str()).map(|s| s.trim().to_ascii_lowercase());
+        let claimed = claimed_hash
+            .as_ref()
+            .and_then(|v| v.as_str())
+            .map(|s| s.trim().to_ascii_lowercase());
         match claimed {
-            None => return Err(rej("document_hash_missing", Verdict::Review, "proposal does not name the document (document_sha256)")),
+            None => {
+                return Err(rej(
+                    "document_hash_missing",
+                    Verdict::Review,
+                    "proposal does not name the document (document_sha256)",
+                ))
+            }
             Some(h) if h != p.doc_sha256.to_ascii_lowercase() => {
-                return Err(rej("document_hash_mismatch", Verdict::Block,
-                    format!("proposal is for document {} but the signed evidence is for {}", short(&h), short(&p.doc_sha256))));
+                return Err(rej(
+                    "document_hash_mismatch",
+                    Verdict::Block,
+                    format!(
+                        "proposal is for document {} but the signed evidence is for {}",
+                        short(&h),
+                        short(&p.doc_sha256)
+                    ),
+                ));
             }
             _ => {}
         }
         if p.status != "ok" {
-            return Err(rej("extraction_failed", Verdict::Review,
-                format!("extractor could not read the document safely: {}", p.failure.as_deref().unwrap_or("unknown"))));
+            return Err(rej(
+                "extraction_failed",
+                Verdict::Review,
+                format!(
+                    "extractor could not read the document safely: {}",
+                    p.failure.as_deref().unwrap_or("unknown")
+                ),
+            ));
         }
         let ev: Evidence = serde_json::from_value(p.evidence.unwrap_or(serde_json::Value::Null))
-            .map_err(|e| rej("evidence_payload_invalid", Verdict::Review, format!("signed evidence fields: {e}")))?;
+            .map_err(|e| {
+                rej(
+                    "evidence_payload_invalid",
+                    Verdict::Review,
+                    format!("signed evidence fields: {e}"),
+                )
+            })?;
         let proposal = obj.remove("proposal").unwrap_or(serde_json::Value::Null);
         let checker_raw = match obj.remove("checker_raw") {
             None | Some(serde_json::Value::Null) => None,
             Some(serde_json::Value::String(s)) => Some(s),
-            Some(_) => return Err(rej("request_unparseable", Verdict::Review, "checker_raw must be a string")),
+            Some(_) => {
+                return Err(rej(
+                    "request_unparseable",
+                    Verdict::Review,
+                    "checker_raw must be a string",
+                ))
+            }
         };
         // Model-proposed item lines are untrusted input like the proposal; the engine verifies them
         // against the signed text layer (lines.rs). Malformed → REVIEW, as for any bad field.
         let proposed_item_lines = match obj.remove("proposed_item_lines") {
             None | Some(serde_json::Value::Null) => None,
-            Some(v) => Some(serde_json::from_value::<Vec<crate::engine::ItemLine>>(v)
-                .map_err(|e| rej("request_unparseable", Verdict::Review, format!("proposed_item_lines: {e}")))?),
+            Some(v) => Some(
+                serde_json::from_value::<Vec<crate::engine::ItemLine>>(v).map_err(|e| {
+                    rej(
+                        "request_unparseable",
+                        Verdict::Review,
+                        format!("proposed_item_lines: {e}"),
+                    )
+                })?,
+            ),
         };
         if let Some(k) = obj.keys().next() {
-            return Err(rej("request_unparseable", Verdict::Review, format!("unknown field {k:?}")));
+            return Err(rej(
+                "request_unparseable",
+                Verdict::Review,
+                format!("unknown field {k:?}"),
+            ));
         }
-        Ok(Request { proposal, evidence: ev, checker_raw, proposed_item_lines })
+        Ok(Request {
+            proposal,
+            evidence: ev,
+            checker_raw,
+            proposed_item_lines,
+        })
     }
 }
 
@@ -243,7 +360,13 @@ fn short(h: &str) -> String {
 impl Governor {
     /// Wire entry point with provenance checks. `now` is the (possibly eval) ledger clock,
     /// `wall_now` the real clock used for signature freshness.
-    pub fn evaluate_signed_json(&mut self, raw: &str, now: i64, wall_now: i64, trust: &mut TrustVerifier) -> Decision {
+    pub fn evaluate_signed_json(
+        &mut self,
+        raw: &str,
+        now: i64,
+        wall_now: i64,
+        trust: &mut TrustVerifier,
+    ) -> Decision {
         match trust.verify(raw, wall_now) {
             Ok(req) => self.evaluate(&req, now),
             Err(r) => self.reject(r.rule, r.verdict, r.detail, now),

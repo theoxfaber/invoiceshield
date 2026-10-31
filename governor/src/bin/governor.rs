@@ -20,7 +20,10 @@ fn usage() -> ! {
 }
 
 fn arg(args: &[String], name: &str) -> Option<String> {
-    args.iter().position(|a| a == name).and_then(|i| args.get(i + 1)).cloned()
+    args.iter()
+        .position(|a| a == name)
+        .and_then(|i| args.get(i + 1))
+        .cloned()
 }
 
 fn need(args: &[String], name: &str) -> String {
@@ -37,7 +40,9 @@ fn die(msg: impl std::fmt::Display) -> ! {
 
 fn main() {
     let args: Vec<String> = std::env::args().skip(1).collect();
-    let Some(cmd) = args.first().cloned() else { usage() };
+    let Some(cmd) = args.first().cloned() else {
+        usage()
+    };
     match cmd.as_str() {
         "backup" => {
             let db = need(&args, "--db");
@@ -47,14 +52,19 @@ fn main() {
             }
             let conn = persist::connect(&db).unwrap_or_else(|e| die(e));
             persist::backup(&conn, Path::new(&out)).unwrap_or_else(|e| die(e));
-            let n = persist::audit_head(&conn).unwrap_or_else(|e| die(e)).map(|h| h.2).unwrap_or(0);
+            let n = persist::audit_head(&conn)
+                .unwrap_or_else(|e| die(e))
+                .map(|h| h.2)
+                .unwrap_or(0);
             println!("backup ok: {db} -> {out} ({n} audit records)");
         }
         "restore" => {
             let from = need(&args, "--from");
             let db = need(&args, "--db");
             if Path::new(&db).exists() && !args.iter().any(|a| a == "--force") {
-                die(format!("{db} exists; stop the server and pass --force to overwrite it"));
+                die(format!(
+                    "{db} exists; stop the server and pass --force to overwrite it"
+                ));
             }
             persist::restore(Path::new(&from), &db).unwrap_or_else(|e| die(e));
             println!("restore ok: {from} -> {db}");
@@ -81,10 +91,17 @@ fn main() {
         "anchor" => {
             let db = need(&args, "--db");
             let f = need(&args, "--anchors");
-            let key = anchor::key_from_env().unwrap_or_else(|e| die(e)).unwrap_or_else(|| die("set GOVERNOR_ANCHOR_KEY or GOVERNOR_ANCHOR_KEY_FILE"));
+            let key = anchor::key_from_env()
+                .unwrap_or_else(|e| die(e))
+                .unwrap_or_else(|| die("set GOVERNOR_ANCHOR_KEY or GOVERNOR_ANCHOR_KEY_FILE"));
             let conn = persist::connect(&db).unwrap_or_else(|e| die(e));
-            let Some((seq, hash, _)) = persist::audit_head(&conn).unwrap_or_else(|e| die(e)) else { die("audit log is empty; nothing to anchor") };
-            let ts = SystemTime::now().duration_since(UNIX_EPOCH).map(|d| d.as_secs() as i64).unwrap_or(0);
+            let Some((seq, hash, _)) = persist::audit_head(&conn).unwrap_or_else(|e| die(e)) else {
+                die("audit log is empty; nothing to anchor")
+            };
+            let ts = SystemTime::now()
+                .duration_since(UNIX_EPOCH)
+                .map(|d| d.as_secs() as i64)
+                .unwrap_or(0);
             let a = anchor::sign(&key, seq, &hash, ts);
             anchor::append(Path::new(&f), &a).unwrap_or_else(|e| die(e));
             println!("{}", serde_json::to_string(&a).expect("json"));
@@ -92,18 +109,27 @@ fn main() {
         "keygen" => {
             let k = anchor::generate_key();
             println!("GOVERNOR_ANCHOR_KEY={}", hex::encode(k.to_bytes()));
-            println!("GOVERNOR_ANCHOR_PUBKEY={}", hex::encode(k.verifying_key().to_bytes()));
+            println!(
+                "GOVERNOR_ANCHOR_PUBKEY={}",
+                hex::encode(k.verifying_key().to_bytes())
+            );
             eprintln!("store the key in a secrets manager or a 0600 file (GOVERNOR_ANCHOR_KEY_FILE); never commit it");
         }
         "new-key" => {
             let name = need(&args, "--name");
-            let roles: Vec<String> = need(&args, "--role").split(',').map(|r| r.trim().to_lowercase()).collect();
-            let entry = serde_json::json!({"name": name, "roles": roles, "key_sha256": "0".repeat(64)});
+            let roles: Vec<String> = need(&args, "--role")
+                .split(',')
+                .map(|r| r.trim().to_lowercase())
+                .collect();
+            let entry =
+                serde_json::json!({"name": name, "roles": roles, "key_sha256": "0".repeat(64)});
             // Validate name/roles exactly as the server will.
             let check = serde_json::json!([entry]).to_string();
             if let Err(e) = invoiceshield_governor::auth::KeyRing::from_lookup(&|k| match k {
                 "GOVERNOR_IDENTITIES" => Some(check.clone()),
-                "GOVERNOR_API_KEY" if !roles.iter().any(|r| r == "agent") => Some("placeholder-agent-key-for-validation".into()),
+                "GOVERNOR_API_KEY" if !roles.iter().any(|r| r == "agent") => {
+                    Some("placeholder-agent-key-for-validation".into())
+                }
                 _ => None,
             }) {
                 die(e.join("; "));

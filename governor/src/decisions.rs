@@ -15,7 +15,11 @@ pub struct DecisionStore {
 
 impl DecisionStore {
     pub fn new(cap: usize) -> Self {
-        DecisionStore { cap: cap.max(1), order: VecDeque::new(), map: HashMap::new() }
+        DecisionStore {
+            cap: cap.max(1),
+            order: VecDeque::new(),
+            map: HashMap::new(),
+        }
     }
 
     pub fn len(&self) -> usize {
@@ -45,7 +49,12 @@ impl DecisionStore {
             let victim = self
                 .order
                 .iter()
-                .position(|k| self.map.get(k).map(|d| d.verdict != Verdict::Review).unwrap_or(true))
+                .position(|k| {
+                    self.map
+                        .get(k)
+                        .map(|d| d.verdict != Verdict::Review)
+                        .unwrap_or(true)
+                })
                 .unwrap_or(0);
             if let Some(k) = self.order.remove(victim) {
                 self.map.remove(&k);

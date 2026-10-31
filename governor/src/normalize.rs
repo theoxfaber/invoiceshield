@@ -62,7 +62,8 @@ pub fn near_dup_base(raw: &str) -> Option<String> {
     } else if letters == 0 {
         let nd = s.iter().rev().take_while(|c| c.is_ascii_digit()).count();
         let i = n - nd;
-        ((1..=2).contains(&nd) && i >= 2 && is_sep(s[i - 1]) && s[i - 2].is_numeric()).then(|| i - 1)
+        ((1..=2).contains(&nd) && i >= 2 && is_sep(s[i - 1]) && s[i - 2].is_numeric())
+            .then(|| i - 1)
     } else {
         None
     }?;
@@ -81,11 +82,17 @@ fn is_invisible(c: char) -> bool {
 }
 
 fn is_dash(c: char) -> bool {
-    matches!(c, '-' | '\u{2010}'..='\u{2015}' | '\u{2212}' | '\u{FE58}' | '\u{FE63}' | '\u{FF0D}')
+    matches!(
+        c,
+        '-' | '\u{2010}'..='\u{2015}' | '\u{2212}' | '\u{FE58}' | '\u{FE63}' | '\u{FF0D}'
+    )
 }
 
 pub fn gstin(raw: &str) -> String {
-    raw.nfkc().filter(|c| c.is_ascii_alphanumeric()).collect::<String>().to_uppercase()
+    raw.nfkc()
+        .filter(|c| c.is_ascii_alphanumeric())
+        .collect::<String>()
+        .to_uppercase()
 }
 
 pub fn domain(raw: &str) -> String {
@@ -94,18 +101,27 @@ pub fn domain(raw: &str) -> String {
 
 /// Upper-case alphanumerics only (NFKC first). For codes compared as plain tokens (SWIFT/BIC).
 pub fn upper_alnum(raw: &str) -> String {
-    raw.nfkc().filter(|c| c.is_ascii_alphanumeric()).collect::<String>().to_uppercase()
+    raw.nfkc()
+        .filter(|c| c.is_ascii_alphanumeric())
+        .collect::<String>()
+        .to_uppercase()
 }
 
 /// IFSC: NFKC, upper-case, whitespace removed, then validated against `^[A-Z]{4}0[A-Z0-9]{6}$`.
 /// None when the value is not a well-formed IFSC (it is never "fixed up" into one).
 pub fn ifsc(raw: &str) -> Option<String> {
-    let s: String = raw.nfkc().filter(|c| !c.is_whitespace() && !is_invisible(*c)).flat_map(|c| c.to_uppercase()).collect();
+    let s: String = raw
+        .nfkc()
+        .filter(|c| !c.is_whitespace() && !is_invisible(*c))
+        .flat_map(|c| c.to_uppercase())
+        .collect();
     let b = s.as_bytes();
     let ok = b.len() == 11
         && b[..4].iter().all(|c| c.is_ascii_uppercase())
         && b[4] == b'0'
-        && b[5..].iter().all(|c| c.is_ascii_uppercase() || c.is_ascii_digit());
+        && b[5..]
+            .iter()
+            .all(|c| c.is_ascii_uppercase() || c.is_ascii_digit());
     ok.then_some(s)
 }
 
@@ -146,7 +162,11 @@ pub fn is_iso4217_shape(code: &str) -> bool {
 pub fn item_key(raw: &str) -> String {
     let mut out = String::new();
     let mut gap = false;
-    for c in raw.nfkc().filter(|c| !is_invisible(*c)).flat_map(|c| c.to_lowercase()) {
+    for c in raw
+        .nfkc()
+        .filter(|c| !is_invisible(*c))
+        .flat_map(|c| c.to_lowercase())
+    {
         if c.is_alphanumeric() {
             if gap && !out.is_empty() {
                 out.push(' ');
@@ -167,10 +187,16 @@ pub fn numbers_bumped(a: &str, b: &str) -> bool {
     fn split(s: &str) -> Option<(&str, &str, &str)> {
         let bytes = s.as_bytes();
         let end = bytes.iter().rposition(|c| c.is_ascii_digit())? + 1;
-        let start = bytes[..end].iter().rposition(|c| !c.is_ascii_digit()).map(|i| i + 1).unwrap_or(0);
+        let start = bytes[..end]
+            .iter()
+            .rposition(|c| !c.is_ascii_digit())
+            .map(|i| i + 1)
+            .unwrap_or(0);
         Some((&s[..start], &s[start..end], &s[end..]))
     }
-    let (Some((pa, da, sa)), Some((pb, db, sb))) = (split(a), split(b)) else { return false };
+    let (Some((pa, da, sa)), Some((pb, db, sb))) = (split(a), split(b)) else {
+        return false;
+    };
     if pa != pb || sa != sb || da.len() > 12 || db.len() > 12 {
         return false;
     }

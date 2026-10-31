@@ -28,7 +28,11 @@ static N: AtomicU32 = AtomicU32::new(0);
 
 /// Fresh empty directory under the system temp dir.
 pub fn tmpdir(tag: &str) -> PathBuf {
-    let d = std::env::temp_dir().join(format!("isg-{tag}-{}-{}", std::process::id(), N.fetch_add(1, Ordering::SeqCst)));
+    let d = std::env::temp_dir().join(format!(
+        "isg-{tag}-{}-{}",
+        std::process::id(),
+        N.fetch_add(1, Ordering::SeqCst)
+    ));
     let _ = std::fs::remove_dir_all(&d);
     std::fs::create_dir_all(&d).unwrap();
     d

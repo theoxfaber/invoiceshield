@@ -19,20 +19,26 @@ CLEAR = json.dumps({"signals": []})
 NOW = 1_793_000_000
 
 
-def _pdf(rows, fee=False) -> bytes:
-    """A layout our parser does not know: 'Particulars' header, 'Grand Total', no 'Total Payable'."""
+def _pdf(rows, fee=False, columns=False) -> bytes:
+    """A layout no deterministic parser reads: no column header, each row printed as one run of text
+    ("1. Stationery - A4 paper  100 nos @ 250.00") with the amount at the right, 'Grand Total', no
+    'Total Payable'. `columns=True` draws the original Sl/Particulars/Qty/Rate/Amount table, which the
+    word-box geometry parser (e53b468) now reads, so it no longer exercises the model path."""
     buf = io.BytesIO()
     c = canvas.Canvas(buf, pagesize=A4)
     y = 800
     for line in ["TAX INVOICE", "Sharma Office Supplies Pvt Ltd", "GSTIN: 24ZZACS4821A1ZX", "Invoice No: SOS/LT/0001",
-                 "Bill To: GSTIN 24ZZACB7319B1Z5", "Sl   Particulars                      Qty    Rate      Amount"]:
+                 "Bill To: GSTIN 24ZZACB7319B1Z5"] + (["Sl   Particulars                      Qty    Rate      Amount"] if columns else []):
         c.drawString(40, y, line)
         y -= 18
     for i, (desc, qty, rate, amt) in enumerate(rows, 1):
-        c.drawString(40, y, str(i))
-        c.drawString(70, y, desc)
-        c.drawString(300, y, str(qty))
-        c.drawString(350, y, rate)
+        if columns:
+            c.drawString(40, y, str(i))
+            c.drawString(70, y, desc)
+            c.drawString(300, y, str(qty))
+            c.drawString(350, y, rate)
+        else:
+            c.drawString(40, y, f"{i}. {desc}  {qty} nos @ {rate}")
         c.drawString(430, y, amt)
         y -= 18
     for label, amt in [("Sub Total", "30,000.00"), ("CGST @9%", "2,700.00"), ("SGST @9%", "2,700.00"), ("Grand Total", "35,400.00")]:
@@ -78,6 +84,12 @@ def test_parser_reads_nothing_on_this_layout_and_the_gate_fails_closed(gov):
     assert ev["item_lines"] == [] and ev["printed_total_paise"] == 35_400_00 and needs_model_lines(ev)
     assert "Stationery - A4 paper" in ev["text_layer"]
     assert d["verdict"] == "review" and "line_items_unreadable" in rules(d), d["reasons"]
+
+
+def test_column_layout_is_now_read_by_the_geometry_parser(gov):
+    ev, d = _run(gov, _pdf(ROWS, columns=True), None)
+    assert [ln["amount_paise"] for ln in ev["item_lines"]] == [25_000_00, 5_000_00, 2_700_00, 2_700_00]
+    assert "line_items_unreadable" not in rules(d), d["reasons"]
 
 
 def test_verified_model_lines_let_the_gate_check_and_pay(gov):

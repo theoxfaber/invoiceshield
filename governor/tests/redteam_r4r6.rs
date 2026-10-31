@@ -30,7 +30,10 @@ fn near_dup_base_strips_one_resubmission_suffix() {
     assert_eq!(near_dup_base("INV-101-A").as_deref(), Some("INV101"));
     assert_eq!(near_dup_base("INV-101-1").as_deref(), Some("INV101"));
     assert_eq!(near_dup_base("INV-101/02").as_deref(), Some("INV101"));
-    assert_eq!(near_dup_base("SOS/26-27/0900-A").as_deref(), Some("SOS26270900"));
+    assert_eq!(
+        near_dup_base("SOS/26-27/0900-A").as_deref(),
+        Some("SOS26270900")
+    );
     assert_eq!(near_dup_base("inv-101 rev").as_deref(), Some("INV101"));
     // not a suffix: digits with no separator, a plain number, letters only, 4+ letters
     assert_eq!(near_dup_base("INV-1011"), None);
@@ -48,7 +51,11 @@ fn r4_suffix_resubmission_same_amount_reviews() {
         assert_eq!(a.verdict, Verdict::Allow, "{:?}", a.reasons);
         let b = eval(&mut g, &body(suffix, 10_000), DAY);
         assert_eq!(b.verdict, Verdict::Review, "{suffix}: {:?}", b.reasons);
-        assert!(has(&b, "near_duplicate_invoice"), "{suffix}: {:?}", b.reasons);
+        assert!(
+            has(&b, "near_duplicate_invoice"),
+            "{suffix}: {:?}",
+            b.reasons
+        );
         assert!(!b.tamper_alert);
     }
 }
@@ -57,7 +64,10 @@ fn r4_suffix_resubmission_same_amount_reviews() {
 fn r4_works_in_both_directions() {
     // the suffixed number was paid first, then the plain one arrives
     let mut g = Governor::new(master());
-    assert_eq!(eval(&mut g, &body("INV-101A", 10_000), 0).verdict, Verdict::Allow);
+    assert_eq!(
+        eval(&mut g, &body("INV-101A", 10_000), 0).verdict,
+        Verdict::Allow
+    );
     let b = eval(&mut g, &body("INV-101", 10_000), DAY);
     assert_eq!(b.verdict, Verdict::Review, "{:?}", b.reasons);
     assert!(has(&b, "near_duplicate_invoice"));
@@ -66,7 +76,10 @@ fn r4_works_in_both_directions() {
 #[test]
 fn r4_not_triggered_by_other_amount_other_number_or_old_entry() {
     let mut g = Governor::new(master());
-    assert_eq!(eval(&mut g, &body("INV-101", 10_000), 0).verdict, Verdict::Allow);
+    assert_eq!(
+        eval(&mut g, &body("INV-101", 10_000), 0).verdict,
+        Verdict::Allow
+    );
     // different amount: a genuine supplementary invoice is not this rule's business
     let d = eval(&mut g, &body("INV-101A", 9_000), DAY);
     assert!(!has(&d, "near_duplicate_invoice"), "{:?}", d.reasons);
@@ -78,7 +91,10 @@ fn r4_not_triggered_by_other_amount_other_number_or_old_entry() {
     assert!(!has(&d, "near_duplicate_invoice"), "{:?}", d.reasons);
     // outside the 90-day window
     let mut g = Governor::new(master());
-    assert_eq!(eval(&mut g, &body("INV-201", 10_000), 0).verdict, Verdict::Allow);
+    assert_eq!(
+        eval(&mut g, &body("INV-201", 10_000), 0).verdict,
+        Verdict::Allow
+    );
     let d = eval(&mut g, &body("INV-201A", 10_000), 91 * DAY);
     assert!(!has(&d, "near_duplicate_invoice"), "{:?}", d.reasons);
 }
@@ -99,7 +115,14 @@ fn r4_persists_across_restart_in_sqlite_store() {
     // and the reverse direction after a second restart: the stored suffixed entry's base
     drop(s);
     let mut s = Store::open(db.to_str().unwrap(), master()).unwrap();
-    let e = s.ledger().unwrap().entries.iter().find(|e| e.decision_id == b.decision_id).cloned().unwrap();
+    let e = s
+        .ledger()
+        .unwrap()
+        .entries
+        .iter()
+        .find(|e| e.decision_id == b.decision_id)
+        .cloned()
+        .unwrap();
     assert_eq!(e.near_key.as_deref(), Some("SOS26270900"));
     let c = fresh(s.act(&body("SOS/26-27/0900-B", 10_000), 300, None).unwrap());
     assert!(has(&c, "near_duplicate_invoice"), "{:?}", c.reasons);
@@ -138,12 +161,20 @@ fn r6_cyrillic_ifsc_raises_tamper_review() {
     let clean = eval(&mut g, &with_bank("INV-501", Some(&acct), Some(&ifsc)), 0);
     assert_eq!(clean.verdict, Verdict::Allow, "{:?}", clean.reasons);
     // replace the first ASCII letter of the master IFSC with its Cyrillic twin
-    let homo: String = ifsc.chars().enumerate().map(|(i, c)| if i == 0 { cyr(c) } else { c }).collect();
+    let homo: String = ifsc
+        .chars()
+        .enumerate()
+        .map(|(i, c)| if i == 0 { cyr(c) } else { c })
+        .collect();
     assert_ne!(homo, ifsc);
     let d = eval(&mut g, &with_bank("INV-502", Some(&acct), Some(&homo)), DAY);
     assert!(d.tamper_alert, "{:?}", d.reasons);
     assert!(d.verdict >= Verdict::Review, "{:?}", d.reasons);
-    assert!(d.reasons.iter().any(|r| r.detail.contains("non-ASCII")), "{:?}", d.reasons);
+    assert!(
+        d.reasons.iter().any(|r| r.detail.contains("non-ASCII")),
+        "{:?}",
+        d.reasons
+    );
 }
 
 #[test]
@@ -163,8 +194,13 @@ fn r6_cyrillic_letter_inside_matching_account_digits_is_tamper() {
 #[test]
 fn r6_tamper_plus_another_problem_blocks_as_before() {
     let (acct, ifsc) = master_bank();
-    let homo: String = ifsc.chars().enumerate().map(|(i, c)| if i == 0 { cyr(c) } else { c }).collect();
-    let mut v: serde_json::Value = serde_json::from_str(&with_bank("INV-701", Some(&acct), Some(&homo))).unwrap();
+    let homo: String = ifsc
+        .chars()
+        .enumerate()
+        .map(|(i, c)| if i == 0 { cyr(c) } else { c })
+        .collect();
+    let mut v: serde_json::Value =
+        serde_json::from_str(&with_bank("INV-701", Some(&acct), Some(&homo))).unwrap();
     v["evidence"]["text_source"] = serde_json::json!("ocr"); // a second REVIEW reason
     let mut g = Governor::new(master());
     let d = eval(&mut g, &v.to_string(), 0);
@@ -174,7 +210,17 @@ fn r6_tamper_plus_another_problem_blocks_as_before() {
 
 fn cyr(c: char) -> char {
     match c {
-        'A' => 'А', 'B' => 'В', 'C' => 'С', 'E' => 'Е', 'H' => 'Н', 'K' => 'К', 'M' => 'М', 'O' => 'О',
-        'P' => 'Р', 'T' => 'Т', 'X' => 'Х', other => other,
+        'A' => 'А',
+        'B' => 'В',
+        'C' => 'С',
+        'E' => 'Е',
+        'H' => 'Н',
+        'K' => 'К',
+        'M' => 'М',
+        'O' => 'О',
+        'P' => 'Р',
+        'T' => 'Т',
+        'X' => 'Х',
+        other => other,
     }
 }

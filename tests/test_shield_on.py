@@ -155,10 +155,11 @@ def test_sequences_through_real_governor(tmp_path):
     by_id = {s["id"]: s for s in sequences()}
     with GovernorProc() as gov:
         for sid, steps in {"D02": ["allow", "block"], "D04": ["allow", "review"], "S01": ["allow", "allow", "review"],
-                           "S05": ["allow", "allow", "allow"], "W01": ["block"], "BS2": ["allow", "allow", "allow"]}.items():
+                           "S05": ["allow", "allow", "review"], "W01": ["block"], "BS2": ["allow", "allow", "allow"]}.items():
             r = run_sequence(gov, by_id[sid], tmp_path)
             assert [s["verdict"] for s in r["steps"]] == steps, sid
-        assert run_sequence(gov, by_id["S05"], tmp_path)["harmful"] is True   # the stated limit is real, not hidden
+        # S05 (slow drip, a stated limit until 75d5863) is now held by po_drip_over_threshold on its third invoice
+            assert run_sequence(gov, by_id["S05"], tmp_path)["harmful"] is False
         assert run_sequence(gov, by_id["D02"], tmp_path)["harmful"] is False
 
 

@@ -1,7 +1,7 @@
 //! Review items 1 and 2 (2026-10-31): fail closed on unreadable item lines; model-proposed lines
 //! are used only when they verify verbatim against the signed text layer.
 use invoiceshield_governor::engine::{Evidence, Governor, ItemLine, Request};
-use invoiceshield_governor::master::{Master, Policy, PoLine, PurchaseOrder, Vendor};
+use invoiceshield_governor::master::{Master, PoLine, Policy, PurchaseOrder, Vendor};
 use invoiceshield_governor::Verdict;
 use serde_json::json;
 
@@ -12,36 +12,96 @@ const TEXT: &str = "TAX INVOICE\nSharma Office Supplies\nGSTIN: 24ZZACS0001A1Z5\
 const TEXT_FEE: &str = "TAX INVOICE\nSl\nDescription\nQty\nRate\nTaxable Value\n1\nA4 copier paper 75 gsm\n4802\n100\n250.00\n25,000.00\n2\nUrgent handling fee\n9985\n1\n5,000.00\n5,000.00\nTaxable Total\n₹ 30,000.00\nCGST\n₹ 2,700.00\nSGST\n₹ 2,700.00\nGRAND TOTAL\n₹ 35,400.00\n";
 
 fn master() -> Master {
-    let mut m = Master { policy: Policy { buyer_gstin: Some("24ZZACB7319B1Z5".into()), ..Policy::default() }, ..Default::default() };
-    m.vendors.insert("V001".into(), Vendor {
-        vendor_id: "V001".into(), legal_name: "Sharma Office Supplies Pvt Ltd".into(), gstin: Some(GSTIN.into()), pan: None,
-        beneficiary_id: "BEN_V001".into(), bank_account: "77770000000101".into(), ifsc: "BARB0MAKARP".into(),
-        bank_name: "Bank".into(), email_domains: vec![], category: "Stationery".into(),
-    });
-    m.pos.insert("PO-1".into(), PurchaseOrder {
-        po_ref: "PO-1".into(), owner_vendor_id: "V001".into(), category: "Stationery".into(), currency: "INR".into(),
-        open_balance_paise: 50_000_00,
-        lines: vec![
-            PoLine { item: "A4 copier paper 75 gsm".into(), aliases: vec![], qty: 200, unit_price_minor: 250_00, currency: None, unit: "ream".into() },
-            PoLine { item: "Stapler heavy duty".into(), aliases: vec![], qty: 20, unit_price_minor: 500_00, currency: None, unit: "nos".into() },
-        ],
-    });
+    let mut m = Master {
+        policy: Policy {
+            buyer_gstin: Some("24ZZACB7319B1Z5".into()),
+            ..Policy::default()
+        },
+        ..Default::default()
+    };
+    m.vendors.insert(
+        "V001".into(),
+        Vendor {
+            vendor_id: "V001".into(),
+            legal_name: "Sharma Office Supplies Pvt Ltd".into(),
+            gstin: Some(GSTIN.into()),
+            pan: None,
+            beneficiary_id: "BEN_V001".into(),
+            bank_account: "77770000000101".into(),
+            ifsc: "BARB0MAKARP".into(),
+            bank_name: "Bank".into(),
+            email_domains: vec![],
+            category: "Stationery".into(),
+        },
+    );
+    m.pos.insert(
+        "PO-1".into(),
+        PurchaseOrder {
+            po_ref: "PO-1".into(),
+            owner_vendor_id: "V001".into(),
+            category: "Stationery".into(),
+            currency: "INR".into(),
+            open_balance_paise: 50_000_00,
+            lines: vec![
+                PoLine {
+                    item: "A4 copier paper 75 gsm".into(),
+                    aliases: vec![],
+                    qty: 200,
+                    unit_price_minor: 250_00,
+                    currency: None,
+                    unit: "ream".into(),
+                },
+                PoLine {
+                    item: "Stapler heavy duty".into(),
+                    aliases: vec![],
+                    qty: 20,
+                    unit_price_minor: 500_00,
+                    currency: None,
+                    unit: "nos".into(),
+                },
+            ],
+        },
+    );
     m
 }
 
 fn ev(text: &str, total: Option<i64>) -> Evidence {
-    Evidence { text_layer_gstin: Some(GSTIN.into()), has_text_layer: true, text_source: Some("text_layer".into()),
-        printed_total_paise: total, text_layer: Some(text.into()), ..Default::default() }
+    Evidence {
+        text_layer_gstin: Some(GSTIN.into()),
+        has_text_layer: true,
+        text_source: Some("text_layer".into()),
+        printed_total_paise: total,
+        text_layer: Some(text.into()),
+        ..Default::default()
+    }
 }
 
 fn l(d: &str, a: i64, q: Option<i64>, u: Option<i64>, tax: bool) -> ItemLine {
-    ItemLine { description: d.into(), amount_paise: a, qty: q, unit_price_minor: u, is_tax: tax }
+    ItemLine {
+        description: d.into(),
+        amount_paise: a,
+        qty: q,
+        unit_price_minor: u,
+        is_tax: tax,
+    }
 }
 
 fn good_lines() -> Vec<ItemLine> {
     vec![
-        l("A4 copier paper 75 gsm", 25_000_00, Some(100), Some(250_00), false),
-        l("Stapler heavy duty", 5_000_00, Some(10), Some(500_00), false),
+        l(
+            "A4 copier paper 75 gsm",
+            25_000_00,
+            Some(100),
+            Some(250_00),
+            false,
+        ),
+        l(
+            "Stapler heavy duty",
+            5_000_00,
+            Some(10),
+            Some(500_00),
+            false,
+        ),
         l("CGST", 2_700_00, None, None, true),
         l("SGST", 2_700_00, None, None, true),
     ]
@@ -49,8 +109,17 @@ fn good_lines() -> Vec<ItemLine> {
 
 fn run(evidence: Evidence, proposed: Option<Vec<ItemLine>>) -> invoiceshield_governor::Decision {
     let mut g = Governor::new(master());
-    let p = json!({"vendor_id":"V001","invoice_no":"SOS/1","amount_paise":35_400_00,"po_ref":"PO-1"});
-    g.evaluate(&Request { proposal: p, evidence, checker_raw: Some(CLEAN.into()), proposed_item_lines: proposed }, 1_000)
+    let p =
+        json!({"vendor_id":"V001","invoice_no":"SOS/1","amount_paise":35_400_00,"po_ref":"PO-1"});
+    g.evaluate(
+        &Request {
+            proposal: p,
+            evidence,
+            checker_raw: Some(CLEAN.into()),
+            proposed_item_lines: proposed,
+        },
+        1_000,
+    )
 }
 
 fn rules(d: &invoiceshield_governor::Decision) -> Vec<String> {
@@ -75,7 +144,11 @@ fn empty_model_proposal_is_the_same_as_none() {
 fn no_printed_total_does_not_trigger_the_line_rule() {
     // Nothing to check lines against: other rules decide (unchanged behaviour).
     let d = run(ev(TEXT, None), None);
-    assert!(!rules(&d).contains(&"line_items_unreadable".into()), "{:?}", d.reasons);
+    assert!(
+        !rules(&d).contains(&"line_items_unreadable".into()),
+        "{:?}",
+        d.reasons
+    );
 }
 
 #[test]
@@ -127,8 +200,20 @@ fn model_lines_without_signed_text_review() {
 fn verified_model_lines_still_face_the_po_rules() {
     // A padded fee read honestly by the model is verified, then caught by the PO-line rule.
     let pl = vec![
-        l("A4 copier paper 75 gsm", 25_000_00, Some(100), Some(250_00), false),
-        l("Urgent handling fee", 5_000_00, Some(1), Some(5_000_00), false),
+        l(
+            "A4 copier paper 75 gsm",
+            25_000_00,
+            Some(100),
+            Some(250_00),
+            false,
+        ),
+        l(
+            "Urgent handling fee",
+            5_000_00,
+            Some(1),
+            Some(5_000_00),
+            false,
+        ),
         l("CGST", 2_700_00, None, None, true),
         l("SGST", 2_700_00, None, None, true),
     ];
@@ -148,15 +233,28 @@ fn model_hiding_the_fee_inside_a_po_line_is_not_verified() {
     ];
     let d = run(ev(TEXT_FEE, Some(35_400_00)), Some(pl));
     assert_eq!(d.verdict, Verdict::Review);
-    assert!(rules(&d).contains(&"line_items_unreadable".into()), "{:?}", d.reasons);
+    assert!(
+        rules(&d).contains(&"line_items_unreadable".into()),
+        "{:?}",
+        d.reasons
+    );
 }
 
 #[test]
 fn model_lines_cannot_clear_another_review() {
     // Verified lines, but the proposal differs from the printed total: still REVIEW.
     let mut g = Governor::new(master());
-    let p = json!({"vendor_id":"V001","invoice_no":"SOS/1","amount_paise":35_000_00,"po_ref":"PO-1"});
-    let d = g.evaluate(&Request { proposal: p, evidence: ev(TEXT, Some(35_400_00)), checker_raw: Some(CLEAN.into()), proposed_item_lines: Some(good_lines()) }, 1_000);
+    let p =
+        json!({"vendor_id":"V001","invoice_no":"SOS/1","amount_paise":35_000_00,"po_ref":"PO-1"});
+    let d = g.evaluate(
+        &Request {
+            proposal: p,
+            evidence: ev(TEXT, Some(35_400_00)),
+            checker_raw: Some(CLEAN.into()),
+            proposed_item_lines: Some(good_lines()),
+        },
+        1_000,
+    );
     assert_eq!(d.verdict, Verdict::Review);
     assert!(rules(&d).contains(&"amount_differs_from_printed_total".into()));
 }

@@ -154,9 +154,23 @@ pub struct Decision {
 /// Keys that look like payment instructions. An agent that tries to send any
 /// of them is either hijacked or misconfigured: BLOCK.
 const BANK_KEYS: &[&str] = &[
-    "account", "account_number", "bank_account", "bank_account_number", "acct", "ifsc", "bank_ifsc",
-    "iban", "swift", "upi", "vpa", "beneficiary", "beneficiary_id", "beneficiary_details", "payee",
-    "bank_name", "routing_number",
+    "account",
+    "account_number",
+    "bank_account",
+    "bank_account_number",
+    "acct",
+    "ifsc",
+    "bank_ifsc",
+    "iban",
+    "swift",
+    "upi",
+    "vpa",
+    "beneficiary",
+    "beneficiary_id",
+    "beneficiary_details",
+    "payee",
+    "bank_name",
+    "routing_number",
 ];
 
 pub struct Governor {
@@ -175,16 +189,30 @@ struct Ctx {
 
 impl Ctx {
     fn add(&mut self, rule: &str, verdict: Verdict, control: Control, detail: impl Into<String>) {
-        self.reasons.push(Reason { rule: rule.into(), verdict, control, detail: detail.into() });
+        self.reasons.push(Reason {
+            rule: rule.into(),
+            verdict,
+            control,
+            detail: detail.into(),
+        });
     }
     fn verdict(&self) -> Verdict {
-        self.reasons.iter().map(|r| r.verdict).max().unwrap_or(Verdict::Allow)
+        self.reasons
+            .iter()
+            .map(|r| r.verdict)
+            .max()
+            .unwrap_or(Verdict::Allow)
     }
 }
 
 impl Governor {
     pub fn new(master: Master) -> Self {
-        Governor { master, ledger: Ledger::default(), audit: AuditLog::default(), next_id: 1 }
+        Governor {
+            master,
+            ledger: Ledger::default(),
+            audit: AuditLog::default(),
+            next_id: 1,
+        }
     }
 
     /// Entry point for raw JSON from the wire. Unparseable request → REVIEW.
@@ -193,7 +221,16 @@ impl Governor {
             Ok(req) => self.evaluate(&req, now),
             Err(e) => self.finish(
                 None,
-                Ctx { reasons: vec![reason("request_unparseable", Verdict::Review, Control::Structural, e.to_string())], tamper: false, no_ledger: false },
+                Ctx {
+                    reasons: vec![reason(
+                        "request_unparseable",
+                        Verdict::Review,
+                        Control::Structural,
+                        e.to_string(),
+                    )],
+                    tamper: false,
+                    no_ledger: false,
+                },
                 vec![],
                 now,
             ),
@@ -201,14 +238,29 @@ impl Governor {
     }
 
     pub fn evaluate(&mut self, req: &Request, now: i64) -> Decision {
-        let mut ctx = Ctx { reasons: vec![], tamper: false, no_ledger: false };
-        let signals = req.checker_raw.as_deref().map(parse_checker_signals).unwrap_or_else(|| {
-            vec![Signal { kind: "checker_missing".into(), severity: crate::verdict::Severity::Review, detail: "no checker report".into() }]
-        });
+        let mut ctx = Ctx {
+            reasons: vec![],
+            tamper: false,
+            no_ledger: false,
+        };
+        let signals = req
+            .checker_raw
+            .as_deref()
+            .map(parse_checker_signals)
+            .unwrap_or_else(|| {
+                vec![Signal {
+                    kind: "checker_missing".into(),
+                    severity: crate::verdict::Severity::Review,
+                    detail: "no checker report".into(),
+                }]
+            });
 
         // 1. Bank fields in the proposal → BLOCK (agent tried to choose the payee).
         if let Some(obj) = req.proposal.as_object() {
-            let bad: Vec<&String> = obj.keys().filter(|k| BANK_KEYS.contains(&k.to_ascii_lowercase().as_str())).collect();
+            let bad: Vec<&String> = obj
+                .keys()
+                .filter(|k| BANK_KEYS.contains(&k.to_ascii_lowercase().as_str()))
+                .collect();
             if !bad.is_empty() {
                 ctx.add("bank_fields_rejected", Verdict::Block, Control::Structural,
                     format!("proposal carried payment-instruction fields {bad:?}; the payee comes only from the vendor master"));
@@ -219,7 +271,12 @@ impl Governor {
         let p: Proposal = match serde_json::from_value(req.proposal.clone()) {
             Ok(p) => p,
             Err(e) => {
-                ctx.add("proposal_invalid", Verdict::Review, Control::Structural, e.to_string());
+                ctx.add(
+                    "proposal_invalid",
+                    Verdict::Review,
+                    Control::Structural,
+                    e.to_string(),
+                );
                 return self.finish(None, ctx, signals, now);
             }
         };
@@ -236,13 +293,23 @@ impl Governor {
             }
         }
         if p.amount_paise <= 0 {
-            ctx.add("amount_nonpositive", Verdict::Block, Control::Structural, "amount must be > 0");
+            ctx.add(
+                "amount_nonpositive",
+                Verdict::Block,
+                Control::Structural,
+                "amount must be > 0",
+            );
             return self.finish(Some(&p), ctx, signals, now);
         }
 
         // 3. Vendor must exist in the master (fail closed).
         let Some(vendor) = self.master.vendors.get(&p.vendor_id).cloned() else {
-            ctx.add("unknown_vendor", Verdict::Block, Control::Structural, format!("{} is not in the vendor master", p.vendor_id));
+            ctx.add(
+                "unknown_vendor",
+                Verdict::Block,
+                Control::Structural,
+                format!("{} is not in the vendor master", p.vendor_id),
+            );
             return self.finish(Some(&p), ctx, signals, now);
         };
         let pol = self.master.policy.clone();
@@ -250,48 +317,130 @@ impl Governor {
         // 4. Currency (STRUCTURAL + EXTRACTION): the proposal, the PO and the document must all be in
         // one currency the policy has limits for. Amounts are never compared across currencies.
         let cur = normalize::currency(&p.currency);
-        let limits = if normalize::is_iso4217_shape(&cur) { pol.limits(&cur) } else { None };
+        let limits = if normalize::is_iso4217_shape(&cur) {
+            pol.limits(&cur)
+        } else {
+            None
+        };
         if limits.is_none() {
-            ctx.add("unknown_currency", Verdict::Review, Control::Structural,
-                format!("proposal currency {:?} has no limits configured; a human must check it", p.currency));
+            ctx.add(
+                "unknown_currency",
+                Verdict::Review,
+                Control::Structural,
+                format!(
+                    "proposal currency {:?} has no limits configured; a human must check it",
+                    p.currency
+                ),
+            );
         }
-        let ev_cur = req.evidence.currency.as_deref().map(normalize::currency).unwrap_or_else(|| "INR".into());
-        let mut doc_curs: Vec<String> = req.evidence.all_currencies.iter().map(|c| normalize::currency(c)).collect();
+        let ev_cur = req
+            .evidence
+            .currency
+            .as_deref()
+            .map(normalize::currency)
+            .unwrap_or_else(|| "INR".into());
+        let mut doc_curs: Vec<String> = req
+            .evidence
+            .all_currencies
+            .iter()
+            .map(|c| normalize::currency(c))
+            .collect();
         doc_curs.push(ev_cur.clone());
         doc_curs.sort();
         doc_curs.dedup();
         if doc_curs.len() > 1 {
-            ctx.add("currency_ambiguous", Verdict::Review, Control::Extraction,
-                format!("the document names more than one currency: {}", doc_curs.join(", ")));
+            ctx.add(
+                "currency_ambiguous",
+                Verdict::Review,
+                Control::Extraction,
+                format!(
+                    "the document names more than one currency: {}",
+                    doc_curs.join(", ")
+                ),
+            );
         }
         if doc_curs.iter().any(|c| *c != cur) {
-            ctx.add("currency_mismatch_invoice", Verdict::Review, Control::Extraction,
-                format!("proposal is in {cur} but the invoice is in {}", doc_curs.join("/")));
+            ctx.add(
+                "currency_mismatch_invoice",
+                Verdict::Review,
+                Control::Extraction,
+                format!(
+                    "proposal is in {cur} but the invoice is in {}",
+                    doc_curs.join("/")
+                ),
+            );
         }
 
         // 5. PO ownership and open balance (same currency only).
         match self.master.pos.get(&p.po_ref) {
-            None => ctx.add("unknown_po", Verdict::Block, Control::Structural, format!("{} is not an open PO", p.po_ref)),
-            Some(po) if po.owner_vendor_id != p.vendor_id => ctx.add("po_not_owned", Verdict::Block, Control::Structural,
-                format!("{} belongs to {}, not {}", po.po_ref, po.owner_vendor_id, p.vendor_id)),
-            Some(po) if normalize::currency(&po.currency) != cur => ctx.add("currency_mismatch_po", Verdict::Review, Control::Structural,
-                format!("proposal is in {cur} but {} is raised in {}; amounts cannot be compared", po.po_ref, po.currency)),
+            None => ctx.add(
+                "unknown_po",
+                Verdict::Block,
+                Control::Structural,
+                format!("{} is not an open PO", p.po_ref),
+            ),
+            Some(po) if po.owner_vendor_id != p.vendor_id => ctx.add(
+                "po_not_owned",
+                Verdict::Block,
+                Control::Structural,
+                format!(
+                    "{} belongs to {}, not {}",
+                    po.po_ref, po.owner_vendor_id, p.vendor_id
+                ),
+            ),
+            Some(po) if normalize::currency(&po.currency) != cur => ctx.add(
+                "currency_mismatch_po",
+                Verdict::Review,
+                Control::Structural,
+                format!(
+                    "proposal is in {cur} but {} is raised in {}; amounts cannot be compared",
+                    po.po_ref, po.currency
+                ),
+            ),
             Some(po) => {
                 // Checked arithmetic (review item 3): an overflow anywhere is a REVIEW, never a wrap.
-                let sums = self.ledger.po_committed(&po.po_ref, &cur)
+                let sums = self
+                    .ledger
+                    .po_committed(&po.po_ref, &cur)
                     .and_then(|c| po.open_balance_paise.checked_sub(c))
-                    .and_then(|available| available.max(0).checked_mul(pol.po_tolerance_bp)
-                        .and_then(|t| available.checked_add(t / 10_000)).map(|hard| (available, hard)));
+                    .and_then(|available| {
+                        available
+                            .max(0)
+                            .checked_mul(pol.po_tolerance_bp)
+                            .and_then(|t| available.checked_add(t / 10_000))
+                            .map(|hard| (available, hard))
+                    });
                 let Some((available, hard)) = sums else {
-                    ctx.add("arithmetic_overflow", Verdict::Review, Control::Structural, format!("PO balance arithmetic for {} overflowed", po.po_ref));
+                    ctx.add(
+                        "arithmetic_overflow",
+                        Verdict::Review,
+                        Control::Structural,
+                        format!("PO balance arithmetic for {} overflowed", po.po_ref),
+                    );
                     return self.finish(Some(&p), ctx, signals, now);
                 };
                 if p.amount_paise > hard {
-                    ctx.add("over_po_balance", Verdict::Block, Control::Structural,
-                        format!("amount {} > PO open balance {} + tolerance", money(p.amount_paise, &cur), money(available, &cur)));
+                    ctx.add(
+                        "over_po_balance",
+                        Verdict::Block,
+                        Control::Structural,
+                        format!(
+                            "amount {} > PO open balance {} + tolerance",
+                            money(p.amount_paise, &cur),
+                            money(available, &cur)
+                        ),
+                    );
                 } else if p.amount_paise > available {
-                    ctx.add("within_po_tolerance", Verdict::Review, Control::Structural,
-                        format!("amount {} exceeds PO open balance {} but is inside tolerance", money(p.amount_paise, &cur), money(available, &cur)));
+                    ctx.add(
+                        "within_po_tolerance",
+                        Verdict::Review,
+                        Control::Structural,
+                        format!(
+                            "amount {} exceeds PO open balance {} but is inside tolerance",
+                            money(p.amount_paise, &cur),
+                            money(available, &cur)
+                        ),
+                    );
                 }
             }
         }
@@ -299,34 +448,89 @@ impl Governor {
         // 5b. Caps and approval threshold, per currency (document claims of approval are ignored).
         if let Some(l) = limits {
             if p.amount_paise > l.payout_cap_minor {
-                ctx.add("over_payout_cap", Verdict::Block, Control::Structural, format!("amount {} > cap {}", money(p.amount_paise, &cur), money(l.payout_cap_minor, &cur)));
+                ctx.add(
+                    "over_payout_cap",
+                    Verdict::Block,
+                    Control::Structural,
+                    format!(
+                        "amount {} > cap {}",
+                        money(p.amount_paise, &cur),
+                        money(l.payout_cap_minor, &cur)
+                    ),
+                );
             } else if p.amount_paise > l.approval_threshold_minor {
-                ctx.add("over_approval_threshold", Verdict::Review, Control::Structural, format!("amount {} > approval threshold {}", money(p.amount_paise, &cur), money(l.approval_threshold_minor, &cur)));
+                ctx.add(
+                    "over_approval_threshold",
+                    Verdict::Review,
+                    Control::Structural,
+                    format!(
+                        "amount {} > approval threshold {}",
+                        money(p.amount_paise, &cur),
+                        money(l.approval_threshold_minor, &cur)
+                    ),
+                );
             }
         }
 
         // 6. Duplicates: exact key, IRN, same invoice with another amount.
         let key = normalize::invoice_no(&p.invoice_no);
-        if let Some(e) = self.ledger.exact_duplicate(&p.vendor_id, &key, p.amount_paise) {
-            ctx.add("duplicate_invoice", Verdict::Block, Control::Structural, format!("already {:?} under decision {}", e.status, e.decision_id));
-        } else if let Some(e) = self.ledger.same_invoice_other_amount(&p.vendor_id, &key, p.amount_paise) {
-            ctx.add("same_invoice_other_amount", Verdict::Review, Control::Structural,
-                format!("invoice {} already has an entry of {}", p.invoice_no, money(e.amount_paise, &e.currency)));
-        } else if let Some(e) = self.ledger.near_duplicate(&p.vendor_id, &cur, p.amount_paise, &key,
-            normalize::near_dup_base(&p.invoice_no).as_deref(), now, pol.near_duplicate_window_secs) {
+        if let Some(e) = self
+            .ledger
+            .exact_duplicate(&p.vendor_id, &key, p.amount_paise)
+        {
+            ctx.add(
+                "duplicate_invoice",
+                Verdict::Block,
+                Control::Structural,
+                format!("already {:?} under decision {}", e.status, e.decision_id),
+            );
+        } else if let Some(e) =
+            self.ledger
+                .same_invoice_other_amount(&p.vendor_id, &key, p.amount_paise)
+        {
+            ctx.add(
+                "same_invoice_other_amount",
+                Verdict::Review,
+                Control::Structural,
+                format!(
+                    "invoice {} already has an entry of {}",
+                    p.invoice_no,
+                    money(e.amount_paise, &e.currency)
+                ),
+            );
+        } else if let Some(e) = self.ledger.near_duplicate(
+            &p.vendor_id,
+            &cur,
+            p.amount_paise,
+            &key,
+            normalize::near_dup_base(&p.invoice_no).as_deref(),
+            now,
+            pol.near_duplicate_window_secs,
+        ) {
             ctx.add("near_duplicate_invoice", Verdict::Review, Control::Structural,
                 format!("invoice {} looks like a re-submission of decision {} (same vendor and amount {}, number differs only by a suffix, within {} days)",
                     p.invoice_no, e.decision_id, money(p.amount_paise, &cur), pol.near_duplicate_window_secs / 86_400));
         }
         if let Some(irn) = p.irn.as_deref() {
             if let Some(e) = self.ledger.irn_seen(irn) {
-                ctx.add("duplicate_irn", Verdict::Block, Control::Structural, format!("IRN already used by decision {}", e.decision_id));
+                ctx.add(
+                    "duplicate_irn",
+                    Verdict::Block,
+                    Control::Structural,
+                    format!("IRN already used by decision {}", e.decision_id),
+                );
             }
         }
         // 6b. Same document under a new number (review item 3, ATK-10 class): the signed text
         // layer, with the invoice number taken out, matches a live entry of this vendor.
         if let Some(ck) = content_key(req.evidence.text_layer.as_deref(), &p.invoice_no) {
-            if let Some(e) = self.ledger.same_content(&p.vendor_id, &key, &ck, now, pol.near_duplicate_window_secs) {
+            if let Some(e) = self.ledger.same_content(
+                &p.vendor_id,
+                &key,
+                &ck,
+                now,
+                pol.near_duplicate_window_secs,
+            ) {
                 ctx.add("near_duplicate_content", Verdict::Review, Control::Extraction,
                     format!("invoice {} has the same document text as decision {} (only the invoice number differs), within {} days",
                         p.invoice_no, e.decision_id, pol.near_duplicate_window_secs / 86_400));
@@ -334,15 +538,33 @@ impl Governor {
         }
 
         // 7. Split payments: rolling per-vendor window (paid + pending + this one).
-        let Some((prior, with_this)) = self.ledger.window_sum(&p.vendor_id, &cur, now, pol.window_secs)
-            .and_then(|prior| prior.checked_add(p.amount_paise).map(|w| (prior, w))) else {
-            ctx.add("arithmetic_overflow", Verdict::Review, Control::Structural, "vendor window sum overflowed");
+        let Some((prior, with_this)) = self
+            .ledger
+            .window_sum(&p.vendor_id, &cur, now, pol.window_secs)
+            .and_then(|prior| prior.checked_add(p.amount_paise).map(|w| (prior, w)))
+        else {
+            ctx.add(
+                "arithmetic_overflow",
+                Verdict::Review,
+                Control::Structural,
+                "vendor window sum overflowed",
+            );
             return self.finish(Some(&p), ctx, signals, now);
         };
         if let Some(l) = limits {
             if prior > 0 && with_this > l.approval_threshold_minor {
-                ctx.add("vendor_window_exceeded", Verdict::Review, Control::Structural,
-                    format!("{} in the last {} days + this {} > threshold {}", money(prior, &cur), pol.window_secs / 86_400, money(p.amount_paise, &cur), money(l.approval_threshold_minor, &cur)));
+                ctx.add(
+                    "vendor_window_exceeded",
+                    Verdict::Review,
+                    Control::Structural,
+                    format!(
+                        "{} in the last {} days + this {} > threshold {}",
+                        money(prior, &cur),
+                        pol.window_secs / 86_400,
+                        money(p.amount_paise, &cur),
+                        money(l.approval_threshold_minor, &cur)
+                    ),
+                );
             }
         }
 
@@ -350,10 +572,18 @@ impl Governor {
         if let Some(master_gstin) = vendor.gstin.as_deref() {
             match req.evidence.text_layer_gstin.as_deref() {
                 Some(g) if normalize::gstin(g) == normalize::gstin(master_gstin) => {}
-                Some(g) => ctx.add("issuer_gstin_mismatch", Verdict::Block, Control::Extraction,
-                    format!("invoice GSTIN {g} is not {}'s GSTIN", vendor.vendor_id)),
-                None => ctx.add("issuer_gstin_unreadable", Verdict::Review, Control::Extraction,
-                    "no GSTIN in the text layer (scan or photo); a human must confirm the issuer"),
+                Some(g) => ctx.add(
+                    "issuer_gstin_mismatch",
+                    Verdict::Block,
+                    Control::Extraction,
+                    format!("invoice GSTIN {g} is not {}'s GSTIN", vendor.vendor_id),
+                ),
+                None => ctx.add(
+                    "issuer_gstin_unreadable",
+                    Verdict::Review,
+                    Control::Extraction,
+                    "no GSTIN in the text layer (scan or photo); a human must confirm the issuer",
+                ),
             }
         }
         if req.evidence.text_source.as_deref() == Some("ocr") {
@@ -362,9 +592,20 @@ impl Governor {
         }
         if let Some(d) = req.evidence.sender_domain.as_deref() {
             let d = normalize::domain(d);
-            if !vendor.email_domains.iter().any(|m| normalize::domain(m) == d) {
-                ctx.add("sender_domain_mismatch", Verdict::Block, Control::Extraction,
-                    format!("sent from {d}, which is not a domain on file for {}", vendor.vendor_id));
+            if !vendor
+                .email_domains
+                .iter()
+                .any(|m| normalize::domain(m) == d)
+            {
+                ctx.add(
+                    "sender_domain_mismatch",
+                    Verdict::Block,
+                    Control::Extraction,
+                    format!(
+                        "sent from {d}, which is not a domain on file for {}",
+                        vendor.vendor_id
+                    ),
+                );
             }
         }
 
@@ -376,20 +617,40 @@ impl Governor {
         // GSTIN is not configured (or either state code is unreadable), the rule cannot be checked, so
         // it REVIEWs (`tax_type_unverifiable`) instead of passing silently.
         if let Some(vg) = vendor.gstin.as_deref() {
-            let mut heads: Vec<String> = req.evidence.tax_kinds.iter().map(|k| k.to_ascii_uppercase()).collect();
-            let lines_src: &[ItemLine] = if req.evidence.item_lines.is_empty() { req.proposed_item_lines.as_deref().unwrap_or(&[]) } else { &req.evidence.item_lines[..] };
+            let mut heads: Vec<String> = req
+                .evidence
+                .tax_kinds
+                .iter()
+                .map(|k| k.to_ascii_uppercase())
+                .collect();
+            let lines_src: &[ItemLine] = if req.evidence.item_lines.is_empty() {
+                req.proposed_item_lines.as_deref().unwrap_or(&[])
+            } else {
+                &req.evidence.item_lines[..]
+            };
             // proposed lines only count once verified (same check as step 10a)
-            if !req.evidence.item_lines.is_empty() || lines::verify_proposed(lines_src, req.evidence.text_layer.as_deref(), req.evidence.printed_total_paise).is_ok() {
+            if !req.evidence.item_lines.is_empty()
+                || lines::verify_proposed(
+                    lines_src,
+                    req.evidence.text_layer.as_deref(),
+                    req.evidence.printed_total_paise,
+                )
+                .is_ok()
+            {
                 for l in lines_src.iter().filter(|l| l.is_tax) {
                     let d = lines::fold(&l.description);
                     for h in ["cgst", "sgst", "utgst", "igst"] {
-                        if d.contains(h) { heads.push(h.to_ascii_uppercase()); }
+                        if d.contains(h) {
+                            heads.push(h.to_ascii_uppercase());
+                        }
                     }
                 }
             }
             heads.sort();
             heads.dedup();
-            let intra_heads = heads.iter().any(|h| h == "CGST" || h == "SGST" || h == "UTGST");
+            let intra_heads = heads
+                .iter()
+                .any(|h| h == "CGST" || h == "SGST" || h == "UTGST");
             let igst = heads.iter().any(|h| h == "IGST");
             if intra_heads || igst {
                 match (state_code(vg), pol.buyer_gstin.as_deref().and_then(state_code)) {
@@ -408,13 +669,39 @@ impl Governor {
         let master_acct = digits(&vendor.bank_account);
         // Accounts the vendor registered besides the primary (master file only) are not tamper;
         // the payee is still the primary beneficiary.
-        let others: &[crate::master::RegisteredAccount] = self.master.registered_accounts.get(&vendor.vendor_id).map(|v| &v[..]).unwrap_or(&[]);
-        let acct_mismatch = req.evidence.printed_bank_account.iter().chain(req.evidence.all_printed_accounts.iter())
-            .any(|a| digits(a) != master_acct && !others.iter().any(|o| digits(&o.bank_account) == digits(a)));
-        let ifsc_mismatch = req.evidence.printed_ifsc.iter().chain(req.evidence.all_printed_ifscs.iter())
-            .any(|i| !normalize::same_bank_code(i, &vendor.ifsc) && !others.iter().any(|o| normalize::same_bank_code(i, &o.ifsc)));
-        let printed_other = req.evidence.printed_bank_account.iter().chain(req.evidence.all_printed_accounts.iter())
-            .any(|a| digits(a) != master_acct && others.iter().any(|o| digits(&o.bank_account) == digits(a)));
+        let others: &[crate::master::RegisteredAccount] = self
+            .master
+            .registered_accounts
+            .get(&vendor.vendor_id)
+            .map(|v| &v[..])
+            .unwrap_or(&[]);
+        let acct_mismatch = req
+            .evidence
+            .printed_bank_account
+            .iter()
+            .chain(req.evidence.all_printed_accounts.iter())
+            .any(|a| {
+                digits(a) != master_acct
+                    && !others.iter().any(|o| digits(&o.bank_account) == digits(a))
+            });
+        let ifsc_mismatch = req
+            .evidence
+            .printed_ifsc
+            .iter()
+            .chain(req.evidence.all_printed_ifscs.iter())
+            .any(|i| {
+                !normalize::same_bank_code(i, &vendor.ifsc)
+                    && !others.iter().any(|o| normalize::same_bank_code(i, &o.ifsc))
+            });
+        let printed_other = req
+            .evidence
+            .printed_bank_account
+            .iter()
+            .chain(req.evidence.all_printed_accounts.iter())
+            .any(|a| {
+                digits(a) != master_acct
+                    && others.iter().any(|o| digits(&o.bank_account) == digits(a))
+            });
         if printed_other && !acct_mismatch {
             ctx.add("printed_registered_secondary_account", Verdict::Allow, Control::Extraction,
                 format!("the invoice prints another account {} registered in the vendor master; payment still goes only to the primary beneficiary", vendor.vendor_id));
@@ -422,13 +709,25 @@ impl Governor {
         // R6: a bank field with non-ASCII characters (Cyrillic/Greek look-alikes, fullwidth digits,
         // invisible marks) is tampering even when its ASCII digits happen to match the master.
         let ev_bank = &req.evidence;
-        let non_ascii = ev_bank.printed_bank_account.iter().chain(ev_bank.all_printed_accounts.iter())
-            .chain(ev_bank.printed_ifsc.iter()).chain(ev_bank.all_printed_ifscs.iter())
+        let non_ascii = ev_bank
+            .printed_bank_account
+            .iter()
+            .chain(ev_bank.all_printed_accounts.iter())
+            .chain(ev_bank.printed_ifsc.iter())
+            .chain(ev_bank.all_printed_ifscs.iter())
             .any(|v| normalize::has_non_ascii(v));
         if acct_mismatch || ifsc_mismatch || non_ascii {
             ctx.tamper = true;
-            let note = if non_ascii { " The printed bank details contain non-ASCII look-alike characters." } else { "" };
-            let rule = if acct_mismatch || ifsc_mismatch { "bank_details_differ_from_master" } else { "bank_details_non_ascii" };
+            let note = if non_ascii {
+                " The printed bank details contain non-ASCII look-alike characters."
+            } else {
+                ""
+            };
+            let rule = if acct_mismatch || ifsc_mismatch {
+                "bank_details_differ_from_master"
+            } else {
+                "bank_details_non_ascii"
+            };
             ctx.add(rule, Verdict::Review, Control::Extraction,
                 format!("invoice asks for different bank details than {} has on file ({}).{note} Payment can only go to the account on file; confirm with the vendor by phone.", vendor.vendor_id, vendor.bank_name));
         }
@@ -457,30 +756,72 @@ impl Governor {
             }
         }
         // A signed text layer with no readable total: nothing to hold the proposal to. Fail closed.
-        if ev.has_text_layer && ev.printed_total_paise.is_none() && ev.text_layer.as_deref().is_some_and(|t| !t.trim().is_empty()) {
+        if ev.has_text_layer
+            && ev.printed_total_paise.is_none()
+            && ev
+                .text_layer
+                .as_deref()
+                .is_some_and(|t| !t.trim().is_empty())
+        {
             ctx.add("total_unreadable", Verdict::Review, Control::Extraction,
                 "the document has a text layer but no total could be read; a human must check the amount");
         }
-        let items: &[ItemLine] = if ev.item_lines.is_empty() { &model_lines } else { &ev.item_lines };
+        let items: &[ItemLine] = if ev.item_lines.is_empty() {
+            &model_lines
+        } else {
+            &ev.item_lines
+        };
         if let Some(total) = ev.printed_total_paise {
             if total != p.amount_paise {
-                ctx.add("amount_differs_from_printed_total", Verdict::Review, Control::Extraction,
-                    format!("proposal {} but the invoice prints Total Payable {}", money(p.amount_paise, &cur), money(total, &ev_cur)));
+                ctx.add(
+                    "amount_differs_from_printed_total",
+                    Verdict::Review,
+                    Control::Extraction,
+                    format!(
+                        "proposal {} but the invoice prints Total Payable {}",
+                        money(p.amount_paise, &cur),
+                        money(total, &ev_cur)
+                    ),
+                );
             }
             if !items.is_empty() {
-                match items.iter().try_fold(0i64, |s, l| s.checked_add(l.amount_paise)) {
+                match items
+                    .iter()
+                    .try_fold(0i64, |s, l| s.checked_add(l.amount_paise))
+                {
                     Some(sum) if sum == total => {}
-                    Some(sum) => ctx.add("invoice_does_not_add_up", Verdict::Review, Control::Extraction,
-                        format!("its lines add up to {} but it prints Total Payable {}", money(sum, &ev_cur), money(total, &ev_cur))),
-                    None => ctx.add("invoice_does_not_add_up", Verdict::Review, Control::Extraction, "its line amounts overflow"),
+                    Some(sum) => ctx.add(
+                        "invoice_does_not_add_up",
+                        Verdict::Review,
+                        Control::Extraction,
+                        format!(
+                            "its lines add up to {} but it prints Total Payable {}",
+                            money(sum, &ev_cur),
+                            money(total, &ev_cur)
+                        ),
+                    ),
+                    None => ctx.add(
+                        "invoice_does_not_add_up",
+                        Verdict::Review,
+                        Control::Extraction,
+                        "its line amounts overflow",
+                    ),
                 }
             }
         }
         if let Some(po) = self.master.pos.get(&p.po_ref) {
             let problems = check_lines_against_po(po, items, &ev_cur, pol.line_price_tolerance_bp);
             if !problems.is_empty() {
-                ctx.add("charge_not_on_po", Verdict::Review, Control::Extraction,
-                    format!("charge not covered by {}: {}", po.po_ref, problems.join("; ")));
+                ctx.add(
+                    "charge_not_on_po",
+                    Verdict::Review,
+                    Control::Extraction,
+                    format!(
+                        "charge not covered by {}: {}",
+                        po.po_ref,
+                        problems.join("; ")
+                    ),
+                );
             }
         }
 
@@ -493,13 +834,38 @@ impl Governor {
         let lk = lines_key(items);
         let key = normalize::invoice_no(&p.invoice_no);
         let rw = pol.resubmission_window_secs;
-        if !ctx.reasons.iter().any(|r| matches!(r.rule.as_str(), "duplicate_invoice" | "same_invoice_other_amount" | "near_duplicate_invoice" | "near_duplicate_content")) {
+        if !ctx.reasons.iter().any(|r| {
+            matches!(
+                r.rule.as_str(),
+                "duplicate_invoice"
+                    | "same_invoice_other_amount"
+                    | "near_duplicate_invoice"
+                    | "near_duplicate_content"
+            )
+        }) {
             if let Some(lk) = lk.as_deref() {
-                if let Some(e) = self.ledger.same_items(&p.vendor_id, &p.po_ref, &cur, p.amount_paise, &key, lk, now, rw) {
+                if let Some(e) = self.ledger.same_items(
+                    &p.vendor_id,
+                    &p.po_ref,
+                    &cur,
+                    p.amount_paise,
+                    &key,
+                    lk,
+                    now,
+                    rw,
+                ) {
                     ctx.add("resubmission_same_items", Verdict::Review, Control::Structural,
                         format!("invoice {} bills the same PO, amount and itemized lines (quantities and rates) as decision {} within {} days under another number",
                             p.invoice_no, e.decision_id, rw / 86_400));
-                } else if let Some(e) = self.ledger.bumped_number(&p.vendor_id, &p.po_ref, &cur, p.amount_paise, &key, now, rw) {
+                } else if let Some(e) = self.ledger.bumped_number(
+                    &p.vendor_id,
+                    &p.po_ref,
+                    &cur,
+                    p.amount_paise,
+                    &key,
+                    now,
+                    rw,
+                ) {
                     ctx.add("resubmission_bumped_number", Verdict::Review, Control::Structural,
                         format!("invoice {} is an itemized bill for the same PO and amount as decision {} within {} days, and its number is that one's +1/+2",
                             p.invoice_no, e.decision_id, rw / 86_400));
@@ -509,8 +875,15 @@ impl Governor {
         // 12. Slow-drip split on one PO (v3 prep): three or more invoices on the PO inside the
         // resubmission window, each under the approval threshold, adding up past it. Two invoices
         // (monthly-style billing) do not count; the 7-day vendor window and the PO balance still apply.
-        if let (Some(l), Some((n, prior))) = (limits, self.ledger.po_window(&p.po_ref, &cur, now, rw)) {
-            if n >= 2 && p.amount_paise <= l.approval_threshold_minor && prior.checked_add(p.amount_paise).is_some_and(|t| t > l.approval_threshold_minor) {
+        if let (Some(l), Some((n, prior))) =
+            (limits, self.ledger.po_window(&p.po_ref, &cur, now, rw))
+        {
+            if n >= 2
+                && p.amount_paise <= l.approval_threshold_minor
+                && prior
+                    .checked_add(p.amount_paise)
+                    .is_some_and(|t| t > l.approval_threshold_minor)
+            {
                 ctx.add("po_drip_over_threshold", Verdict::Review, Control::Structural,
                     format!("{} invoices on {} in the last {} days plus this one add up to more than the approval threshold {}", n, p.po_ref, rw / 86_400, money(l.approval_threshold_minor, &cur)));
             }
@@ -519,7 +892,16 @@ impl Governor {
         // reviewer instead of blocking (identity and tamper BLOCKs stay BLOCK).
         if credit_note {
             for r in ctx.reasons.iter_mut() {
-                if r.verdict == Verdict::Block && matches!(r.rule.as_str(), "over_po_balance" | "over_payout_cap" | "duplicate_invoice" | "duplicate_irn" | "unknown_po") {
+                if r.verdict == Verdict::Block
+                    && matches!(
+                        r.rule.as_str(),
+                        "over_po_balance"
+                            | "over_payout_cap"
+                            | "duplicate_invoice"
+                            | "duplicate_irn"
+                            | "unknown_po"
+                    )
+                {
                     r.verdict = Verdict::Review;
                     r.detail = format!("{} (credit note: not payable, shown for review)", r.detail);
                 }
@@ -530,32 +912,65 @@ impl Governor {
         self.finish_with_keys(Some(&p), ctx, signals, now, ck, lk)
     }
 
-    fn finish(&mut self, p: Option<&Proposal>, ctx: Ctx, signals: Vec<Signal>, now: i64) -> Decision {
+    fn finish(
+        &mut self,
+        p: Option<&Proposal>,
+        ctx: Ctx,
+        signals: Vec<Signal>,
+        now: i64,
+    ) -> Decision {
         self.finish_with_keys(p, ctx, signals, now, None, None)
     }
 
-    fn finish_with_keys(&mut self, p: Option<&Proposal>, mut ctx: Ctx, signals: Vec<Signal>, now: i64, content: Option<String>, lines_key: Option<String>) -> Decision {
+    fn finish_with_keys(
+        &mut self,
+        p: Option<&Proposal>,
+        mut ctx: Ctx,
+        signals: Vec<Signal>,
+        now: i64,
+        content: Option<String>,
+        lines_key: Option<String>,
+    ) -> Decision {
         let deterministic = ctx.verdict();
         let mut verdict = merge(deterministic, &signals);
         // A tamper alert combined with any other non-allow reason escalates to BLOCK (design §4a).
-        if ctx.tamper && ctx.reasons.iter().filter(|r| r.verdict >= Verdict::Review).count() > 1 {
+        if ctx.tamper
+            && ctx
+                .reasons
+                .iter()
+                .filter(|r| r.verdict >= Verdict::Review)
+                .count()
+                > 1
+        {
             verdict = Verdict::Block;
         }
         if p.is_none() && verdict == Verdict::Allow {
             verdict = Verdict::Review; // no valid proposal can never pay
         }
         for s in &signals {
-            if s.kind.starts_with("tamper") { ctx.tamper = true; }
+            if s.kind.starts_with("tamper") {
+                ctx.tamper = true;
+            }
         }
         let decision_id = format!("dec_{:06}", self.next_id);
         self.next_id += 1;
 
         let payee = match (p, verdict) {
-            (Some(p), Verdict::Allow | Verdict::Review) => self.master.vendors.get(&p.vendor_id).map(|v| Payee {
-                beneficiary_id: v.beneficiary_id.clone(),
-                bank_name: v.bank_name.clone(),
-                account_last4: v.bank_account.chars().rev().take(4).collect::<Vec<_>>().into_iter().rev().collect(),
-            }),
+            (Some(p), Verdict::Allow | Verdict::Review) => {
+                self.master.vendors.get(&p.vendor_id).map(|v| Payee {
+                    beneficiary_id: v.beneficiary_id.clone(),
+                    bank_name: v.bank_name.clone(),
+                    account_last4: v
+                        .bank_account
+                        .chars()
+                        .rev()
+                        .take(4)
+                        .collect::<Vec<_>>()
+                        .into_iter()
+                        .rev()
+                        .collect(),
+                })
+            }
             _ => None,
         };
         if let Some(p) = p {
@@ -586,13 +1001,26 @@ impl Governor {
             "decision_id": decision_id, "ts": now, "proposal": p, "verdict": verdict,
             "deterministic_verdict": deterministic, "reasons": ctx.reasons, "signals": signals,
         }));
-        Decision { decision_id, verdict, deterministic_verdict: deterministic, reasons: ctx.reasons, signals, payee, tamper_alert: ctx.tamper, audit_hash }
+        Decision {
+            decision_id,
+            verdict,
+            deterministic_verdict: deterministic,
+            reasons: ctx.reasons,
+            signals,
+            payee,
+            tamper_alert: ctx.tamper,
+            audit_hash,
+        }
     }
 
     /// A decision that never reached the rules (e.g. evidence failed provenance checks in
     /// `trust.rs`). Audited like any other; with no proposal it can never be ALLOW.
     pub fn reject(&mut self, rule: &str, verdict: Verdict, detail: String, now: i64) -> Decision {
-        let ctx = Ctx { reasons: vec![reason(rule, verdict, Control::Structural, detail)], tamper: false, no_ledger: false };
+        let ctx = Ctx {
+            reasons: vec![reason(rule, verdict, Control::Structural, detail)],
+            tamper: false,
+            no_ledger: false,
+        };
         self.finish(None, ctx, vec![], now)
     }
 
@@ -615,8 +1043,21 @@ impl Governor {
     }
 
     /// Human decision on a pending REVIEW (out of band, never via the agent).
-    pub fn resolve_review(&mut self, decision_id: &str, approve: bool, approver: &str, now: i64) -> bool {
-        let ok = self.ledger.set_status(decision_id, if approve { EntryStatus::Paid } else { EntryStatus::Rejected });
+    pub fn resolve_review(
+        &mut self,
+        decision_id: &str,
+        approve: bool,
+        approver: &str,
+        now: i64,
+    ) -> bool {
+        let ok = self.ledger.set_status(
+            decision_id,
+            if approve {
+                EntryStatus::Paid
+            } else {
+                EntryStatus::Rejected
+            },
+        );
         if ok {
             self.audit.append(serde_json::json!({"resolve": decision_id, "approve": approve, "approver": approver, "ts": now}));
         }
@@ -646,7 +1087,12 @@ pub fn content_key(text: Option<&str>, invoice_no: &str) -> Option<String> {
 }
 
 fn reason(rule: &str, verdict: Verdict, control: Control, detail: String) -> Reason {
-    Reason { rule: rule.into(), verdict, control, detail }
+    Reason {
+        rule: rule.into(),
+        verdict,
+        control,
+        detail,
+    }
 }
 
 /// A non-tax "Round off" line under one unit of the currency (₹1 = 100 paise) is not a charge.
@@ -654,9 +1100,25 @@ fn reason(rule: &str, verdict: Verdict, control: Control, detail: String) -> Rea
 pub fn is_round_off(l: &ItemLine) -> bool {
     // "Round off", "Rounding", "R/O", "Round off Amt", "Rounded off", "Less: Round off": under one
     // unit of the currency, and every word is a round-off word (v3 prep, v2 genuine layouts).
-    const WORDS: &[&str] = &["round", "off", "rounding", "roundoff", "rounded", "r", "o", "amt", "amount", "less", "add", "adjustment", "adj"];
+    const WORDS: &[&str] = &[
+        "round",
+        "off",
+        "rounding",
+        "roundoff",
+        "rounded",
+        "r",
+        "o",
+        "amt",
+        "amount",
+        "less",
+        "add",
+        "adjustment",
+        "adj",
+    ];
     let k = normalize::item_key(&l.description);
-    !l.is_tax && l.amount_paise.abs() < 100 && !k.is_empty()
+    !l.is_tax
+        && l.amount_paise.abs() < 100
+        && !k.is_empty()
         && k.split(' ').all(|w| WORDS.contains(&w))
         && (k.contains("round") || k == "r o")
 }
@@ -665,7 +1127,11 @@ pub fn is_round_off(l: &ItemLine) -> bool {
 /// None when no line does (lump-sum billing).
 pub fn lines_key(items: &[ItemLine]) -> Option<String> {
     use sha2::{Digest, Sha256};
-    let mut v: Vec<(i64, i64)> = items.iter().filter(|l| !l.is_tax).filter_map(|l| Some((l.qty?, l.unit_price_minor?))).collect();
+    let mut v: Vec<(i64, i64)> = items
+        .iter()
+        .filter(|l| !l.is_tax)
+        .filter_map(|l| Some((l.qty?, l.unit_price_minor?)))
+        .collect();
     if v.is_empty() {
         return None;
     }
@@ -680,9 +1146,15 @@ pub fn lines_key(items: &[ItemLine]) -> Option<String> {
 fn names_item(desc: &str, line: &crate::master::PoLine) -> bool {
     let d = normalize::item_key(desc);
     let bracket = trailing_bracket(desc).map(normalize::item_key);
-    std::iter::once(&line.item).chain(line.aliases.iter()).map(|n| normalize::item_key(n)).filter(|k| !k.is_empty()).any(|k| {
-        d == k || d.strip_prefix(&k).is_some_and(|rest| rest.starts_with(' ')) || bracket.as_deref() == Some(k.as_str())
-    })
+    std::iter::once(&line.item)
+        .chain(line.aliases.iter())
+        .map(|n| normalize::item_key(n))
+        .filter(|k| !k.is_empty())
+        .any(|k| {
+            d == k
+                || d.strip_prefix(&k).is_some_and(|rest| rest.starts_with(' '))
+                || bracket.as_deref() == Some(k.as_str())
+        })
 }
 
 /// The text inside a description's final, balanced bracket pair: "film (Packaging (shrink wrap))"
@@ -710,7 +1182,12 @@ fn trailing_bracket(desc: &str) -> Option<&str> {
 
 /// Structured PO-line matching (replaces the old substring test). Returns one problem per line that
 /// is not covered; empty when every charge line fits a PO line.
-pub fn check_lines_against_po(po: &crate::master::PurchaseOrder, items: &[ItemLine], invoice_currency: &str, tol_bp: i64) -> Vec<String> {
+pub fn check_lines_against_po(
+    po: &crate::master::PurchaseOrder,
+    items: &[ItemLine],
+    invoice_currency: &str,
+    tol_bp: i64,
+) -> Vec<String> {
     use std::collections::BTreeMap;
     let po_cur = normalize::currency(&po.currency);
     let mut problems = vec![];
@@ -720,29 +1197,56 @@ pub fn check_lines_against_po(po: &crate::master::PurchaseOrder, items: &[ItemLi
         if is_round_off(l) {
             continue;
         }
-        let label = format!("\"{}\" {}", l.description, money(l.amount_paise, invoice_currency));
-        let cands: Vec<(usize, &crate::master::PoLine)> = po.lines.iter().enumerate()
+        let label = format!(
+            "\"{}\" {}",
+            l.description,
+            money(l.amount_paise, invoice_currency)
+        );
+        let cands: Vec<(usize, &crate::master::PoLine)> = po
+            .lines
+            .iter()
+            .enumerate()
             .filter(|(_, pl)| names_item(&l.description, pl))
-            .filter(|(_, pl)| pl.currency.as_deref().map(normalize::currency).unwrap_or_else(|| po_cur.clone()) == invoice_currency)
+            .filter(|(_, pl)| {
+                pl.currency
+                    .as_deref()
+                    .map(normalize::currency)
+                    .unwrap_or_else(|| po_cur.clone())
+                    == invoice_currency
+            })
             .collect();
         if cands.is_empty() {
-            problems.push(format!("{label} matches no {invoice_currency} line of the PO"));
+            problems.push(format!(
+                "{label} matches no {invoice_currency} line of the PO"
+            ));
             continue;
         }
         let qty = l.qty.unwrap_or(1);
-        let unit = l.unit_price_minor.unwrap_or(if qty != 0 { l.amount_paise / qty } else { 0 });
+        let unit = l
+            .unit_price_minor
+            .unwrap_or(if qty != 0 { l.amount_paise / qty } else { 0 });
         // qty x unit must reproduce the line amount; each unit may be rounded by at most one minor unit.
         // A positive line amount BELOW qty x unit (a printed line discount) also fits: it bills less than
         // the quantity at that rate, and the quantity and rate are still checked against the PO line below
         // (2026-10-31, after a discounted genuine invoice on the already-seen v1 set; DECISIONS.md).
-        let exact = qty.checked_mul(unit).map(|v| (v - l.amount_paise).abs() <= qty || (l.amount_paise > 0 && l.amount_paise < v)).unwrap_or(false);
+        let exact = qty
+            .checked_mul(unit)
+            .map(|v| {
+                (v - l.amount_paise).abs() <= qty || (l.amount_paise > 0 && l.amount_paise < v)
+            })
+            .unwrap_or(false);
         if qty <= 0 || unit < 0 || !exact {
             problems.push(format!("{label} does not equal its quantity x unit price"));
             continue;
         }
         // A discounted line bills amount / qty per unit (rounded up), which is what is compared with
         // the PO rate (v3 prep: a 10%-off line at a list rate above the PO rate bills the PO rate).
-        let unit = if qty > 0 && l.amount_paise > 0 && qty.checked_mul(unit).is_some_and(|v| l.amount_paise < v - qty) {
+        let unit = if qty > 0
+            && l.amount_paise > 0
+            && qty
+                .checked_mul(unit)
+                .is_some_and(|v| l.amount_paise < v - qty)
+        {
             (l.amount_paise + qty - 1) / qty
         } else {
             unit
@@ -763,7 +1267,9 @@ pub fn check_lines_against_po(po: &crate::master::PurchaseOrder, items: &[ItemLi
                 e.0 += qty;
                 e.1 += l.amount_paise;
             }
-            None => problems.push(format!("{label} bills more than the PO line allows (quantity, unit price or line value)")),
+            None => problems.push(format!(
+                "{label} bills more than the PO line allows (quantity, unit price or line value)"
+            )),
         }
     }
     problems
@@ -776,7 +1282,13 @@ pub fn money(minor: i64, currency: &str) -> String {
     }
     let neg = minor < 0;
     let m = minor.unsigned_abs();
-    format!("{}{} {}.{:02}", if neg { "-" } else { "" }, currency, m / 100, m % 100)
+    format!(
+        "{}{} {}.{:02}",
+        if neg { "-" } else { "" },
+        currency,
+        m / 100,
+        m % 100
+    )
 }
 
 fn digits(s: &str) -> String {

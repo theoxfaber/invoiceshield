@@ -89,7 +89,9 @@ impl McError {
             McError::MakerCannot => "maker_cannot_check_own_change",
             McError::AlreadyApproved => "already_approved_by_this_identity",
             McError::Refused(ChangeRefused::NoNumberOnFile) => "no_number_on_file",
-            McError::Refused(ChangeRefused::CallbackNotToNumberOnFile) => "callback_not_to_number_on_file",
+            McError::Refused(ChangeRefused::CallbackNotToNumberOnFile) => {
+                "callback_not_to_number_on_file"
+            }
             McError::Refused(ChangeRefused::CallbackDetailsDiffer) => "callback_details_differ",
             McError::Refused(_) => "refused",
         }
@@ -126,12 +128,27 @@ pub fn hmac_sha256(key: &[u8], msg: &[u8]) -> [u8; 32] {
         ipad[i] ^= k[i];
         opad[i] ^= k[i];
     }
-    let inner = Sha256::new().chain_update(ipad).chain_update(msg).finalize();
-    Sha256::new().chain_update(opad).chain_update(inner).finalize().into()
+    let inner = Sha256::new()
+        .chain_update(ipad)
+        .chain_update(msg)
+        .finalize();
+    Sha256::new()
+        .chain_update(opad)
+        .chain_update(inner)
+        .finalize()
+        .into()
 }
 
-fn change_mac(key: &[u8; 32], change_id: &str, vendor_id: &str, new_details: &str, applied_at: i64) -> String {
-    let msg = format!("invoiceshield-master-change-v1\n{change_id}\n{vendor_id}\n{new_details}\n{applied_at}\n");
+fn change_mac(
+    key: &[u8; 32],
+    change_id: &str,
+    vendor_id: &str,
+    new_details: &str,
+    applied_at: i64,
+) -> String {
+    let msg = format!(
+        "invoiceshield-master-change-v1\n{change_id}\n{vendor_id}\n{new_details}\n{applied_at}\n"
+    );
     hex::encode(hmac_sha256(key, msg.as_bytes()))
 }
 
@@ -142,14 +159,25 @@ pub fn effective_master(c: &Connection, base: &Master, key: Option<&[u8; 32]>) -
     let mut m = base.clone();
     let mut st = c.prepare("SELECT change_id, vendor_id, new_details, applied_at, mac FROM master_changes WHERE status = 'applied' ORDER BY applied_at, seq")?;
     let rows = st.query_map([], |r| {
-        Ok((r.get::<_, String>(0)?, r.get::<_, String>(1)?, r.get::<_, String>(2)?, r.get::<_, Option<i64>>(3)?, r.get::<_, Option<String>>(4)?))
+        Ok((
+            r.get::<_, String>(0)?,
+            r.get::<_, String>(1)?,
+            r.get::<_, String>(2)?,
+            r.get::<_, Option<i64>>(3)?,
+            r.get::<_, Option<String>>(4)?,
+        ))
     })?;
     let mut tampered = vec![];
     for row in rows {
         let (id, vid, nd, applied_at, mac) = row?;
         if let Some(k) = key {
             let want = change_mac(k, &id, &vid, &nd, applied_at.unwrap_or(i64::MIN));
-            let ok = mac.as_deref().is_some_and(|got| bool::from(subtle::ConstantTimeEq::ct_eq(got.as_bytes(), want.as_bytes())));
+            let ok = mac.as_deref().is_some_and(|got| {
+                bool::from(subtle::ConstantTimeEq::ct_eq(
+                    got.as_bytes(),
+                    want.as_bytes(),
+                ))
+            });
             if !ok {
                 eprintln!("STATE INTEGRITY: applied bank change {id} for {vid} has no valid MAC; vendor {vid} is blocked until this is investigated");
                 tampered.push(vid);
@@ -188,11 +216,29 @@ fn view(c: &Connection, id: &str) -> Result<Option<ChangeView>> {
             },
         )
         .optional()?;
-    let Some((change_id, vendor_id, status, maker, requested_at, nd, cb, approved_at, effective_at, applied_at, rejected_by, reason)) = row else {
+    let Some((
+        change_id,
+        vendor_id,
+        status,
+        maker,
+        requested_at,
+        nd,
+        cb,
+        approved_at,
+        effective_at,
+        applied_at,
+        rejected_by,
+        reason,
+    )) = row
+    else {
         return Ok(None);
     };
-    let mut st = c.prepare("SELECT approver FROM master_change_approvals WHERE change_id = ?1 ORDER BY ts, approver")?;
-    let approvals = st.query_map([id], |r| r.get::<_, String>(0))?.collect::<rusqlite::Result<Vec<_>>>()?;
+    let mut st = c.prepare(
+        "SELECT approver FROM master_change_approvals WHERE change_id = ?1 ORDER BY ts, approver",
+    )?;
+    let approvals = st
+        .query_map([id], |r| r.get::<_, String>(0))?
+        .collect::<rusqlite::Result<Vec<_>>>()?;
     Ok(Some(ChangeView {
         change_id,
         vendor_id,
@@ -211,19 +257,39 @@ fn view(c: &Connection, id: &str) -> Result<Option<ChangeView>> {
 }
 
 fn approvals(c: &Connection, id: &str) -> Result<Vec<String>> {
-    let mut st = c.prepare("SELECT approver FROM master_change_approvals WHERE change_id = ?1 ORDER BY approver")?;
-    let v = st.query_map([id], |r| r.get::<_, String>(0))?.collect::<rusqlite::Result<Vec<_>>>()?;
+    let mut st = c.prepare(
+        "SELECT approver FROM master_change_approvals WHERE change_id = ?1 ORDER BY approver",
+    )?;
+    let v = st
+        .query_map([id], |r| r.get::<_, String>(0))?
+        .collect::<rusqlite::Result<Vec<_>>>()?;
     Ok(v)
 }
 
 /// Apply every change in `cooling_off` whose `effective_at` has passed, through the library rule.
-pub fn apply_due(tx: &Transaction, gov: &mut Governor, phones: &BTreeMap<String, String>, cooling: i64, now: i64, key: Option<&[u8; 32]>) -> Result<()> {
+pub fn apply_due(
+    tx: &Transaction,
+    gov: &mut Governor,
+    phones: &BTreeMap<String, String>,
+    cooling: i64,
+    now: i64,
+    key: Option<&[u8; 32]>,
+) -> Result<()> {
     let due: Vec<(String, String, String, String, i64, String)> = {
         let mut st = tx.prepare(
             "SELECT change_id, vendor_id, new_details, maker, requested_at, COALESCE(callback, '')
              FROM master_changes WHERE status = 'cooling_off' AND effective_at <= ?1 ORDER BY effective_at, seq",
         )?;
-        let rows = st.query_map([now], |r| Ok((r.get(0)?, r.get(1)?, r.get(2)?, r.get(3)?, r.get(4)?, r.get(5)?)))?;
+        let rows = st.query_map([now], |r| {
+            Ok((
+                r.get(0)?,
+                r.get(1)?,
+                r.get(2)?,
+                r.get(3)?,
+                r.get(4)?,
+                r.get(5)?,
+            ))
+        })?;
         rows.collect::<rusqlite::Result<Vec<_>>>()?
     };
     for (id, vid, nd, maker, requested_at, cb) in due {
@@ -267,21 +333,54 @@ pub fn apply_due(tx: &Transaction, gov: &mut Governor, phones: &BTreeMap<String,
 impl Store {
     /// One write transaction for a workflow step: reload, apply due changes, run `f`, persist the
     /// new audit records, commit. Any error rolls everything back.
-    fn mc_write(&mut self, now: i64, f: impl FnOnce(&Transaction, &mut AuditLog, &BTreeMap<String, String>, &Master) -> Result<McResult>) -> Result<McResult> {
+    fn mc_write(
+        &mut self,
+        now: i64,
+        f: impl FnOnce(
+            &Transaction,
+            &mut AuditLog,
+            &BTreeMap<String, String>,
+            &Master,
+        ) -> Result<McResult>,
+    ) -> Result<McResult> {
         let r = (|| {
-            let tx = self.conn.transaction_with_behavior(TransactionBehavior::Immediate)?;
-            Store::sync(&tx, &mut self.gov, &mut self.generation, &self.base_master, self.state_key.as_ref())?;
+            let tx = self
+                .conn
+                .transaction_with_behavior(TransactionBehavior::Immediate)?;
+            Store::sync(
+                &tx,
+                &mut self.gov,
+                &mut self.generation,
+                &self.base_master,
+                self.state_key.as_ref(),
+            )?;
             self.generation = -1;
             let aud0 = self.gov.audit.records.len();
-            apply_due(&tx, &mut self.gov, &self.phones, self.cooling_off_secs, now, self.state_key.as_ref())?;
+            apply_due(
+                &tx,
+                &mut self.gov,
+                &self.phones,
+                self.cooling_off_secs,
+                now,
+                self.state_key.as_ref(),
+            )?;
             let out = f(&tx, &mut self.gov.audit, &self.phones, &self.gov.master)?;
             for rec in &self.gov.audit.records[aud0..] {
                 tx.execute(
                     "INSERT INTO audit (seq, prev_hash, payload, hash) VALUES (?1, ?2, ?3, ?4)",
-                    params![rec.seq as i64, rec.prev_hash, serde_json::to_string(&rec.payload)?, rec.hash],
+                    params![
+                        rec.seq as i64,
+                        rec.prev_hash,
+                        serde_json::to_string(&rec.payload)?,
+                        rec.hash
+                    ],
                 )?;
             }
-            let g: i64 = tx.query_row("UPDATE meta SET v = v + 1 WHERE k = 'generation' RETURNING v", [], |r| r.get(0))?;
+            let g: i64 = tx.query_row(
+                "UPDATE meta SET v = v + 1 WHERE k = 'generation' RETURNING v",
+                [],
+                |r| r.get(0),
+            )?;
             tx.commit()?;
             Ok::<_, StoreError>((out, g))
         })();
@@ -298,7 +397,13 @@ impl Store {
     }
 
     /// Step 1: an operator (the maker) enters new bank details for a vendor.
-    pub fn mc_request(&mut self, maker: &str, vendor_id: &str, d: NewDetails, now: i64) -> Result<McResult> {
+    pub fn mc_request(
+        &mut self,
+        maker: &str,
+        vendor_id: &str,
+        d: NewDetails,
+        now: i64,
+    ) -> Result<McResult> {
         let vendor_id = vendor_id.to_string();
         let maker = maker.to_string();
         self.mc_write(now, move |tx, audit, _phones, master| {
@@ -335,7 +440,13 @@ impl Store {
     }
 
     /// Step 2: the out-of-band call-back to the number on file.
-    pub fn mc_callback(&mut self, id: &str, by: &str, cb: CallbackReport, now: i64) -> Result<McResult> {
+    pub fn mc_callback(
+        &mut self,
+        id: &str,
+        by: &str,
+        cb: CallbackReport,
+        now: i64,
+    ) -> Result<McResult> {
         let (id, by) = (id.to_string(), by.to_string());
         self.mc_write(now, move |tx, audit, phones, _master| {
             let Some(v) = view(tx, &id)? else { return Ok(Err(McError::NotFound)) };
@@ -413,7 +524,11 @@ impl Store {
 
     /// Any open change can be stopped by an operator or approver (including during cooling-off).
     pub fn mc_reject(&mut self, id: &str, by: &str, reason: &str, now: i64) -> Result<McResult> {
-        let (id, by, reason) = (id.to_string(), by.to_string(), reason.chars().take(500).collect::<String>());
+        let (id, by, reason) = (
+            id.to_string(),
+            by.to_string(),
+            reason.chars().take(500).collect::<String>(),
+        );
         self.mc_write(now, move |tx, audit, _phones, _master| {
             let Some(v) = view(tx, &id)? else { return Ok(Err(McError::NotFound)) };
             if v.status == "applied" || v.status == "rejected" {
@@ -430,7 +545,8 @@ impl Store {
 
     /// Apply whatever is due at `now` (normally done inside each payment transaction).
     pub fn mc_tick(&mut self, now: i64) -> Result<()> {
-        self.mc_write(now, |_, _, _, _| Ok(Err(McError::NotFound))).map(|_| ())
+        self.mc_write(now, |_, _, _, _| Ok(Err(McError::NotFound)))
+            .map(|_| ())
     }
 
     pub fn mc_get(&self, id: &str) -> Result<Option<ChangeView>> {

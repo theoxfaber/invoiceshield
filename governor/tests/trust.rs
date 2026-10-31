@@ -12,7 +12,10 @@ const NOW: i64 = 1_800_000_000;
 const CLEAN: &str = r#"{"signals":[]}"#;
 
 fn master() -> Master {
-    let path = concat!(env!("CARGO_MANIFEST_DIR"), "/../dataset/fixtures/master.json");
+    let path = concat!(
+        env!("CARGO_MANIFEST_DIR"),
+        "/../dataset/fixtures/master.json"
+    );
     Master::from_json(&std::fs::read_to_string(path).unwrap()).unwrap()
 }
 
@@ -30,7 +33,14 @@ fn nonce() -> String {
 }
 
 /// Canonical JSON: serde_json's Value map is a BTreeMap, so keys come out sorted, no whitespace.
-fn payload(sk: &SigningKey, doc: &str, issued_at: i64, nonce: &str, status: &str, evidence: Value) -> String {
+fn payload(
+    sk: &SigningKey,
+    doc: &str,
+    issued_at: i64,
+    nonce: &str,
+    status: &str,
+    evidence: Value,
+) -> String {
     serde_json::to_string(&json!({
         "v": 1, "key_id": key_id(&sk.verifying_key()), "doc_sha256": doc, "extractor_version": "test",
         "issued_at": issued_at, "nonce": nonce, "status": status, "evidence": evidence,
@@ -43,24 +53,39 @@ fn envelope(sk: &SigningKey, payload: &str) -> Value {
 
 fn body(doc: Option<&str>, env: Option<Value>, raw_evidence: Option<Value>) -> String {
     let mut p = json!({"vendor_id": "V001", "invoice_no": "SOS/26-27/0231", "amount_paise": 4_500_000, "po_ref": "PO-2026-0101"});
-    if let Some(d) = doc { p["document_sha256"] = json!(d); }
+    if let Some(d) = doc {
+        p["document_sha256"] = json!(d);
+    }
     let mut b = json!({"proposal": p, "checker_raw": CLEAN});
-    if let Some(e) = env { b["signed_evidence"] = e; }
-    if let Some(e) = raw_evidence { b["evidence"] = e; }
+    if let Some(e) = env {
+        b["signed_evidence"] = e;
+    }
+    if let Some(e) = raw_evidence {
+        b["evidence"] = e;
+    }
     b.to_string()
 }
 
 fn setup() -> (Governor, TrustVerifier, SigningKey) {
     let sk = SigningKey::generate(&mut OsRng);
-    (Governor::new(master()), TrustVerifier::new(TrustConfig::new(vec![sk.verifying_key()])), sk)
+    (
+        Governor::new(master()),
+        TrustVerifier::new(TrustConfig::new(vec![sk.verifying_key()])),
+        sk,
+    )
 }
 
-fn rules(d: &invoiceshield_governor::Decision) -> Vec<String> { d.reasons.iter().map(|r| r.rule.clone()).collect() }
+fn rules(d: &invoiceshield_governor::Decision) -> Vec<String> {
+    d.reasons.iter().map(|r| r.rule.clone()).collect()
+}
 
 #[test]
 fn valid_signed_evidence_passes() {
     let (mut g, mut t, sk) = setup();
-    let env = envelope(&sk, &payload(&sk, DOC, NOW, &nonce(), "ok", good_evidence()));
+    let env = envelope(
+        &sk,
+        &payload(&sk, DOC, NOW, &nonce(), "ok", good_evidence()),
+    );
     let d = g.evaluate_signed_json(&body(Some(DOC), Some(env), None), NOW, NOW, &mut t);
     assert_eq!(d.verdict, Verdict::Allow, "{:?}", d.reasons);
 }
@@ -93,8 +118,20 @@ fn forged_signature_blocks() {
     let (mut g, mut t, sk) = setup();
     let attacker = SigningKey::generate(&mut OsRng);
     // attacker signs with its own key but claims the real key id
-    let p = payload(&sk, DOC, NOW, &nonce(), "ok", json!({"text_layer_gstin": "24ZZACS4821A1ZX", "has_text_layer": true}));
-    let d = g.evaluate_signed_json(&body(Some(DOC), Some(envelope(&attacker, &p)), None), NOW, NOW, &mut t);
+    let p = payload(
+        &sk,
+        DOC,
+        NOW,
+        &nonce(),
+        "ok",
+        json!({"text_layer_gstin": "24ZZACS4821A1ZX", "has_text_layer": true}),
+    );
+    let d = g.evaluate_signed_json(
+        &body(Some(DOC), Some(envelope(&attacker, &p)), None),
+        NOW,
+        NOW,
+        &mut t,
+    );
     assert_eq!(d.verdict, Verdict::Block);
     assert_eq!(rules(&d), vec!["evidence_signature_invalid"]);
 }
@@ -114,9 +151,17 @@ fn edited_payload_blocks() {
 fn unknown_key_and_garbage_envelopes_block() {
     let (mut g, mut t, _) = setup();
     let other = SigningKey::generate(&mut OsRng);
-    let env = envelope(&other, &payload(&other, DOC, NOW, &nonce(), "ok", good_evidence()));
-    for e in [env, json!({"payload": "{}", "sig": "!!"}), json!({"payload": 3}), json!("x"),
-              json!({"payload": "not json", "sig": ""})] {
+    let env = envelope(
+        &other,
+        &payload(&other, DOC, NOW, &nonce(), "ok", good_evidence()),
+    );
+    for e in [
+        env,
+        json!({"payload": "{}", "sig": "!!"}),
+        json!({"payload": 3}),
+        json!("x"),
+        json!({"payload": "not json", "sig": ""}),
+    ] {
         let d = g.evaluate_signed_json(&body(Some(DOC), Some(e), None), NOW, NOW, &mut t);
         assert_eq!(d.verdict, Verdict::Block, "{:?}", d.reasons);
     }
@@ -125,7 +170,10 @@ fn unknown_key_and_garbage_envelopes_block() {
 #[test]
 fn tampered_document_hash_blocks() {
     let (mut g, mut t, sk) = setup();
-    let env = envelope(&sk, &payload(&sk, DOC, NOW, &nonce(), "ok", good_evidence()));
+    let env = envelope(
+        &sk,
+        &payload(&sk, DOC, NOW, &nonce(), "ok", good_evidence()),
+    );
     let other = "0".repeat(64);
     let d = g.evaluate_signed_json(&body(Some(&other), Some(env), None), NOW, NOW, &mut t);
     assert_eq!(d.verdict, Verdict::Block);
@@ -135,7 +183,10 @@ fn tampered_document_hash_blocks() {
 #[test]
 fn missing_document_hash_reviews() {
     let (mut g, mut t, sk) = setup();
-    let env = envelope(&sk, &payload(&sk, DOC, NOW, &nonce(), "ok", good_evidence()));
+    let env = envelope(
+        &sk,
+        &payload(&sk, DOC, NOW, &nonce(), "ok", good_evidence()),
+    );
     let d = g.evaluate_signed_json(&body(None, Some(env), None), NOW, NOW, &mut t);
     assert_eq!(d.verdict, Verdict::Review);
     assert_eq!(rules(&d), vec!["document_hash_missing"]);
@@ -144,9 +195,15 @@ fn missing_document_hash_reviews() {
 #[test]
 fn replay_blocks() {
     let (mut g, mut t, sk) = setup();
-    let env = envelope(&sk, &payload(&sk, DOC, NOW, &nonce(), "ok", good_evidence()));
+    let env = envelope(
+        &sk,
+        &payload(&sk, DOC, NOW, &nonce(), "ok", good_evidence()),
+    );
     let b = body(Some(DOC), Some(env), None);
-    assert_eq!(g.evaluate_signed_json(&b, NOW, NOW, &mut t).verdict, Verdict::Allow);
+    assert_eq!(
+        g.evaluate_signed_json(&b, NOW, NOW, &mut t).verdict,
+        Verdict::Allow
+    );
     g.reset_state(); // even after an eval ledger reset the nonce stays spent
     let d = g.evaluate_signed_json(&b, NOW, NOW + 1, &mut t);
     assert_eq!(d.verdict, Verdict::Block);
@@ -156,22 +213,45 @@ fn replay_blocks() {
 #[test]
 fn stale_and_future_evidence_review() {
     let (mut g, mut t, sk) = setup();
-    let old = envelope(&sk, &payload(&sk, DOC, NOW - 301, &nonce(), "ok", good_evidence()));
+    let old = envelope(
+        &sk,
+        &payload(&sk, DOC, NOW - 301, &nonce(), "ok", good_evidence()),
+    );
     let d = g.evaluate_signed_json(&body(Some(DOC), Some(old), None), NOW, NOW, &mut t);
-    assert_eq!((d.verdict, rules(&d)), (Verdict::Review, vec!["evidence_stale".to_string()]));
-    let fut = envelope(&sk, &payload(&sk, DOC, NOW + 31, &nonce(), "ok", good_evidence()));
+    assert_eq!(
+        (d.verdict, rules(&d)),
+        (Verdict::Review, vec!["evidence_stale".to_string()])
+    );
+    let fut = envelope(
+        &sk,
+        &payload(&sk, DOC, NOW + 31, &nonce(), "ok", good_evidence()),
+    );
     let d = g.evaluate_signed_json(&body(Some(DOC), Some(fut), None), NOW, NOW, &mut t);
-    assert_eq!((d.verdict, rules(&d)), (Verdict::Review, vec!["evidence_from_future".to_string()]));
+    assert_eq!(
+        (d.verdict, rules(&d)),
+        (Verdict::Review, vec!["evidence_from_future".to_string()])
+    );
 }
 
 #[test]
 fn extraction_failure_reviews() {
     let (mut g, mut t, sk) = setup();
-    let p = serde_json::to_string(&json!({"v": 1, "key_id": key_id(&sk.verifying_key()), "doc_sha256": DOC,
+    let p = serde_json::to_string(
+        &json!({"v": 1, "key_id": key_id(&sk.verifying_key()), "doc_sha256": DOC,
         "extractor_version": "test", "issued_at": NOW, "nonce": nonce(), "status": "failed",
-        "failure": "wall_clock_timeout"})).unwrap();
-    let d = g.evaluate_signed_json(&body(Some(DOC), Some(envelope(&sk, &p)), None), NOW, NOW, &mut t);
-    assert_eq!((d.verdict, rules(&d)), (Verdict::Review, vec!["extraction_failed".to_string()]));
+        "failure": "wall_clock_timeout"}),
+    )
+    .unwrap();
+    let d = g.evaluate_signed_json(
+        &body(Some(DOC), Some(envelope(&sk, &p)), None),
+        NOW,
+        NOW,
+        &mut t,
+    );
+    assert_eq!(
+        (d.verdict, rules(&d)),
+        (Verdict::Review, vec!["extraction_failed".to_string()])
+    );
 }
 
 #[test]
@@ -181,7 +261,13 @@ fn signed_payload_with_unknown_evidence_field_reviews() {
     e["surprise"] = json!(1);
     let env = envelope(&sk, &payload(&sk, DOC, NOW, &nonce(), "ok", e));
     let d = g.evaluate_signed_json(&body(Some(DOC), Some(env), None), NOW, NOW, &mut t);
-    assert_eq!((d.verdict, rules(&d)), (Verdict::Review, vec!["evidence_payload_invalid".to_string()]));
+    assert_eq!(
+        (d.verdict, rules(&d)),
+        (
+            Verdict::Review,
+            vec!["evidence_payload_invalid".to_string()]
+        )
+    );
 }
 
 #[test]
@@ -190,8 +276,16 @@ fn raw_evidence_next_to_envelope_is_ignored() {
     let mut e = good_evidence();
     e["printed_bank_account"] = json!("50200012345678"); // the document really shows another account
     let env = envelope(&sk, &payload(&sk, DOC, NOW, &nonce(), "ok", e));
-    let d = g.evaluate_signed_json(&body(Some(DOC), Some(env), Some(good_evidence())), NOW, NOW, &mut t);
-    assert!(d.tamper_alert, "caller's clean raw evidence must not override the signed values");
+    let d = g.evaluate_signed_json(
+        &body(Some(DOC), Some(env), Some(good_evidence())),
+        NOW,
+        NOW,
+        &mut t,
+    );
+    assert!(
+        d.tamper_alert,
+        "caller's clean raw evidence must not override the signed values"
+    );
 }
 
 #[test]
@@ -208,9 +302,17 @@ fn dev_mode_accepts_unsigned_only_when_enabled() {
 fn nonce_store_prunes_expired_entries() {
     let (mut g, mut t, sk) = setup();
     for i in 0..5 {
-        let env = envelope(&sk, &payload(&sk, DOC, NOW + i * 100, &nonce(), "ok", good_evidence()));
+        let env = envelope(
+            &sk,
+            &payload(&sk, DOC, NOW + i * 100, &nonce(), "ok", good_evidence()),
+        );
         g.reset_state();
-        g.evaluate_signed_json(&body(Some(DOC), Some(env), None), NOW, NOW + i * 100, &mut t);
+        g.evaluate_signed_json(
+            &body(Some(DOC), Some(env), None),
+            NOW,
+            NOW + i * 100,
+            &mut t,
+        );
     }
     assert!(t.nonces_held() <= 4, "held {}", t.nonces_held());
 }
@@ -221,11 +323,29 @@ fn nonce_store_full_fails_closed() {
     let mut cfg = TrustConfig::new(vec![sk.verifying_key()]);
     cfg.max_nonces = 1;
     let mut t = TrustVerifier::new(cfg);
-    let mk = || body(Some(DOC), Some(envelope(&sk, &payload(&sk, DOC, NOW, &nonce(), "ok", good_evidence()))), None);
-    assert_eq!(g.evaluate_signed_json(&mk(), NOW, NOW, &mut t).verdict, Verdict::Allow);
+    let mk = || {
+        body(
+            Some(DOC),
+            Some(envelope(
+                &sk,
+                &payload(&sk, DOC, NOW, &nonce(), "ok", good_evidence()),
+            )),
+            None,
+        )
+    };
+    assert_eq!(
+        g.evaluate_signed_json(&mk(), NOW, NOW, &mut t).verdict,
+        Verdict::Allow
+    );
     g.reset_state();
     let d = g.evaluate_signed_json(&mk(), NOW, NOW, &mut t);
-    assert_eq!((d.verdict, rules(&d)), (Verdict::Review, vec!["evidence_nonce_store_full".to_string()]));
+    assert_eq!(
+        (d.verdict, rules(&d)),
+        (
+            Verdict::Review,
+            vec!["evidence_nonce_store_full".to_string()]
+        )
+    );
 }
 
 #[test]

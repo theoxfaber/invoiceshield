@@ -28,9 +28,18 @@ fn digest(seq: u64, prev: &str, payload: &serde_json::Value) -> String {
 impl AuditLog {
     pub fn append(&mut self, payload: serde_json::Value) -> String {
         let seq = self.records.len() as u64;
-        let prev = self.records.last().map(|r| r.hash.clone()).unwrap_or_else(|| GENESIS.into());
+        let prev = self
+            .records
+            .last()
+            .map(|r| r.hash.clone())
+            .unwrap_or_else(|| GENESIS.into());
         let hash = digest(seq, &prev, &payload);
-        self.records.push(AuditRecord { seq, prev_hash: prev, payload, hash: hash.clone() });
+        self.records.push(AuditRecord {
+            seq,
+            prev_hash: prev,
+            payload,
+            hash: hash.clone(),
+        });
         hash
     }
 
@@ -38,7 +47,10 @@ impl AuditLog {
     pub fn verify(&self) -> Option<usize> {
         let mut prev = GENESIS.to_string();
         for (i, r) in self.records.iter().enumerate() {
-            if r.seq != i as u64 || r.prev_hash != prev || digest(r.seq, &r.prev_hash, &r.payload) != r.hash {
+            if r.seq != i as u64
+                || r.prev_hash != prev
+                || digest(r.seq, &r.prev_hash, &r.payload) != r.hash
+            {
                 return Some(i);
             }
             prev = r.hash.clone();

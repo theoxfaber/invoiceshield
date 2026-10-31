@@ -20,7 +20,10 @@ pub struct Rate {
 impl Rate {
     /// `None` when `per_sec` is 0 (limiting off for this bucket).
     pub fn new(per_sec: f64, burst: f64) -> Option<Rate> {
-        (per_sec > 0.0).then(|| Rate { per_sec, burst: burst.max(1.0) })
+        (per_sec > 0.0).then(|| Rate {
+            per_sec,
+            burst: burst.max(1.0),
+        })
     }
 }
 
@@ -44,7 +47,11 @@ pub enum Check {
 
 impl Limiter {
     pub fn new(rate: Rate, max_keys: usize) -> Self {
-        Limiter { rate, max_keys: max_keys.max(1), buckets: Mutex::new(HashMap::new()) }
+        Limiter {
+            rate,
+            max_keys: max_keys.max(1),
+            buckets: Mutex::new(HashMap::new()),
+        }
     }
 
     pub fn rate(&self) -> Rate {
@@ -73,12 +80,23 @@ impl Limiter {
             }
             if m.len() >= self.max_keys {
                 let r = self.rate;
-                m.retain(|_, b| b.tokens + now.saturating_duration_since(b.at).as_secs_f64() * r.per_sec < r.burst);
+                m.retain(|_, b| {
+                    b.tokens + now.saturating_duration_since(b.at).as_secs_f64() * r.per_sec
+                        < r.burst
+                });
                 if m.len() >= self.max_keys {
-                    return Check::Limited { retry_after_secs: 1 };
+                    return Check::Limited {
+                        retry_after_secs: 1,
+                    };
                 }
             }
-            m.insert(key.to_string(), Bucket { tokens: self.rate.burst, at: now });
+            m.insert(
+                key.to_string(),
+                Bucket {
+                    tokens: self.rate.burst,
+                    at: now,
+                },
+            );
         }
         let b = m.get_mut(key).expect("inserted");
         let elapsed = now.saturating_duration_since(b.at).as_secs_f64();
@@ -95,7 +113,9 @@ impl Limiter {
                 b.at = now;
             }
             let wait = ((cost - tokens) / self.rate.per_sec).ceil().max(1.0);
-            Check::Limited { retry_after_secs: wait as u64 }
+            Check::Limited {
+                retry_after_secs: wait as u64,
+            }
         }
     }
 }
@@ -119,7 +139,10 @@ impl LimitsConfig {
     /// identity, 200 req/s burst 400 per IP, 30 failed authentications per minute per IP (burst
     /// 10). In eval mode (`eval_clock`) the defaults are off so the replay harness and load test
     /// measure the gate, not the limiter; explicit values still apply. 0 turns a limiter off.
-    pub fn from_lookup(get: &dyn Fn(&str) -> Option<String>, eval_clock: bool) -> Result<LimitsConfig, Vec<String>> {
+    pub fn from_lookup(
+        get: &dyn Fn(&str) -> Option<String>,
+        eval_clock: bool,
+    ) -> Result<LimitsConfig, Vec<String>> {
         let mut errs = vec![];
         let mut num = |k: &str, d: f64| -> f64 {
             match get(k).filter(|v| !v.is_empty()) {

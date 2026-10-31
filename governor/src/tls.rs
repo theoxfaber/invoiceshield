@@ -20,9 +20,13 @@ pub fn server_config(cert_file: &Path, key_file: &Path) -> Result<rustls::Server
         .collect::<Result<_, _>>()
         .map_err(|e| format!("GOVERNOR_TLS_CERT_FILE {}: {e}", cert_file.display()))?;
     if certs.is_empty() {
-        return Err(format!("GOVERNOR_TLS_CERT_FILE {}: no PEM certificate found", cert_file.display()));
+        return Err(format!(
+            "GOVERNOR_TLS_CERT_FILE {}: no PEM certificate found",
+            cert_file.display()
+        ));
     }
-    let key = PrivateKeyDer::from_pem_file(key_file).map_err(|e| format!("GOVERNOR_TLS_KEY_FILE {}: {e}", key_file.display()))?;
+    let key = PrivateKeyDer::from_pem_file(key_file)
+        .map_err(|e| format!("GOVERNOR_TLS_KEY_FILE {}: {e}", key_file.display()))?;
     let provider = Arc::new(rustls::crypto::ring::default_provider());
     let mut cfg = rustls::ServerConfig::builder_with_provider(provider)
         .with_safe_default_protocol_versions()
@@ -35,7 +39,11 @@ pub fn server_config(cert_file: &Path, key_file: &Path) -> Result<rustls::Server
 }
 
 /// Accept TLS connections forever. A failed handshake drops that connection only.
-pub async fn serve(listener: tokio::net::TcpListener, cfg: rustls::ServerConfig, app: Router) -> std::io::Result<()> {
+pub async fn serve(
+    listener: tokio::net::TcpListener,
+    cfg: rustls::ServerConfig,
+    app: Router,
+) -> std::io::Result<()> {
     let acceptor = TlsAcceptor::from(Arc::new(cfg));
     loop {
         let (tcp, peer) = match listener.accept().await {
@@ -49,18 +57,26 @@ pub async fn serve(listener: tokio::net::TcpListener, cfg: rustls::ServerConfig,
         let acceptor = acceptor.clone();
         let app = app.clone();
         tokio::spawn(async move {
-            let tls = match tokio::time::timeout(std::time::Duration::from_secs(10), acceptor.accept(tcp)).await {
+            let tls = match tokio::time::timeout(
+                std::time::Duration::from_secs(10),
+                acceptor.accept(tcp),
+            )
+            .await
+            {
                 Ok(Ok(s)) => s,
                 _ => return, // handshake failed or timed out (e.g. plain HTTP on the TLS port)
             };
-            let svc = hyper::service::service_fn(move |mut req: hyper::Request<hyper::body::Incoming>| {
-                req.extensions_mut().insert(ConnectInfo::<SocketAddr>(peer));
-                let mut app = app.clone();
-                async move { tower::Service::call(&mut app, req.map(axum::body::Body::new)).await }
-            });
-            let _ = hyper_util::server::conn::auto::Builder::new(hyper_util::rt::TokioExecutor::new())
-                .serve_connection(hyper_util::rt::TokioIo::new(tls), svc)
-                .await;
+            let svc = hyper::service::service_fn(
+                move |mut req: hyper::Request<hyper::body::Incoming>| {
+                    req.extensions_mut().insert(ConnectInfo::<SocketAddr>(peer));
+                    let mut app = app.clone();
+                    async move { tower::Service::call(&mut app, req.map(axum::body::Body::new)).await }
+                },
+            );
+            let _ =
+                hyper_util::server::conn::auto::Builder::new(hyper_util::rt::TokioExecutor::new())
+                    .serve_connection(hyper_util::rt::TokioIo::new(tls), svc)
+                    .await;
         });
     }
 }

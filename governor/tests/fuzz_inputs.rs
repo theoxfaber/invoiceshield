@@ -8,12 +8,21 @@ use proptest::prelude::*;
 use rand_core::OsRng;
 
 fn master() -> Master {
-    let path = concat!(env!("CARGO_MANIFEST_DIR"), "/../dataset/fixtures/master.json");
+    let path = concat!(
+        env!("CARGO_MANIFEST_DIR"),
+        "/../dataset/fixtures/master.json"
+    );
     Master::from_json(&std::fs::read_to_string(path).unwrap()).unwrap()
 }
 
 fn cfg() -> ProptestConfig {
-    ProptestConfig { cases: std::env::var("PROPTEST_CASES").ok().and_then(|v| v.parse().ok()).unwrap_or(256), ..ProptestConfig::default() }
+    ProptestConfig {
+        cases: std::env::var("PROPTEST_CASES")
+            .ok()
+            .and_then(|v| v.parse().ok())
+            .unwrap_or(256),
+        ..ProptestConfig::default()
+    }
 }
 
 /// JSON-shaped strings biased toward the real request shape, so the fuzzer gets past the parser.
@@ -23,16 +32,48 @@ fn json_value() -> impl Strategy<Value = serde_json::Value> {
         any::<bool>().prop_map(serde_json::Value::from),
         any::<i64>().prop_map(serde_json::Value::from),
         "\\PC{0,24}".prop_map(serde_json::Value::from),
-        prop::sample::select(vec!["V001", "PO-2026-0101", "24ZZACS4821A1ZX", "sharmaofficesupplies.in", "ok", "failed"]).prop_map(serde_json::Value::from),
+        prop::sample::select(vec![
+            "V001",
+            "PO-2026-0101",
+            "24ZZACS4821A1ZX",
+            "sharmaofficesupplies.in",
+            "ok",
+            "failed"
+        ])
+        .prop_map(serde_json::Value::from),
     ];
-    leaf.prop_recursive(3, 24, 6, |inner| prop_oneof![
-        prop::collection::vec(inner.clone(), 0..4).prop_map(serde_json::Value::from),
-        prop::collection::btree_map(
-            prop::sample::select(vec!["proposal", "evidence", "signed_evidence", "checker_raw", "payload", "sig",
-                "vendor_id", "invoice_no", "amount_paise", "po_ref", "document_sha256", "key_id", "nonce",
-                "issued_at", "v", "status", "text_layer_gstin", "printed_bank_account", "x"]).prop_map(String::from),
-            inner, 0..6).prop_map(|m| serde_json::Value::Object(m.into_iter().collect())),
-    ])
+    leaf.prop_recursive(3, 24, 6, |inner| {
+        prop_oneof![
+            prop::collection::vec(inner.clone(), 0..4).prop_map(serde_json::Value::from),
+            prop::collection::btree_map(
+                prop::sample::select(vec![
+                    "proposal",
+                    "evidence",
+                    "signed_evidence",
+                    "checker_raw",
+                    "payload",
+                    "sig",
+                    "vendor_id",
+                    "invoice_no",
+                    "amount_paise",
+                    "po_ref",
+                    "document_sha256",
+                    "key_id",
+                    "nonce",
+                    "issued_at",
+                    "v",
+                    "status",
+                    "text_layer_gstin",
+                    "printed_bank_account",
+                    "x"
+                ])
+                .prop_map(String::from),
+                inner,
+                0..6
+            )
+            .prop_map(|m| serde_json::Value::Object(m.into_iter().collect())),
+        ]
+    })
 }
 
 proptest! {
@@ -77,5 +118,8 @@ proptest! {
 #[test]
 fn invoice_no_composed_and_decomposed_greek_share_a_key() {
     // Regression from the fuzz run: "ΐ" and "Ϊ́" must not be two different duplicate keys.
-    assert_eq!(normalize::invoice_no("INV-ΐ-1"), normalize::invoice_no("INV-\u{3AA}\u{301}-1"));
+    assert_eq!(
+        normalize::invoice_no("INV-ΐ-1"),
+        normalize::invoice_no("INV-\u{3AA}\u{301}-1")
+    );
 }

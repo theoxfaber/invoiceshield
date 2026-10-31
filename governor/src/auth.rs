@@ -82,8 +82,14 @@ pub struct KeyRing {
 
 impl std::fmt::Debug for KeyRing {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        let names: Vec<_> = self.entries.iter().map(|e| (&e.id.name, &e.id.roles)).collect();
-        f.debug_struct("KeyRing").field("identities", &names).finish()
+        let names: Vec<_> = self
+            .entries
+            .iter()
+            .map(|e| (&e.id.name, &e.id.roles))
+            .collect();
+        f.debug_struct("KeyRing")
+            .field("identities", &names)
+            .finish()
     }
 }
 
@@ -103,23 +109,34 @@ pub fn new_key() -> String {
 }
 
 fn valid_name(n: &str) -> bool {
-    !n.is_empty() && n.len() <= 64 && n.bytes().all(|b| b.is_ascii_alphanumeric() || b"._-@".contains(&b))
+    !n.is_empty()
+        && n.len() <= 64
+        && n.bytes()
+            .all(|b| b.is_ascii_alphanumeric() || b"._-@".contains(&b))
 }
 
 impl KeyRing {
     /// Build from the environment (or a lookup map in tests). Every problem is returned at once.
     pub fn from_lookup(get: &dyn Fn(&str) -> Option<String>) -> Result<KeyRing, Vec<String>> {
         let mut errs = vec![];
-        let mut ring = KeyRing { entries: vec![], warnings: vec![] };
+        let mut ring = KeyRing {
+            entries: vec![],
+            warnings: vec![],
+        };
         match secret_from(get, "GOVERNOR_IDENTITIES") {
             Err(e) => errs.push(e),
             Ok(None) => {}
             Ok(Some(s)) => {
                 if s.loose_permissions {
-                    ring.warnings.push(format!("GOVERNOR_IDENTITIES_FILE {:?} is readable by group/others; chmod 600", s.from_file.unwrap_or_default()));
+                    ring.warnings.push(format!(
+                        "GOVERNOR_IDENTITIES_FILE {:?} is readable by group/others; chmod 600",
+                        s.from_file.unwrap_or_default()
+                    ));
                 }
                 match serde_json::from_str::<Vec<IdentitySpec>>(&s.value) {
-                    Err(e) => errs.push(format!("GOVERNOR_IDENTITIES: not a JSON array of {{name, roles, key_sha256}}: {e}")),
+                    Err(e) => errs.push(format!(
+                        "GOVERNOR_IDENTITIES: not a JSON array of {{name, roles, key_sha256}}: {e}"
+                    )),
                     Ok(specs) => {
                         for sp in specs {
                             let h = match hex::decode(sp.key_sha256.trim()) {
@@ -143,14 +160,21 @@ impl KeyRing {
         }
         for (var, name, roles) in [
             ("GOVERNOR_API_KEY", "agent", vec![Role::Agent]),
-            ("GOVERNOR_OPERATOR_KEY", "operator", vec![Role::Operator, Role::Approver]),
+            (
+                "GOVERNOR_OPERATOR_KEY",
+                "operator",
+                vec![Role::Operator, Role::Approver],
+            ),
         ] {
             match secret_from(get, var) {
                 Err(e) => errs.push(e),
                 Ok(None) => {}
                 Ok(Some(s)) => {
                     if s.value.len() < 16 {
-                        errs.push(format!("{var} must be at least 16 characters (got {})", s.value.len()));
+                        errs.push(format!(
+                            "{var} must be at least 16 characters (got {})",
+                            s.value.len()
+                        ));
                         continue;
                     }
                     if s.value.chars().any(char::is_whitespace) {
@@ -158,15 +182,23 @@ impl KeyRing {
                         continue;
                     }
                     if s.loose_permissions {
-                        ring.warnings.push(format!("{var}_FILE {:?} is readable by group/others; chmod 600", s.from_file.clone().unwrap_or_default()));
+                        ring.warnings.push(format!(
+                            "{var}_FILE {:?} is readable by group/others; chmod 600",
+                            s.from_file.clone().unwrap_or_default()
+                        ));
                     }
-                    if let Err(e) = ring.push(name, roles.into_iter().collect(), hash_key(&s.value)) {
+                    if let Err(e) = ring.push(name, roles.into_iter().collect(), hash_key(&s.value))
+                    {
                         errs.push(format!("{var}: {e}"));
                     }
                 }
             }
         }
-        if ring.entries.iter().any(|e| e.id.name == "operator" && e.id.has(Role::Approver)) {
+        if ring
+            .entries
+            .iter()
+            .any(|e| e.id.name == "operator" && e.id.has(Role::Approver))
+        {
             ring.warnings.push("legacy GOVERNOR_OPERATOR_KEY in use: one key both enters and approves; configure GOVERNOR_IDENTITIES for separate operator/approver identities".into());
         }
         if !ring.entries.iter().any(|e| e.id.has(Role::Agent)) {
@@ -185,7 +217,9 @@ impl KeyRing {
 
     fn push(&mut self, name: &str, roles: BTreeSet<Role>, hash: [u8; 32]) -> Result<(), String> {
         if !valid_name(name) {
-            return Err(format!("identity name {name:?} must be 1-64 chars of [A-Za-z0-9._-@]"));
+            return Err(format!(
+                "identity name {name:?} must be 1-64 chars of [A-Za-z0-9._-@]"
+            ));
         }
         if roles.is_empty() {
             return Err(format!("{name}: at least one role is required"));
@@ -197,9 +231,17 @@ impl KeyRing {
             return Err(format!("{name}: duplicate identity name"));
         }
         if self.entries.iter().any(|e| bool::from(e.hash.ct_eq(&hash))) {
-            return Err(format!("{name}: same key as another identity (every identity needs its own key)"));
+            return Err(format!(
+                "{name}: same key as another identity (every identity needs its own key)"
+            ));
         }
-        self.entries.push(Entry { id: Identity { name: name.into(), roles }, hash });
+        self.entries.push(Entry {
+            id: Identity {
+                name: name.into(),
+                roles,
+            },
+            hash,
+        });
         Ok(())
     }
 
