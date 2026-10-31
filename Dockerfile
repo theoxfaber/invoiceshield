@@ -19,7 +19,7 @@ RUN --mount=type=cache,target=/usr/local/cargo/registry \
  && strip /out/governor-server /out/governor
 
 # ---- stage 2: Python runtime ----
-FROM python:3.12-slim-bookworm AS runtime
+FROM python:3.15-slim-bookworm AS runtime
 ENV PYTHONDONTWRITEBYTECODE=1 PYTHONUNBUFFERED=1 PIP_NO_CACHE_DIR=1 PIP_DISABLE_PIP_VERSION_CHECK=1
 # tesseract + poppler: scans/photos are OCR'd locally (assembler/scan.py).
 RUN apt-get update \
