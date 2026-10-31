@@ -75,7 +75,10 @@ fn replay_after_restart_is_still_blocked() {
     let dir = tmpdir("nonce-restart");
     let db = dir.join("g.db");
     let db = db.to_str().unwrap();
-    let (ex, ck) = (SigningKey::generate(&mut OsRng), SigningKey::generate(&mut OsRng));
+    let (ex, ck) = (
+        SigningKey::generate(&mut OsRng),
+        SigningKey::generate(&mut OsRng),
+    );
     let b = signed_body(&ex, &ck, "INV-N1");
     {
         let mut s = trusted_store(db, &ex, &ck);
@@ -95,7 +98,10 @@ fn second_process_on_same_db_cannot_replay() {
     let dir = tmpdir("nonce-2proc");
     let db = dir.join("g.db");
     let db = db.to_str().unwrap();
-    let (ex, ck) = (SigningKey::generate(&mut OsRng), SigningKey::generate(&mut OsRng));
+    let (ex, ck) = (
+        SigningKey::generate(&mut OsRng),
+        SigningKey::generate(&mut OsRng),
+    );
     let b = signed_body(&ex, &ck, "INV-N2");
     let mut a = trusted_store(db, &ex, &ck);
     let mut c = trusted_store(db, &ex, &ck);
@@ -106,7 +112,10 @@ fn second_process_on_same_db_cannot_replay() {
 
 #[test]
 fn expired_nonces_are_pruned_from_the_db() {
-    let (ex, ck) = (SigningKey::generate(&mut OsRng), SigningKey::generate(&mut OsRng));
+    let (ex, ck) = (
+        SigningKey::generate(&mut OsRng),
+        SigningKey::generate(&mut OsRng),
+    );
     let mut s = trusted_store(":memory:", &ex, &ck);
     s.conn()
         .execute(
@@ -115,14 +124,21 @@ fn expired_nonces_are_pruned_from_the_db() {
         )
         .unwrap();
     fresh(s.act(&signed_body(&ex, &ck, "INV-N3"), 0, None).unwrap());
-    assert_eq!(persist::nonces_persisted(s.conn()).unwrap(), 1, "old row pruned, new row kept");
+    assert_eq!(
+        persist::nonces_persisted(s.conn()).unwrap(),
+        1,
+        "old row pruned, new row kept"
+    );
 }
 
 // ------------------------------------------- human rejection is permanent until reopened
 
 /// A REVIEW (over the approval threshold) proposed by `agent`, then rejected by `ravi`.
 fn rejected(s: &mut Store, inv: &str) -> String {
-    let d = fresh(s.act_as(&body(inv, 81_000), 0, None, Some("agent")).unwrap());
+    let d = fresh(
+        s.act_as(&body(inv, 81_000), 0, None, Some("agent"))
+            .unwrap(),
+    );
     assert_eq!(d.verdict, Verdict::Review, "{:?}", d.reasons);
     assert_eq!(
         s.resolve_as(&d.decision_id, false, "ravi", 10).unwrap(),
@@ -136,13 +152,23 @@ fn rejected_invoice_stays_blocked_beyond_every_window() {
     let mut s = Store::open_in_memory(master()).unwrap();
     let id = rejected(&mut s, "INV-REJ-1");
     for t in [20, 31 * DAY, 91 * DAY, 400 * DAY] {
-        let d = fresh(s.act_as(&body("INV-REJ-1", 81_000), t, None, Some("agent")).unwrap());
+        let d = fresh(
+            s.act_as(&body("INV-REJ-1", 81_000), t, None, Some("agent"))
+                .unwrap(),
+        );
         assert_eq!(d.verdict, Verdict::Block, "at t={t}");
-        assert!(rules(&d).contains(&"previously_rejected".to_string()), "{:?}", rules(&d));
+        assert!(
+            rules(&d).contains(&"previously_rejected".to_string()),
+            "{:?}",
+            rules(&d)
+        );
         assert!(d.reasons.iter().any(|r| r.detail.contains(&id)));
     }
     // A smaller amount under the same number is the same rejected invoice.
-    let d = fresh(s.act_as(&body("INV-REJ-1", 1_000), 500 * DAY, None, Some("agent")).unwrap());
+    let d = fresh(
+        s.act_as(&body("INV-REJ-1", 1_000), 500 * DAY, None, Some("agent"))
+            .unwrap(),
+    );
     assert!(rules(&d).contains(&"previously_rejected".to_string()));
     assert_eq!(d.verdict, Verdict::Block);
 }
@@ -158,7 +184,8 @@ fn reopen_requires_another_identity_and_is_audited() {
     );
     let audit_before = s.audit_records().unwrap().len();
     assert_eq!(
-        s.reopen_as(&id, "anita", "vendor sent corrected PO", 30).unwrap(),
+        s.reopen_as(&id, "anita", "vendor sent corrected PO", 30)
+            .unwrap(),
         ReopenOutcome::Reopened
     );
     let recs = s.audit_records().unwrap();
@@ -170,8 +197,15 @@ fn reopen_requires_another_identity_and_is_audited() {
         ReopenOutcome::NotRejected,
         "a reopen happens once"
     );
-    let d = fresh(s.act_as(&body("INV-REJ-2", 81_000), 40 * DAY, None, Some("agent")).unwrap());
-    assert!(!rules(&d).contains(&"previously_rejected".to_string()), "{:?}", rules(&d));
+    let d = fresh(
+        s.act_as(&body("INV-REJ-2", 81_000), 40 * DAY, None, Some("agent"))
+            .unwrap(),
+    );
+    assert!(
+        !rules(&d).contains(&"previously_rejected".to_string()),
+        "{:?}",
+        rules(&d)
+    );
     assert_ne!(d.verdict, Verdict::Block, "{:?}", d.reasons);
 }
 
@@ -185,20 +219,38 @@ fn reopen_survives_restart_and_rejection_without_reopen_too() {
         let mut s = Store::open(db, master()).unwrap();
         a = rejected(&mut s, "INV-REJ-A");
         b = rejected(&mut s, "INV-REJ-B");
-        assert_eq!(s.reopen_as(&a, "anita", "ok", 20).unwrap(), ReopenOutcome::Reopened);
+        assert_eq!(
+            s.reopen_as(&a, "anita", "ok", 20).unwrap(),
+            ReopenOutcome::Reopened
+        );
     }
     let mut s = Store::open(db, master()).unwrap();
-    let da = fresh(s.act_as(&body("INV-REJ-A", 81_000), 100 * DAY, None, Some("agent")).unwrap());
-    assert!(!rules(&da).contains(&"previously_rejected".to_string()), "{a}");
-    let db_ = fresh(s.act_as(&body("INV-REJ-B", 81_000), 100 * DAY, None, Some("agent")).unwrap());
-    assert!(rules(&db_).contains(&"previously_rejected".to_string()), "{b}");
+    let da = fresh(
+        s.act_as(&body("INV-REJ-A", 81_000), 100 * DAY, None, Some("agent"))
+            .unwrap(),
+    );
+    assert!(
+        !rules(&da).contains(&"previously_rejected".to_string()),
+        "{a}"
+    );
+    let db_ = fresh(
+        s.act_as(&body("INV-REJ-B", 81_000), 100 * DAY, None, Some("agent"))
+            .unwrap(),
+    );
+    assert!(
+        rules(&db_).contains(&"previously_rejected".to_string()),
+        "{b}"
+    );
     assert!(s.audit_head().unwrap().is_some());
 }
 
 #[test]
 fn only_human_rejected_decisions_can_be_reopened() {
     let mut s = Store::open_in_memory(master()).unwrap();
-    let allowed = fresh(s.act_as(&body("INV-OK-1", 1_000), 0, None, Some("agent")).unwrap());
+    let allowed = fresh(
+        s.act_as(&body("INV-OK-1", 1_000), 0, None, Some("agent"))
+            .unwrap(),
+    );
     assert_eq!(allowed.verdict, Verdict::Allow);
     assert_eq!(
         s.reopen_as(&allowed.decision_id, "anita", "x", 1).unwrap(),
@@ -220,7 +272,10 @@ fn only_human_rejected_decisions_can_be_reopened() {
 fn reopen_rows_are_append_only_in_the_db() {
     let mut s = Store::open_in_memory(master()).unwrap();
     let id = rejected(&mut s, "INV-REJ-3");
-    assert_eq!(s.reopen_as(&id, "anita", "ok", 20).unwrap(), ReopenOutcome::Reopened);
+    assert_eq!(
+        s.reopen_as(&id, "anita", "ok", 20).unwrap(),
+        ReopenOutcome::Reopened
+    );
     assert!(s
         .conn()
         .execute("UPDATE rejection_reopens SET reopened_by = 'agent'", [])

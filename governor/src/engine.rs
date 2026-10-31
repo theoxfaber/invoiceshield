@@ -251,15 +251,15 @@ impl Governor {
             s.clone()
         } else {
             req.checker_raw
-            .as_deref()
-            .map(parse_checker_signals)
-            .unwrap_or_else(|| {
-                vec![Signal {
-                    kind: "checker_missing".into(),
-                    severity: crate::verdict::Severity::Review,
-                    detail: "no checker report".into(),
-                }]
-            })
+                .as_deref()
+                .map(parse_checker_signals)
+                .unwrap_or_else(|| {
+                    vec![Signal {
+                        kind: "checker_missing".into(),
+                        severity: crate::verdict::Severity::Review,
+                        detail: "no checker report".into(),
+                    }]
+                })
         };
 
         // 1. Bank fields in the proposal → BLOCK (agent tried to choose the payee).
@@ -484,12 +484,10 @@ impl Governor {
         // 6a. A human already REJECTED this invoice (post-review hardening): BLOCK, with no time
         // window, until an operator/approver reopens that decision (audited).
         let ck_now = content_key(req.evidence.text_layer.as_deref(), &p.invoice_no);
-        if let Some(e) = self.ledger.previously_rejected(
-            &p.vendor_id,
-            &key,
-            p.irn.as_deref(),
-            ck_now.as_deref(),
-        ) {
+        if let Some(e) =
+            self.ledger
+                .previously_rejected(&p.vendor_id, &key, p.irn.as_deref(), ck_now.as_deref())
+        {
             ctx.add(
                 "previously_rejected",
                 Verdict::Block,
@@ -1070,10 +1068,18 @@ impl Governor {
     }
 
     /// Reopen a human-rejected decision (operator/approver, out of band). Audited.
-    pub fn reopen_rejection(&mut self, decision_id: &str, by: &str, reason: &str, now: i64) -> bool {
+    pub fn reopen_rejection(
+        &mut self,
+        decision_id: &str,
+        by: &str,
+        reason: &str,
+        now: i64,
+    ) -> bool {
         let ok = self.ledger.reopen(decision_id);
         if ok {
-            self.audit.append(serde_json::json!({"reopen": decision_id, "by": by, "reason": reason, "ts": now}));
+            self.audit.append(
+                serde_json::json!({"reopen": decision_id, "by": by, "reason": reason, "ts": now}),
+            );
         }
         ok
     }

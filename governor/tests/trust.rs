@@ -74,7 +74,13 @@ fn checker_key() -> &'static SigningKey {
     K.get_or_init(|| SigningKey::generate(&mut OsRng))
 }
 
-fn checker_payload(ck: &SigningKey, doc: &str, evidence_nonce: &str, issued_at: i64, raw: &str) -> String {
+fn checker_payload(
+    ck: &SigningKey,
+    doc: &str,
+    evidence_nonce: &str,
+    issued_at: i64,
+    raw: &str,
+) -> String {
     serde_json::to_string(&json!({
         "v": 1, "kind": "checker", "key_id": key_id(&ck.verifying_key()), "doc_sha256": doc,
         "evidence_nonce": evidence_nonce, "issued_at": issued_at, "raw": raw,
@@ -92,11 +98,15 @@ fn signed_checker_for(env: &Value, raw: &str) -> Value {
     let doc = p.get("doc_sha256").and_then(|v| v.as_str()).unwrap_or(DOC);
     let n = p.get("nonce").and_then(|v| v.as_str()).unwrap_or("");
     let issued = p.get("issued_at").and_then(|v| v.as_i64()).unwrap_or(NOW);
-    envelope(checker_key(), &checker_payload(checker_key(), doc, n, issued, raw))
+    envelope(
+        checker_key(),
+        &checker_payload(checker_key(), doc, n, issued, raw),
+    )
 }
 
 fn trust_cfg(sk: &SigningKey) -> TrustConfig {
-    TrustConfig::new(vec![sk.verifying_key()]).with_checker_keys(vec![checker_key().verifying_key()])
+    TrustConfig::new(vec![sk.verifying_key()])
+        .with_checker_keys(vec![checker_key().verifying_key()])
 }
 
 fn envelope(sk: &SigningKey, payload: &str) -> Value {
@@ -442,7 +452,12 @@ fn fresh_env(sk: &SigningKey) -> Value {
 fn checker_dropped_by_agent_reviews() {
     // Finding 1: a compromised agent omits the checker entirely.
     let (mut g, mut t, sk) = setup();
-    let d = g.evaluate_signed_json(&body_with_checker(fresh_env(&sk), None, None), NOW, NOW, &mut t);
+    let d = g.evaluate_signed_json(
+        &body_with_checker(fresh_env(&sk), None, None),
+        NOW,
+        NOW,
+        &mut t,
+    );
     assert_eq!(d.verdict, Verdict::Review);
     assert_eq!(signals(&d), vec!["checker_missing"]);
 }
@@ -468,7 +483,12 @@ fn unsigned_checker_raw_next_to_signed_checker_is_ignored() {
     let env = fresh_env(&sk);
     let block = r#"{"signals":[{"kind":"injection_suspected","severity":"block","detail":"x"}]}"#;
     let c = signed_checker_for(&env, block);
-    let d = g.evaluate_signed_json(&body_with_checker(env, Some(c), Some(CLEAN)), NOW, NOW, &mut t);
+    let d = g.evaluate_signed_json(
+        &body_with_checker(env, Some(c), Some(CLEAN)),
+        NOW,
+        NOW,
+        &mut t,
+    );
     assert_eq!(d.verdict, Verdict::Block);
     assert_eq!(signals(&d), vec!["injection_suspected"]);
 }
@@ -483,8 +503,16 @@ fn forged_checker_signature_reviews() {
         .to_string();
     let attacker = SigningKey::generate(&mut OsRng);
     // claims the real checker key id, signed by the attacker
-    let forged = envelope(&attacker, &checker_payload(checker_key(), DOC, &n, NOW, CLEAN));
-    let d = g.evaluate_signed_json(&body_with_checker(env, Some(forged), None), NOW, NOW, &mut t);
+    let forged = envelope(
+        &attacker,
+        &checker_payload(checker_key(), DOC, &n, NOW, CLEAN),
+    );
+    let d = g.evaluate_signed_json(
+        &body_with_checker(env, Some(forged), None),
+        NOW,
+        NOW,
+        &mut t,
+    );
     assert_eq!(d.verdict, Verdict::Review);
     assert_eq!(signals(&d), vec!["checker_signature_invalid"]);
 }
@@ -510,11 +538,15 @@ fn edited_checker_payload_reviews() {
     let env = fresh_env(&sk);
     let block = r#"{"signals":[{"kind":"injection_suspected","severity":"block","detail":"x"}]}"#;
     let mut c = signed_checker_for(&env, block);
-    let edited = c["payload"]
-        .as_str()
-        .unwrap()
-        .replace(r#"{\"kind\":\"injection_suspected\",\"severity\":\"block\",\"detail\":\"x\"}"#, "");
-    assert_ne!(edited, c["payload"].as_str().unwrap(), "the edit must change the payload");
+    let edited = c["payload"].as_str().unwrap().replace(
+        r#"{\"kind\":\"injection_suspected\",\"severity\":\"block\",\"detail\":\"x\"}"#,
+        "",
+    );
+    assert_ne!(
+        edited,
+        c["payload"].as_str().unwrap(),
+        "the edit must change the payload"
+    );
     c["payload"] = json!(edited);
     let d = g.evaluate_signed_json(&body_with_checker(env, Some(c), None), NOW, NOW, &mut t);
     assert_ne!(d.verdict, Verdict::Allow);
@@ -527,10 +559,20 @@ fn replayed_checker_payload_reviews() {
     let (mut g, mut t, sk) = setup();
     let env_a = fresh_env(&sk);
     let c_a = signed_checker_for(&env_a, CLEAN);
-    let d = g.evaluate_signed_json(&body_with_checker(env_a, Some(c_a.clone()), None), NOW, NOW, &mut t);
+    let d = g.evaluate_signed_json(
+        &body_with_checker(env_a, Some(c_a.clone()), None),
+        NOW,
+        NOW,
+        &mut t,
+    );
     assert_eq!(d.verdict, Verdict::Allow, "{:?}", d.reasons);
     g.reset_state();
-    let d = g.evaluate_signed_json(&body_with_checker(fresh_env(&sk), Some(c_a), None), NOW, NOW, &mut t);
+    let d = g.evaluate_signed_json(
+        &body_with_checker(fresh_env(&sk), Some(c_a), None),
+        NOW,
+        NOW,
+        &mut t,
+    );
     assert_eq!(d.verdict, Verdict::Review);
     assert_eq!(signals(&d), vec!["checker_nonce_mismatch"]);
 }
@@ -544,7 +586,10 @@ fn checker_for_another_document_reviews() {
         .unwrap()
         .to_string();
     let other = "1".repeat(64);
-    let c = envelope(checker_key(), &checker_payload(checker_key(), &other, &n, NOW, CLEAN));
+    let c = envelope(
+        checker_key(),
+        &checker_payload(checker_key(), &other, &n, NOW, CLEAN),
+    );
     let d = g.evaluate_signed_json(&body_with_checker(env, Some(c), None), NOW, NOW, &mut t);
     assert_eq!(d.verdict, Verdict::Review);
     assert_eq!(signals(&d), vec!["checker_document_mismatch"]);
@@ -574,9 +619,18 @@ fn stale_checker_and_bad_checker_schema_review() {
         assert_eq!(d.verdict, Verdict::Review, "{want}");
         assert_eq!(signals(&d), vec![want.to_string()]);
     }
-    for c in [json!("x"), json!({"payload": "{}", "sig": "!!"}), json!({"payload": 3})] {
+    for c in [
+        json!("x"),
+        json!({"payload": "{}", "sig": "!!"}),
+        json!({"payload": 3}),
+    ] {
         g.reset_state();
-        let d = g.evaluate_signed_json(&body_with_checker(fresh_env(&sk), Some(c), None), NOW, NOW, &mut t);
+        let d = g.evaluate_signed_json(
+            &body_with_checker(fresh_env(&sk), Some(c), None),
+            NOW,
+            NOW,
+            &mut t,
+        );
         assert_eq!(d.verdict, Verdict::Review);
         assert_eq!(signals(&d), vec!["checker_signature_invalid"]);
     }
@@ -612,7 +666,12 @@ fn no_checker_key_configured_fails_closed() {
 fn sandbox_without_network_namespace_reviews_by_default() {
     // Finding 2: the extractor signed network_namespace=false (the Python socket-patch fallback).
     let (mut g, mut t, sk) = setup();
-    for sb in [json!({"network_namespace": false}), json!({}), Value::Null, json!({"network_namespace": "true"})] {
+    for sb in [
+        json!({"network_namespace": false}),
+        json!({}),
+        Value::Null,
+        json!({"network_namespace": "true"}),
+    ] {
         let env = envelope(
             &sk,
             &payload_sandbox(&sk, DOC, NOW, &nonce(), "ok", good_evidence(), sb.clone()),
@@ -632,7 +691,15 @@ fn sandbox_without_network_namespace_allowed_only_when_configured() {
     let mut t = TrustVerifier::new(cfg);
     let env = envelope(
         &sk,
-        &payload_sandbox(&sk, DOC, NOW, &nonce(), "ok", good_evidence(), json!({"network_namespace": false})),
+        &payload_sandbox(
+            &sk,
+            DOC,
+            NOW,
+            &nonce(),
+            "ok",
+            good_evidence(),
+            json!({"network_namespace": false}),
+        ),
     );
     let d = g.evaluate_signed_json(&body(Some(DOC), Some(env), None), NOW, NOW, &mut t);
     assert_eq!(d.verdict, Verdict::Allow, "{:?}", d.reasons);
@@ -643,7 +710,9 @@ fn verify_accept_returns_the_nonce_to_persist() {
     let (_, mut t, sk) = setup();
     let n = nonce();
     let env = envelope(&sk, &payload(&sk, DOC, NOW, &n, "ok", good_evidence()));
-    let (_, acc) = t.verify_accept(&body(Some(DOC), Some(env), None), NOW).unwrap();
+    let (_, acc) = t
+        .verify_accept(&body(Some(DOC), Some(env), None), NOW)
+        .unwrap();
     let acc = acc.expect("signed path returns the accepted nonce");
     assert_eq!((acc.nonce, acc.issued_at), (n, NOW));
 }

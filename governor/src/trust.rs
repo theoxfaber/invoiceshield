@@ -533,7 +533,10 @@ impl TrustVerifier {
         {
             return checker_signal(
                 "checker_stale",
-                format!("checker report issued_at {} is outside the freshness window", c.issued_at),
+                format!(
+                    "checker report issued_at {} is outside the freshness window",
+                    c.issued_at
+                ),
             );
         }
         parse_checker_signals(&c.raw)
