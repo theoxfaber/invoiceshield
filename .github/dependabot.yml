@@ -8,6 +8,15 @@ updates:
     groups:
       cargo-minor:
         update-types: [minor, patch]
+    # Semver-major bumps that broke the governor build or lockfile (closed PRs #3, #4, #9, Oct 31 2026).
+    # Upgrading these needs code changes in governor/, which is gate code; do it deliberately, not via dependabot.
+    ignore:
+      - dependency-name: getrandom
+        update-types: ["version-update:semver-major"]
+      - dependency-name: rusqlite
+        update-types: ["version-update:semver-major"]
+      - dependency-name: ed25519-dalek
+        update-types: ["version-update:semver-major"]
   - package-ecosystem: pip
     directory: /
     schedule:
