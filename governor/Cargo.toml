@@ -37,7 +37,7 @@ proptest = "1"
 ed25519-dalek = { version = "2", features = ["rand_core"] }
 rand_core = { version = "0.6", features = ["getrandom"] }
 # Phase 4: self-signed test certificates for the TLS start test.
-rcgen = { version = "0.13", default-features = false, features = ["crypto", "pem", "ring"] }
+rcgen = { version = "0.14", default-features = false, features = ["crypto", "pem", "ring"] }
 
 [[bin]]
 name = "governor-server"
