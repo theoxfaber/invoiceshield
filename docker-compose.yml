@@ -41,9 +41,9 @@ services:
         condition: service_completed_successfully
     environment:
       GOVERNOR_API_KEY: ${GOVERNOR_API_KEY:?set GOVERNOR_API_KEY (>= 16 chars), e.g. export GOVERNOR_API_KEY=$(openssl rand -hex 16)}
-      GOVERNOR_OPERATOR_KEY: ${GOVERNOR_OPERATOR_KEY:-}
-      GOVERNOR_METRICS_TOKEN: ${GOVERNOR_METRICS_TOKEN:-}
-      GOVERNOR_EXTRACTOR_PUBKEY: ${GOVERNOR_EXTRACTOR_PUBKEY:-}   # overrides the file below when set
+      GOVERNOR_OPERATOR_KEY:    # passed through only when set in the shell (an empty value is a config error)
+      GOVERNOR_METRICS_TOKEN:   # passed through only when set (>= 16 chars)
+      GOVERNOR_EXTRACTOR_PUBKEY:   # passed through only when set; overrides the file below
       GOVERNOR_EXTRACTOR_PUBKEY_FILE: /pub/extractor.pub
       RUST_LOG: ${RUST_LOG:-info}
       GOVERNOR_DB: /data/governor.db   # durable state (SQLite WAL); backups: docker compose exec governor /app/governor/target/release/governor backup ...
@@ -107,7 +107,7 @@ services:
     environment:
       PORT: "8001"
       SANDBOX_STATE: /data/sandbox-counter.json
-      BASETEN_API_KEY: ${BASETEN_API_KEY:-}
+      BASETEN_API_KEY:   # server-side only, passed through when set in the shell; unset = no model calls
       SANDBOX_USE_MODEL: ${SANDBOX_USE_MODEL:-1}
       SANDBOX_SPEND_CAP_USD: ${SANDBOX_SPEND_CAP_USD:-9.00}
       SANDBOX_USD_PER_MODEL_CALL: ${SANDBOX_USD_PER_MODEL_CALL:-0.02}
