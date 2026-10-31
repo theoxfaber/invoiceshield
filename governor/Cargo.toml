@@ -11,7 +11,7 @@ serde_json = "1"
 sha2 = "0.11"
 hex = "0.4"
 unicode-normalization = "0.1"
-axum = "0.7"
+axum = "0.8"
 tokio = { version = "1", features = ["rt-multi-thread", "macros", "net", "sync", "io-util", "time"] }
 subtle = "2"
 # Phase 3 (durable state): SQLite with the C library compiled in, online backup API.
