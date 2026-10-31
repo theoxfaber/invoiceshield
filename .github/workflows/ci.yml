@@ -64,7 +64,7 @@ jobs:
       - name: System packages (OCR for scan/photo variants)
         run: sudo apt-get update && sudo apt-get install -y --no-install-recommends tesseract-ocr poppler-utils
       - run: pip install -r requirements-dev.txt
-      - uses: actions/download-artifact@v4
+      - uses: actions/download-artifact@v8
         with:
           name: governor-bin
           path: governor/target/release
