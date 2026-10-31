@@ -51,16 +51,17 @@ Every `/v1` call carries `Authorization: Bearer <key>`. Keys map to identities w
 
 | Method & path | Role | What it does |
 |---|---|---|
-| `POST /v1/actions` | agent | Decide one proposed payment. Body: `proposal` (vendor_id, invoice_no, amount_paise, po_ref, currency, document_sha256), `signed_evidence` (from the extraction service), `checker_raw`, optional `proposed_item_lines`. A malformed body is a 200 REVIEW, not an HTTP error. `Idempotency-Key` supported. |
+| `POST /v1/actions` | agent | Decide one proposed payment. Body: `proposal` (vendor_id, invoice_no, amount_paise, po_ref, currency, document_sha256), `signed_evidence` (from the extraction service), `signed_checker` (the checker's report, signed with the checker's own Ed25519 key and bound to the same document and evidence nonce), optional `proposed_item_lines`. A missing, unsigned, forged, stale or replayed checker report is a REVIEW signal, never PAY; a bare `checker_raw` is ignored unless `GOVERNOR_CHECKER_UNSIGNED_OK=1`. A malformed body is a 200 REVIEW, not an HTTP error. `Idempotency-Key` supported. |
 | `GET /v1/decisions/{id}` | any | Fetch a decision. |
-| `POST /v1/decisions/{id}/resolve` | approver, never the proposer | Approve or reject a REVIEW. |
+| `POST /v1/decisions/{id}/resolve` | approver, never the proposer | Approve or reject a REVIEW. A human rejection is permanent: the same invoice (vendor + invoice number, IRN, or same document text) is BLOCKed `previously_rejected` with no time window. |
+| `POST /v1/decisions/{id}/reopen` | operator or approver, never the proposer | Lift a human rejection, once, with a reason (1–500 chars). Audited; the rejected ledger row is never changed. |
 | `GET /v1/reviews` | approver, operator | Pending REVIEWs with reason codes, evidence and the master payee. |
 | `GET /v1/ui/review` | (static) | Approver page (strict CSP; key held in tab memory; resolves through `/resolve`). |
 | `POST /v1/master-changes` | operator (maker) | Request a vendor bank change. |
 | `POST /v1/master-changes/{id}/callback` | operator/approver, not the maker | Record the call-back to the number on file. |
 | `POST /v1/master-changes/{id}/approve` | approver, not the maker | Two distinct approvers; cooling-off starts at the second. |
 | `POST /v1/master-changes/{id}/reject` | operator, approver | Reject a pending change. |
-| `GET /v1/master-changes/{id}` | any | Status of a change. |
+| `GET /v1/master-changes/{id}` | operator, approver | Status of a change (the agent role cannot read it). |
 | `GET /v1/audit/verify` | any | Verify the hash-chained audit log. |
 | `GET /healthz` · `/readyz` · `/metrics` | none | Liveness, readiness, Prometheus metrics. |
 
@@ -69,21 +70,22 @@ Decision response: `verdict` (`allow`/`review`/`block`), `reasons` (rule, verdic
 ## Deployment
 
 - **Docker:** `export GOVERNOR_API_KEY=$(openssl rand -hex 16) && docker compose up --build governor demo`. The compose file creates the extractor's Ed25519 key in a one-shot service and gives the governor only the public key; state lives in the `/data` volume. Image: Rust build stage + Python runtime, non-root, healthcheck.
-- **Config:** validated at startup (every error listed, exit 2). Required: `GOVERNOR_EXTRACTOR_PUBKEY[_FILE]`, `GOVERNOR_IDENTITIES[_FILE]` (hashed keys from `governor new-key`; the legacy single `GOVERNOR_API_KEY` still works), `GOVERNOR_DB` (durable SQLite path). Optional: `GOVERNOR_TLS_CERT_FILE`/`_KEY_FILE`, `GOVERNOR_STATE_KEY` (MACs applied bank changes), `GOVERNOR_VENDOR_PHONES` (call-back numbers), `GOVERNOR_ANCHOR_URL` (ship signed audit heads off-box).
+- **Config:** validated at startup (every error listed, exit 2). Required: `GOVERNOR_EXTRACTOR_PUBKEY[_FILE]`, `GOVERNOR_IDENTITIES[_FILE]` (hashed keys from `governor new-key`; the legacy single `GOVERNOR_API_KEY` still works), `GOVERNOR_DB` (durable SQLite path). Optional: `GOVERNOR_TLS_CERT_FILE`/`_KEY_FILE`, `GOVERNOR_STATE_KEY` (MACs applied bank changes), `GOVERNOR_VENDOR_PHONES` (call-back numbers), `GOVERNOR_ANCHOR_URL` (ship signed audit heads off-box), `GOVERNOR_CHECKER_PUBKEY` (the checker's own Ed25519 key, must differ from the extractor's; unset means every signed decision gets a REVIEW checker signal, warned at startup), `GOVERNOR_CHECKER_UNSIGNED_OK` (default `0`; `1` reads a legacy unsigned `checker_raw`, warned), `GOVERNOR_ALLOW_NO_NETNS` (default `0`; `1` accepts evidence extracted without a network namespace, warned). Used evidence nonces are stored in the SQLite DB in the same transaction as the decision, so a restart does not reopen a replay window. Changes made after the external review: [`docs/REVIEW_FIXES.md`](docs/REVIEW_FIXES.md).
 - **Ops:** JSON logs, `/metrics`, runbooks ([`docs/RUNBOOKS.md`](docs/RUNBOOKS.md)), backup/restore/verify CLI ([`docs/DURABLE_STATE.md`](docs/DURABLE_STATE.md)), load test and SLO on one shared sandbox VM, not a production benchmark ([`docs/SLO.md`](docs/SLO.md)). CI runs clippy, tests, ruff, pytest, the offline demo, cargo audit, pip-audit and a Docker smoke test.
 
 ## Security model
 
 Full threat model: [`docs/THREAT_MODEL.md`](docs/THREAT_MODEL.md). In short:
 - **Compromised or injected agent:** can propose only vendor, invoice, amount, PO; cannot name a payee, approve its own REVIEW, change the master or confirm a call-back.
-- **Forged evidence:** the governor only reads evidence signed by the separate extraction service (Ed25519, fresh, single-use nonce, bound to the document hash); a tampered, foreign or replayed envelope is BLOCK, unsigned is REVIEW. Extraction runs in a subprocess with CPU/memory/file limits and no network.
+- **Forged evidence:** the governor only reads evidence signed by the separate extraction service (Ed25519, fresh, single-use nonce, bound to the document hash); a tampered, foreign or replayed envelope is BLOCK, unsigned is REVIEW; used nonces persist across restarts. Extraction (and pdftoppm page rendering) runs in a fresh subprocess with a minimal environment (no API keys), CPU/memory/file limits, a timeout and a user+network namespace; if the signed evidence says no network namespace was created, the governor answers REVIEW unless `GOVERNOR_ALLOW_NO_NETNS=1`, and the fallback is logged loudly.
+- **Forged checker:** the checker's escalate-only signals are signed with its own key and bound to the document and the evidence nonce; an agent that drops, empties, forges or replays them gets REVIEW.
 - **Duplicate payment:** decided in one SQLite transaction; UNIQUE indexes make a second live ledger entry impossible even across processes.
 - **Insider / DB tampering:** maker-checker enforced in code and by DB triggers; applied bank changes are HMAC'd (a forged row blocks the vendor instead of redirecting it); the audit chain is anchored by Ed25519-signed heads.
 - **Not covered:** a poisoned vendor master entered through the proper workflow by colluding approvers; documents the ingestion step takes from the agent rather than the mailbox; HSM/KMS key storage; DKIM checks on the cover email. Internal red team only (`docs/RED_TEAM_INTERNAL.md`); no external security review has happened.
 
 ## Results
 
-Every number below comes from a file in `eval/results/`, named with its full path at each item; the run log with commands is [`eval/EVAL_LOG.md`](eval/EVAL_LOG.md), and every rule change with its reason is in [`docs/DECISIONS.md`](docs/DECISIONS.md). The final frozen gate is tag **`freeze-v3`** (`5c698b0`); the held-out v2 run was at `55fb679`.
+Every number below comes from a file in `eval/results/`, named with its full path at each item; the run log with commands is [`eval/EVAL_LOG.md`](eval/EVAL_LOG.md), and every rule change with its reason is in [`docs/DECISIONS.md`](docs/DECISIONS.md). The final frozen gate is tag **`freeze-v3`** (`5c698b0`); the held-out v2 run was at `55fb679`. **The sealed scores apply only to `freeze-v3`.** The post-review hardening in [`docs/REVIEW_FIXES.md`](docs/REVIEW_FIXES.md) came later; no sealed set was rerun or tuned on, and those changes can only add REVIEW/BLOCK outcomes (on a host without network namespaces, some genuine invoices that paid on `freeze-v3` now go to REVIEW).
 
 **Headline: held-out v3, the one blind run on `freeze-v3` (Oct 31, 2026).** 150 invoices (100 attacks, 50 benign, six templates), sealed and hashed before the gate saw them (`eval/sealed/v3.SEALED.md`), written by an AI agent with no repo access, run once; labels opened only after every verdict was written; no gate change afterwards. Files: `eval/results/sealed-v3-freeze-v3.{jsonl,meta.json,score.json,breakdown.json}`; every failure is listed in [`docs/V3_RESULTS.md`](docs/V3_RESULTS.md).
 
