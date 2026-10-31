@@ -20,7 +20,7 @@ rusqlite = { version = "0.32", features = ["bundled", "backup"] }
 ed25519-dalek = "2"
 getrandom = "0.2"
 # Phase 2 (trust boundary): signed extractor envelopes carry base64 signatures.
-base64 = "0.22"
+base64 = "0.23"
 # Phase 6 (ops): structured JSON logs
 tracing = "0.1"
 tracing-subscriber = { version = "0.3", default-features = false, features = ["fmt", "json", "env-filter", "std", "ansi"] }
