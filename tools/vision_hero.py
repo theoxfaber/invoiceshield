@@ -59,7 +59,7 @@ def main(argv=None) -> int:
     from shield.client import ExtractorProc, GovernorProc
     from shield.vision_assess import Finding, checker_raw, findings_json, assess
     from shield.vision_budget import Budget, BudgetedProvider
-    from shield.vision_locate import calibrate
+    from shield.vision_locate import calibrate, extend_to_ink
     from shield.vision_overlay import draw
     from shield.vision_witness import MAX_SIDE, witness
     from tools.vision_eval import make_provider_factory
@@ -82,6 +82,8 @@ def main(argv=None) -> int:
     t0 = time.monotonic()
     w = witness(prov, img, max_side=MAX_SIDE)
     w, cal = calibrate(w, img)
+    for n in w.notices:  # OCR reads only part of a faint line: widen its box to the ink on that row (geometry only)
+        n["box"] = extend_to_ink(n.get("box"), img)
     findings = findings_json(assess(w, master))
     witness_s = time.monotonic() - t0
     overlay = draw(img, findings)

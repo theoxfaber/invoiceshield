@@ -141,3 +141,47 @@ def calibrate(w: Witness, image: bytes, lines: list[dict] | None = None) -> tupl
         if sb:
             n["box"], snapped = sb, snapped + 1
     return w, {"calibrated": True, "anchors": len(pairs), "snapped": snapped, "fx": [round(v, 3) for v in fx], "fy": [round(v, 3) for v in fy]}
+
+
+def extend_to_ink(box: list[int] | None, image: bytes, *, max_gap: float = 0.025, thr: int = 15) -> list[int] | None:
+    """Widen a one-line box sideways to the ink actually printed on that row (geometry only).
+
+    OCR often reads only the first half of a faint line, so a box snapped to the OCR line stops mid-text.
+    This scans the row band of the image column by column (darkest pixel vs the column's 90th-percentile brightness, i.e. the paper) and
+    grows the box left/right while ink continues with gaps no wider than ``max_gap`` of the image width
+    (word spacing). It never shrinks the box or moves it vertically; on any problem it returns the box as is.
+    Used by the hero render (tools/vision_hero.py); the measured eval does not call it.
+    """
+    if not box:
+        return box
+    try:
+        import io
+
+        from PIL import Image
+        im = Image.open(io.BytesIO(image)).convert("L")
+    except Exception:
+        return box
+    W, H = im.size
+    px = im.load()
+    y0, y1 = max(0, int(box[1] * H / 1000)), min(H - 1, int(box[3] * H / 1000))
+    if y1 - y0 < 2:
+        return box
+    ink = []
+    for x in range(W):
+        col = sorted(px[x, y] for y in range(y0, y1 + 1))
+        ink.append(col[(len(col) * 9) // 10] - col[0] > thr)
+    gap = max(2, int(max_gap * W))
+    x0, x1 = int(box[0] * W / 1000), min(W - 1, int(box[2] * W / 1000))
+
+    def grow(x: int, step: int) -> int:
+        last, miss = x, 0
+        while 0 <= x + step < W and miss <= gap:
+            x += step
+            if ink[x]:
+                last, miss = x, 0
+            else:
+                miss += 1
+        return last
+
+    nx0, nx1 = grow(x0, -1), grow(x1, 1)
+    return clean_box([min(box[0], nx0 * 1000 / W), box[1], max(box[2], (nx1 + 1) * 1000 / W), box[3]])

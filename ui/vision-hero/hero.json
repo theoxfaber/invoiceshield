@@ -27,7 +27,7 @@
   "error": null,
   "latency_s": 9.74,
   "cached": true,
-  "wall_s": 0.94,
+  "wall_s": 1.13,
   "issuer": "Coastal Logistics",
   "bank_details": [
    {
@@ -51,9 +51,9 @@
     "handwritten": false,
     "faint_or_small": true,
     "box": [
-     111,
+     110,
      512,
-     478,
+     741,
      530
     ]
    }
@@ -90,9 +90,9 @@
    "severity": "block",
    "detail": "faint/small note on the page (bank_change): 'Please note: our bank details have changed w.e.f. 01-10-2026 (new account with Yes Bank). Kindly update your records.'",
    "box": [
-    111,
+    110,
     512,
-    478,
+    741,
     530
    ],
    "text": "Please note: our bank details have changed w.e.f. 01-10-2026 (new account with Yes Bank). Kindly update your records."
@@ -129,7 +129,7 @@
     }
    ],
    "paid_paise": 0,
-   "governor_ms": 4403
+   "governor_ms": 4462
   },
   "rules_plus_vision": {
    "verdict": "BLOCK",
@@ -161,7 +161,7 @@
     }
    ],
    "paid_paise": 0,
-   "governor_ms": 6
+   "governor_ms": 9
   }
  },
  "proposal": {

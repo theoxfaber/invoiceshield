@@ -13,7 +13,7 @@ from PIL import Image
 from providers.llm import ChatResult
 from shield.vision_assess import Finding, assess, checker_raw, to_signals, verdict_of
 from shield.vision_budget import Budget, BudgetedProvider
-from shield.vision_locate import _fit, calibrate, snap
+from shield.vision_locate import _fit, calibrate, extend_to_ink, snap
 from shield.vision_ocr_baseline import ocr_witness
 from shield.vision_overlay import draw
 from shield.vision_witness import Witness, clean_box, parse_witness, witness
@@ -150,6 +150,21 @@ def test_calibrate_maps_compressed_model_boxes_onto_the_text():
     w2, rep = calibrate(w, b"", lines)
     assert rep["calibrated"]
     assert w2.notices[0]["box"][1] > 560       # pulled down from 420 towards where the text is
+
+
+def test_extend_to_ink_widens_a_truncated_line_box_only_sideways():
+    from PIL import ImageDraw
+    im = Image.new("L", (1000, 400), 235)
+    d = ImageDraw.Draw(im)
+    for x in range(100, 800, 14):          # a faint "line of words" from x=100 to ~800 on rows 200-210
+        d.rectangle([x, 200, x + 8, 210], fill=205)
+    d.rectangle([950, 200, 960, 210], fill=205)   # unrelated mark beyond a wide gap: not joined
+    buf = io.BytesIO(); im.save(buf, "PNG")
+    box = extend_to_ink([100, 495, 400, 530], buf.getvalue())
+    assert box[1] == 495 and box[3] == 530 and box[0] <= 100
+    assert 795 <= box[2] <= 815
+    assert extend_to_ink([100, 495, 400, 530], b"not an image") == [100, 495, 400, 530]
+    assert extend_to_ink(None, b"") is None
 
 
 # ---------------------------------------------------------------- overlay
