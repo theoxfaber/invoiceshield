@@ -8,7 +8,11 @@ from __future__ import annotations
 
 import re
 
-_INV_LABEL = re.compile(r"\b(?:Tax\s+)?Invoice\s*(?:No|Number|Num|#)\b\s*\.?\s*[:#.]?\s*", re.I)
+_INV_LABEL = re.compile(r"\b(?:Tax\s+)?(?:Invoice|Inv|Bill|Document|Doc|Credit\s+Note|Debit\s+Note)\s*(?:No|Number|Num|#)(?![A-Za-z])\s*\.?\s*[:#.]?\s*", re.I)
+_INV_LABEL_EOL = re.compile(r"\b(?:Tax\s+)?(?:Invoice|Inv|Bill|Document|Doc|Credit\s+Note|Debit\s+Note)\s*(?:No|Number|Num|#)(?![A-Za-z])[ \t]*[.:#]?[ \t]*\n", re.I)
+# Zoho-style header: "TAX INVOICE" ... a line "# DSF-1224"; Tally-style: "Invoice No." / "Dated" / value / date
+_HASH_LINE = re.compile(r"^\s*#\s*([A-Za-z0-9][A-Za-z0-9/\-_.]*\d[A-Za-z0-9/\-_.]*)\s*$", re.M)
+_DATEISH = re.compile(r"^\d{1,2}[-/. ](?:\d{1,2}|[A-Za-z]{3})[-/. ]\d{2,4}$")
 _SEP = {"-", "/", "\\", "–"}
 _STOP = re.compile(r"^(?:date[d]?|dt|po|ref|order|e-?way|buyer|gstin|place|party|m/s|challan|due)\b", re.I)
 
@@ -37,6 +41,19 @@ def printed_invoice_no(text: str) -> str | None:
                 continue
             break
         return "".join(out)
+    # Tally layout: the label line, then other label lines ("Dated"), then the values in order
+    for m in _INV_LABEL_EOL.finditer(text or ""):
+        rest = text[m.end():].split("\n")
+        for ln in rest[:4]:
+            t = ln.strip()
+            if not t or not re.search(r"\d", t):
+                continue
+            if _DATEISH.match(t) or len(t.split()) > 1:
+                break
+            return t.rstrip(".,;")
+    m = _HASH_LINE.search(text or "")
+    if m and re.search(r"(?i)tax\s+invoice|invoice", text[:m.start()]):
+        return m.group(1)
     return None
 
 

@@ -33,6 +33,11 @@ pub struct Entry {
     /// ATK-10 class: same document re-sent under a bumped number). None when no text was signed.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub content_key: Option<String>,
+    /// Fingerprint of the itemized lines the rules ran on: the sorted (quantity, unit price) pairs of
+    /// non-tax lines that print both (v3 prep, bumped-number resubmissions). None when no line
+    /// prints a quantity and a rate (lump-sum "as per PO" billing).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub lines_key: Option<String>,
 }
 
 fn inr() -> String {
@@ -85,6 +90,39 @@ impl Ledger {
                 && e.ts > now - window_secs
                 && e.ts <= now
         })
+    }
+
+    /// Same itemized content (v3 prep): same vendor, PO, amount and currency, the same itemized-lines
+    /// fingerprint, another invoice number, inside (now - window, now].
+    #[allow(clippy::too_many_arguments)]
+    pub fn same_items(&self, vendor_id: &str, po_ref: &str, currency: &str, amount: i64, key: &str, lines_key: &str, now: i64, window_secs: i64) -> Option<&Entry> {
+        self.live().find(|e| {
+            e.vendor_id == vendor_id && e.po_ref == po_ref && e.currency == currency && e.amount_paise == amount
+                && e.invoice_key != key && e.lines_key.as_deref() == Some(lines_key) && e.ts > now - window_secs && e.ts <= now
+        })
+    }
+
+    /// Bumped number (v3 prep): same vendor, PO, amount and currency, inside the window, and the two
+    /// invoice numbers are identical except for their last digit run, which differs by 1 or 2.
+    #[allow(clippy::too_many_arguments)]
+    pub fn bumped_number(&self, vendor_id: &str, po_ref: &str, currency: &str, amount: i64, key: &str, now: i64, window_secs: i64) -> Option<&Entry> {
+        self.live().find(|e| {
+            e.vendor_id == vendor_id && e.po_ref == po_ref && e.currency == currency && e.amount_paise == amount
+                && e.invoice_key != key && e.ts > now - window_secs && e.ts <= now
+                && crate::normalize::numbers_bumped(&e.invoice_key, key)
+        })
+    }
+
+    /// Live entries on one PO in (now - window, now]: (count, sum). None on overflow.
+    pub fn po_window(&self, po_ref: &str, currency: &str, now: i64, window_secs: i64) -> Option<(usize, i64)> {
+        let since = now.checked_sub(window_secs)?;
+        let mut n = 0usize;
+        let mut sum = 0i64;
+        for e in self.live().filter(|e| e.po_ref == po_ref && e.currency == currency && e.ts > since && e.ts <= now) {
+            n += 1;
+            sum = sum.checked_add(e.amount_paise)?;
+        }
+        Some((n, sum))
     }
 
     pub fn irn_seen(&self, irn: &str) -> Option<&Entry> {

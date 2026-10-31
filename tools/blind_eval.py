@@ -57,9 +57,12 @@ def domain(email: str | None) -> list[str]:
 
 def build_master(case: dict, policy: dict) -> dict:
     vendors = []
+    registered = []  # v3 prep (2026-10-31, re-runs only): the vendor's other registered accounts
     for v in case["vendor_master"]:
         accts = v.get("bank_accounts") or []
         primary = next((a for a in accts if a.get("primary")), accts[0] if accts else {})
+        registered += [{"vendor_id": v["vendor_id"], "bank_account": a.get("account_number", ""), "ifsc": a.get("ifsc", "")}
+                       for a in accts if a is not primary and a.get("account_number")]
         vendors.append({
             "vendor_id": v["vendor_id"], "legal_name": v["legal_name"], "gstin": v.get("gstin") or None,
             "pan": v.get("pan") or None, "beneficiary_id": f"BENE_{v['vendor_id']}",
@@ -89,11 +92,14 @@ def build_master(case: dict, policy: dict) -> dict:
             pos[ref] = {"po_ref": ref, "owner_vendor_id": owner[ref], "category": "", "currency": "INR",
                         "open_balance_paise": amt, "lines": []}
     auto = minor(policy.get("auto_pay_limit_inr", 500000))
-    return {"vendors": vendors, "pos": list(pos.values()), "policy": {
+    out = {"vendors": vendors, "pos": list(pos.values()), "policy": {
         "approval_threshold_paise": auto, "payout_cap_paise": auto * 10, "po_tolerance_bp": 200,
         "window_secs": int(policy.get("split_window_days", 7)) * 86400,
         "near_duplicate_window_secs": int(policy.get("duplicate_window_days", 90)) * 86400,
     }}
+    if registered:
+        out["registered_accounts"] = registered
+    return out
 
 
 def proposal(case: dict) -> dict:

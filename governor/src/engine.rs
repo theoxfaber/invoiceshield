@@ -406,10 +406,19 @@ impl Governor {
 
         // 9. Bank box on the document ≠ master → tamper alert (never changes the payee).
         let master_acct = digits(&vendor.bank_account);
+        // Accounts the vendor registered besides the primary (master file only) are not tamper;
+        // the payee is still the primary beneficiary.
+        let others: &[crate::master::RegisteredAccount] = self.master.registered_accounts.get(&vendor.vendor_id).map(|v| &v[..]).unwrap_or(&[]);
         let acct_mismatch = req.evidence.printed_bank_account.iter().chain(req.evidence.all_printed_accounts.iter())
-            .any(|a| digits(a) != master_acct);
+            .any(|a| digits(a) != master_acct && !others.iter().any(|o| digits(&o.bank_account) == digits(a)));
         let ifsc_mismatch = req.evidence.printed_ifsc.iter().chain(req.evidence.all_printed_ifscs.iter())
-            .any(|i| !normalize::same_bank_code(i, &vendor.ifsc));
+            .any(|i| !normalize::same_bank_code(i, &vendor.ifsc) && !others.iter().any(|o| normalize::same_bank_code(i, &o.ifsc)));
+        let printed_other = req.evidence.printed_bank_account.iter().chain(req.evidence.all_printed_accounts.iter())
+            .any(|a| digits(a) != master_acct && others.iter().any(|o| digits(&o.bank_account) == digits(a)));
+        if printed_other && !acct_mismatch {
+            ctx.add("printed_registered_secondary_account", Verdict::Allow, Control::Extraction,
+                format!("the invoice prints another account {} registered in the vendor master; payment still goes only to the primary beneficiary", vendor.vendor_id));
+        }
         // R6: a bank field with non-ASCII characters (Cyrillic/Greek look-alikes, fullwidth digits,
         // invisible marks) is tampering even when its ASCII digits happen to match the master.
         let ev_bank = &req.evidence;
@@ -475,15 +484,57 @@ impl Governor {
             }
         }
 
+        // 11. Resubmission under a new number (v3 prep, 2026-10-31; v1 ATK-10 / v2 bumped-number class).
+        // REVIEW when a live entry of this vendor has the same PO, amount and currency inside the
+        // resubmission window, under another number, and either (a) the same itemized lines (every
+        // non-tax line's quantity and unit price, sorted) or (b) a number that differs only by +1/+2 in
+        // its last digit run while this invoice is itemized. Lump-sum "as per PO" invoices (no line
+        // prints a quantity and a rate) never match: recurring service bills of one amount stay PAY.
+        let lk = lines_key(items);
+        let key = normalize::invoice_no(&p.invoice_no);
+        let rw = pol.resubmission_window_secs;
+        if !ctx.reasons.iter().any(|r| matches!(r.rule.as_str(), "duplicate_invoice" | "same_invoice_other_amount" | "near_duplicate_invoice" | "near_duplicate_content")) {
+            if let Some(lk) = lk.as_deref() {
+                if let Some(e) = self.ledger.same_items(&p.vendor_id, &p.po_ref, &cur, p.amount_paise, &key, lk, now, rw) {
+                    ctx.add("resubmission_same_items", Verdict::Review, Control::Structural,
+                        format!("invoice {} bills the same PO, amount and itemized lines (quantities and rates) as decision {} within {} days under another number",
+                            p.invoice_no, e.decision_id, rw / 86_400));
+                } else if let Some(e) = self.ledger.bumped_number(&p.vendor_id, &p.po_ref, &cur, p.amount_paise, &key, now, rw) {
+                    ctx.add("resubmission_bumped_number", Verdict::Review, Control::Structural,
+                        format!("invoice {} is an itemized bill for the same PO and amount as decision {} within {} days, and its number is that one's +1/+2",
+                            p.invoice_no, e.decision_id, rw / 86_400));
+                }
+            }
+        }
+        // 12. Slow-drip split on one PO (v3 prep): three or more invoices on the PO inside the
+        // resubmission window, each under the approval threshold, adding up past it. Two invoices
+        // (monthly-style billing) do not count; the 7-day vendor window and the PO balance still apply.
+        if let (Some(l), Some((n, prior))) = (limits, self.ledger.po_window(&p.po_ref, &cur, now, rw)) {
+            if n >= 2 && p.amount_paise <= l.approval_threshold_minor && prior.checked_add(p.amount_paise).is_some_and(|t| t > l.approval_threshold_minor) {
+                ctx.add("po_drip_over_threshold", Verdict::Review, Control::Structural,
+                    format!("{} invoices on {} in the last {} days plus this one add up to more than the approval threshold {}", n, p.po_ref, rw / 86_400, money(l.approval_threshold_minor, &cur)));
+            }
+        }
+        // Credit notes (v2 finding 4): nothing is payable, so amount and ledger rules inform the
+        // reviewer instead of blocking (identity and tamper BLOCKs stay BLOCK).
+        if credit_note {
+            for r in ctx.reasons.iter_mut() {
+                if r.verdict == Verdict::Block && matches!(r.rule.as_str(), "over_po_balance" | "over_payout_cap" | "duplicate_invoice" | "duplicate_irn" | "unknown_po") {
+                    r.verdict = Verdict::Review;
+                    r.detail = format!("{} (credit note: not payable, shown for review)", r.detail);
+                }
+            }
+        }
+
         let ck = content_key(req.evidence.text_layer.as_deref(), &p.invoice_no);
-        self.finish_with(Some(&p), ctx, signals, now, ck)
+        self.finish_with_keys(Some(&p), ctx, signals, now, ck, lk)
     }
 
     fn finish(&mut self, p: Option<&Proposal>, ctx: Ctx, signals: Vec<Signal>, now: i64) -> Decision {
-        self.finish_with(p, ctx, signals, now, None)
+        self.finish_with_keys(p, ctx, signals, now, None, None)
     }
 
-    fn finish_with(&mut self, p: Option<&Proposal>, mut ctx: Ctx, signals: Vec<Signal>, now: i64, content: Option<String>) -> Decision {
+    fn finish_with_keys(&mut self, p: Option<&Proposal>, mut ctx: Ctx, signals: Vec<Signal>, now: i64, content: Option<String>, lines_key: Option<String>) -> Decision {
         let deterministic = ctx.verdict();
         let mut verdict = merge(deterministic, &signals);
         // A tamper alert combined with any other non-allow reason escalates to BLOCK (design §4a).
@@ -527,6 +578,7 @@ impl Governor {
                     ts: now,
                     near_key: normalize::near_dup_base(&p.invoice_no),
                     content_key: content.clone(),
+                    lines_key: lines_key.clone(),
                 });
             }
         }
@@ -600,8 +652,25 @@ fn reason(rule: &str, verdict: Verdict, control: Control, detail: String) -> Rea
 /// A non-tax "Round off" line under one unit of the currency (₹1 = 100 paise) is not a charge.
 /// Decided 2026-10-30 before the held-out run (docs/DECISIONS.md, backlog #15).
 pub fn is_round_off(l: &ItemLine) -> bool {
-    !l.is_tax && l.amount_paise.abs() < 100
-        && matches!(normalize::item_key(&l.description).as_str(), "round off" | "rounding" | "roundoff")
+    // "Round off", "Rounding", "R/O", "Round off Amt", "Rounded off", "Less: Round off": under one
+    // unit of the currency, and every word is a round-off word (v3 prep, v2 genuine layouts).
+    const WORDS: &[&str] = &["round", "off", "rounding", "roundoff", "rounded", "r", "o", "amt", "amount", "less", "add", "adjustment", "adj"];
+    let k = normalize::item_key(&l.description);
+    !l.is_tax && l.amount_paise.abs() < 100 && !k.is_empty()
+        && k.split(' ').all(|w| WORDS.contains(&w))
+        && (k.contains("round") || k == "r o")
+}
+
+/// Fingerprint of itemized lines: sorted (qty, unit price) of non-tax lines that print both, or
+/// None when no line does (lump-sum billing).
+pub fn lines_key(items: &[ItemLine]) -> Option<String> {
+    use sha2::{Digest, Sha256};
+    let mut v: Vec<(i64, i64)> = items.iter().filter(|l| !l.is_tax).filter_map(|l| Some((l.qty?, l.unit_price_minor?))).collect();
+    if v.is_empty() {
+        return None;
+    }
+    v.sort();
+    Some(hex::encode(Sha256::digest(format!("{v:?}").as_bytes())))
 }
 
 /// Does an invoice line description name this PO line? The description must be the item (or an
@@ -671,6 +740,13 @@ pub fn check_lines_against_po(po: &crate::master::PurchaseOrder, items: &[ItemLi
             problems.push(format!("{label} does not equal its quantity x unit price"));
             continue;
         }
+        // A discounted line bills amount / qty per unit (rounded up), which is what is compared with
+        // the PO rate (v3 prep: a 10%-off line at a list rate above the PO rate bills the PO rate).
+        let unit = if qty > 0 && l.amount_paise > 0 && qty.checked_mul(unit).is_some_and(|v| l.amount_paise < v - qty) {
+            (l.amount_paise + qty - 1) / qty
+        } else {
+            unit
+        };
         // first candidate line with room for this charge
         let fit = cands.iter().find(|(i, pl)| {
             let (q, v) = used.get(i).copied().unwrap_or((0, 0));

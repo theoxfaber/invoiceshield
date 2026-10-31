@@ -125,6 +125,11 @@ def words(pdf: str | Path, timeout: float = 20.0) -> list[tuple[int, float, floa
     return res
 
 
+def _numonly(t: str) -> bool:
+    """A digits-only cell (HSN/SAC code, serial number) is not description text."""
+    return bool(re.fullmatch(r"[\d,.\s/-]+", t.strip()))
+
+
 def _cw(c: Cell) -> float:
     return (c.x1 - c.x0) / max(len(c.text), 1)
 
@@ -214,15 +219,24 @@ class Header:
     desc: int
 
     def col_of(self, c: Cell) -> int:
-        if is_money_cell(c.text) or lead_int(c.text) is not None:
-            # figures are right-aligned or centred under their header
-            over = [i for i in range(len(self.cols)) if _gap(c, self.cols[i].x0, self.cols[i].x1) < 0]
-            if len(over) == 1:
-                return over[0]
-            cc = (c.x0 + c.x1) / 2
-            return min(over or range(len(self.cols)),
-                       key=lambda i: min(abs(c.x1 - self.cols[i].x1), abs(cc - (self.cols[i].x0 + self.cols[i].x1) / 2)))
-        return min(range(len(self.cols)), key=lambda i: _gap(c, self.cols[i].x0, self.cols[i].x1))
+        """Text cells: the header box they overlap most (or are nearest to). Figures: the header whose
+        box contains the figure's right edge (right-aligned under the header); otherwise columns
+        partition the row at the header cells' left edges (left-aligned labels, figures ending before
+        the next column starts) and the figure belongs to the column it overlaps most."""
+        if not (is_money_cell(c.text) or lead_int(c.text) is not None):
+            return min(range(len(self.cols)), key=lambda i: _gap(c, self.cols[i].x0, self.cols[i].x1))
+        hit = [i for i, h in enumerate(self.cols) if h.x0 - 2 <= c.x1 <= h.x1 + 2]
+        if len(hit) == 1:
+            return hit[0]
+        xs = [h.x0 for h in self.cols]
+        best, bo = 0, -1e18
+        for k in range(len(xs)):
+            lo = xs[k] if k else -1e9
+            hi = xs[k + 1] if k + 1 < len(xs) else 1e9
+            o = min(c.x1, hi) - max(c.x0, lo)
+            if o > bo:
+                best, bo = k, o
+        return best
 
     def desc_span(self) -> tuple[float, float]:
         d = self.cols[self.desc]
@@ -255,9 +269,8 @@ def _header(rows: list[Row], i: int) -> Header:
     return Header(cols, desc)
 
 
-def _aligned(c: Cell, h: Cell) -> bool:
-    """A qty/rate figure sits under its header (allowing a few characters of offset)."""
-    return _gap(c, h.x0, h.x1) <= max(12.0, 3 * _cw(c))
+def _aligned(c: Cell, h: Cell) -> bool:  # kept for callers; column assignment does the alignment
+    return True
 
 
 def _label(row: Row, hdr: Header, amt_cell: Cell) -> str:
@@ -272,7 +285,7 @@ def _label(row: Row, hdr: Header, amt_cell: Cell) -> str:
     ptxt = " ".join(c.text for c in phrase).strip().rstrip(":").strip()
     if ptxt and re.search(r"[A-Za-z]", ptxt) and (TAX_RE.search(ptxt) or SUMMARYISH.search(ptxt) or TOTAL_LBL.search(ptxt)):
         return ptxt
-    txt = [c.text for c in row.cells if c is not amt_cell and hdr.in_desc(c) and not is_money_cell(c.text) and lead_int(c.text) is None]
+    txt = [c.text for c in row.cells if c is not amt_cell and hdr.in_desc(c) and not is_money_cell(c.text) and not _numonly(c.text)]
     if txt:
         return " ".join(txt)
     left = [c for c in allleft if re.search(r"[A-Za-z]", c.text)]
@@ -357,7 +370,7 @@ def _try_column(rows: list[Row], start: int, hdr0: Header, amt_idx: int, total: 
                     amt_cells = [moneys[-1]]
             if not amt_cells:
                 if not in_summary:
-                    tx = [c for c in in_desc if lead_int(c.text) is None]
+                    tx = [c for c in in_desc if not _numonly(c.text)]
                     q = None
                     if qcol is not None:
                         qc = [c for c in r.cells if hdr.col_of(c) == qcol and lead_int(c.text) is not None and _aligned(c, hdr.cols[qcol])]
@@ -377,7 +390,7 @@ def _try_column(rows: list[Row], start: int, hdr0: Header, amt_idx: int, total: 
         is_item = not in_summary and not summaryish and \
             (not lab or any(hdr.in_desc(c) for c in r.cells if c is not a and not is_money_cell(c.text)))
         if is_item:
-            dcells = [c for c in r.cells if c is not a and hdr.in_desc(c) and not is_money_cell(c.text) and lead_int(c.text) is None]
+            dcells = [c for c in r.cells if c is not a and hdr.in_desc(c) and not is_money_cell(c.text) and not _numonly(c.text)]
             row = {"description": lab, "amount_paise": amt, "is_tax": False, "_row": r, "_hi": hdr.desc_span()[1],
                    "_parts": [(r.yc, lab, max((c.x1 for c in dcells), default=0.0))] if lab else [],
                    "_cw": min((_cw(c) for c in r.cells), default=5.0)}
@@ -507,3 +520,59 @@ def verified_in_text(lines: list[dict], text: str) -> bool:
             if ln["qty"] * ln["unit_price_minor"] + ln["qty"] < ln["amount_paise"]:
                 return False
     return True
+
+
+# --- GST heads printed as table columns ----------------------------------------------------------
+_HEAD_TOKEN = re.compile(r"(?<![A-Za-z])(CGST|SGST|UTGST|IGST)(?![A-Za-z])", re.I)
+
+
+def tax_heads_words(ws) -> tuple[set[str], set[str]]:
+    """GST heads that the word boxes show as charged at zero only: a head printed as a column header
+    whose figure in that column is 0.00 (e.g. a "CGST | SGST | IGST" tax summary with IGST 0.00),
+    and never printed with a non-zero figure on its own line or in its column; plus the heads shown
+    with a non-zero figure. Returns (zero-only heads, charged heads). The text-order heuristic
+    (`extract.tax_kinds`) counts the next figure in reading order, which on a column layout belongs
+    to another column."""
+    rows = rows_of(ws)
+    zero: set[str] = set()
+    charged: set[str] = set()
+    for i, r in enumerate(rows):
+        heads = [(c, m.group(1).upper()) for c in r.cells for m in [_HEAD_TOKEN.search(c.text)] if m]
+        if not heads:
+            continue
+        colheads = []
+        for c, h in heads:  # inline: "CGST @ 9% : 840.00" (only rate/colon tokens between head and figure)
+            k = r.cells.index(c)
+            val = None
+            for c2 in r.cells[k + 1:]:
+                if is_money_cell(c2.text):
+                    val = money(c2.text)
+                    break
+                if not re.fullmatch(r"[@:%\d.()\s-]*", c2.text):
+                    break
+            if val is None and re.search(r"[@:]\s*[\d.]*\s*%?\s*[:]?\s*$", c.text) is None and is_money_cell(c.text.split()[-1]):
+                val = money(c.text.split()[-1])
+            if val is None:
+                colheads.append((c, h))
+            else:
+                (charged if val else zero).add(h)
+        if not colheads:
+            continue
+        hdr = Header(cols=r.cells, desc=0)
+        for r2 in rows[i + 1:i + 5]:
+            if r2.page != r.page or r2.yc - r.yc > 6 * r.h:
+                break
+            vals = [m for m in r2.cells if is_money_cell(m.text)]
+            if len(vals) < 2:
+                continue
+            for c, h in colheads:
+                col = r.cells.index(c)
+                mine = [m for m in vals if hdr.col_of(m) == col]
+                if mine:
+                    (charged if any(money(m.text) for m in mine) else zero).add(h)
+            break
+    return zero - charged, charged
+
+
+def zero_tax_heads(ws) -> set[str]:
+    return tax_heads_words(ws)[0]

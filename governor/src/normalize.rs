@@ -159,3 +159,23 @@ pub fn item_key(raw: &str) -> String {
     }
     out
 }
+
+/// Two (already normalised) invoice numbers that are identical except for their LAST run of digits,
+/// whose values differ by 1 or 2 ("vec/26-27/0233" / "vec/26-27/0234"). Used only together with
+/// equal vendor, PO and amount (v3 prep, bumped-number resubmissions).
+pub fn numbers_bumped(a: &str, b: &str) -> bool {
+    fn split(s: &str) -> Option<(&str, &str, &str)> {
+        let bytes = s.as_bytes();
+        let end = bytes.iter().rposition(|c| c.is_ascii_digit())? + 1;
+        let start = bytes[..end].iter().rposition(|c| !c.is_ascii_digit()).map(|i| i + 1).unwrap_or(0);
+        Some((&s[..start], &s[start..end], &s[end..]))
+    }
+    let (Some((pa, da, sa)), Some((pb, db, sb))) = (split(a), split(b)) else { return false };
+    if pa != pb || sa != sb || da.len() > 12 || db.len() > 12 {
+        return false;
+    }
+    match (da.parse::<u64>(), db.parse::<u64>()) {
+        (Ok(x), Ok(y)) => (1..=2).contains(&x.abs_diff(y)),
+        _ => false,
+    }
+}

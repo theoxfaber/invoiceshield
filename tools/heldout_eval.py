@@ -144,11 +144,22 @@ def v2_master(fx: dict, case: dict) -> dict:
 
 def v2_seeds(fx: dict) -> list:
     gst = {v["id"]: v.get("gstin") for v in fx["vendors"]}
+    po_desc = {(po["po_number"], ln.get("hsn"), int(ln["unit_price_paise"])): ln["description"]
+               for po in fx["purchase_orders"] for ln in po["lines"]}
     out = []
     for p in fx["paid_invoices"]:
         prop = {"vendor_id": p["vendor_id"], "invoice_no": p["invoice_number"], "amount_paise": int(p["amount_paise"]),
                 "currency": "INR", "po_ref": p["po_number"]}
         ev = {"text_layer_gstin": gst.get(p["vendor_id"]), "has_text_layer": True, "text_source": "text_layer"}
+        # v3 prep (2026-10-31, re-runs only): the paid record's own lines (qty, unit price) go into the
+        # ledger seed, so the resubmission rule can compare itemized content with history the way it
+        # would with a decision the gate made itself. Descriptions come from the matching PO line.
+        lines = [{"description": po_desc.get((p["po_number"], ln.get("hsn"), int(ln.get("unit_price_paise", 0))), "paid line"),
+                  "amount_paise": int(ln["qty"]) * int(ln["unit_price_paise"]), "qty": int(ln["qty"]),
+                  "unit_price_minor": int(ln["unit_price_paise"]), "is_tax": False}
+                 for ln in p.get("lines", []) if ln.get("qty") and ln.get("unit_price_paise")]
+        if lines:
+            ev["item_lines"] = lines
         out.append((epoch(p["invoice_date"], 10), prop, ev))
     return sorted(out, key=lambda x: x[0])
 

@@ -113,6 +113,14 @@ pub struct Policy {
     /// None: the tax-type rule does not run.
     #[serde(default)]
     pub buyer_gstin: Option<String>,
+    /// Look-back for the resubmission rules (same itemized lines / bumped number, same PO and
+    /// amount) and the per-PO drip rule. 30 days.
+    #[serde(default = "default_resubmission_window")]
+    pub resubmission_window_secs: i64,
+}
+
+fn default_resubmission_window() -> i64 {
+    30 * 24 * 3600
 }
 
 fn default_near_dup_window() -> i64 {
@@ -146,6 +154,7 @@ impl Default for Policy {
             line_price_tolerance_bp: 0,
             near_duplicate_window_secs: default_near_dup_window(),
             buyer_gstin: None,
+            resubmission_window_secs: default_resubmission_window(),
         }
     }
 }
@@ -156,6 +165,20 @@ pub struct Master {
     pub vendors: BTreeMap<String, Vendor>,
     pub pos: BTreeMap<String, PurchaseOrder>,
     pub policy: Policy,
+    /// Other accounts a vendor has registered (v3 prep, 2026-10-31; v1 BEN-19 class). A printed
+    /// account/IFSC that matches one of these is not a tamper alert. Payment still goes ONLY to the
+    /// vendor's primary `beneficiary_id`; these are never a payee. Loaded from the master file only
+    /// (same trust as the initial primary account); changes go through the same review as any master edit.
+    #[serde(default, skip_serializing_if = "BTreeMap::is_empty")]
+    pub registered_accounts: BTreeMap<String, Vec<RegisteredAccount>>,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct RegisteredAccount {
+    pub vendor_id: String,
+    pub bank_account: String,
+    pub ifsc: String,
 }
 
 impl Master {
@@ -167,12 +190,18 @@ impl Master {
             pos: Vec<PurchaseOrder>,
             #[serde(default)]
             policy: Option<Policy>,
+            #[serde(default)]
+            registered_accounts: Vec<RegisteredAccount>,
         }
         let raw: Raw = serde_json::from_str(s)?;
         Ok(Master {
             vendors: raw.vendors.into_iter().map(|v| (v.vendor_id.clone(), v)).collect(),
             pos: raw.pos.into_iter().map(|p| (p.po_ref.clone(), p)).collect(),
             policy: raw.policy.unwrap_or_default(),
+            registered_accounts: raw.registered_accounts.into_iter().fold(BTreeMap::new(), |mut m, a| {
+                m.entry(a.vendor_id.clone()).or_insert_with(Vec::new).push(a);
+                m
+            }),
         })
     }
 }

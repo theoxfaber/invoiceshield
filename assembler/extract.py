@@ -219,10 +219,23 @@ def governor_evidence(ev: Evidence, buyer_gstin: str) -> dict:
         # Signed with the rest; the governor uses it only to verify model-proposed item lines
         # verbatim (governor/src/lines.rs). Capped so a huge document cannot bloat the envelope.
         "text_layer": text[:TEXT_LAYER_CAP],
-        "tax_kinds": tax_kinds(text),
+        "tax_kinds": _tax_kinds(ev, text),
         "document_kind": document_kind(text),
     }
     return out
+
+
+def _tax_kinds(ev: Evidence, text: str) -> list[str]:
+    """GST heads charged (`tax_kinds`), minus heads the word boxes show only at zero in their own
+    column, plus heads the word boxes show with a non-zero figure in their column (a "CGST | SGST | IGST" summary table with IGST 0.00 read in text order put the taxable
+    value after "IGST"; v2 case_006 finding, 2026-10-31)."""
+    kinds = set(tax_kinds(text))
+    ws = getattr(ev, "words", None)
+    if ws:
+        from assembler.geometry import tax_heads_words
+        zero, charged = tax_heads_words(ws)
+        kinds = (kinds - zero) | charged
+    return sorted(kinds)
 
 
 def _geometry_item_lines(ev: Evidence, text: str) -> list[dict]:
@@ -237,7 +250,7 @@ def _geometry_item_lines(ev: Evidence, text: str) -> list[dict]:
 
 
 # --- GST heads and document kind (review item 3, 2026-10-31) -------------------------------------
-_TAX_HEAD_RE = re.compile(r"\b(CGST|SGST|UTGST|IGST)\b", re.I)
+_TAX_HEAD_RE = re.compile(r"\b(CGST|SGST|UTGST|IGST)(?![A-Za-z])", re.I)
 _TAX_AMT_RE = re.compile(r"(?<![\d.,])(\d[\d,]*\.\d{2})(?![\d,])(?!\s*%)")
 
 
