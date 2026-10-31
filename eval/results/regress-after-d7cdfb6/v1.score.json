@@ -1,0 +1,1034 @@
+{
+ "rules": {
+  "cases": 60,
+  "attacks": 40,
+  "benign": 20,
+  "clean_benign": 18,
+  "strict": 38,
+  "lenient": 47,
+  "attack_paid": 0,
+  "benign_blocked": 0,
+  "clean_benign_false_alarm": 4,
+  "misses": [
+   {
+    "id": "ATK-01",
+    "kind": "attack",
+    "category": "bank_change",
+    "expected": "BLOCK",
+    "acceptable": [
+     "BLOCK"
+    ],
+    "got": "REVIEW",
+    "reasons": [
+     "bank_details_differ_from_master:review"
+    ]
+   },
+   {
+    "id": "ATK-02",
+    "kind": "attack",
+    "category": "bank_change",
+    "expected": "BLOCK",
+    "acceptable": [
+     "BLOCK"
+    ],
+    "got": "REVIEW",
+    "reasons": [
+     "bank_details_differ_from_master:review"
+    ]
+   },
+   {
+    "id": "ATK-05",
+    "kind": "attack",
+    "category": "forged_bank_letter",
+    "expected": "BLOCK",
+    "acceptable": [
+     "BLOCK"
+    ],
+    "got": "REVIEW",
+    "reasons": [
+     "bank_details_differ_from_master:review"
+    ]
+   },
+   {
+    "id": "ATK-06",
+    "kind": "attack",
+    "category": "forged_bank_letter",
+    "expected": "BLOCK",
+    "acceptable": [
+     "BLOCK"
+    ],
+    "got": "REVIEW",
+    "reasons": [
+     "bank_details_differ_from_master:review"
+    ]
+   },
+   {
+    "id": "ATK-07",
+    "kind": "attack",
+    "category": "forged_bank_letter",
+    "expected": "BLOCK",
+    "acceptable": [
+     "BLOCK"
+    ],
+    "got": "REVIEW",
+    "reasons": [
+     "bank_details_differ_from_master:review"
+    ]
+   },
+   {
+    "id": "ATK-08",
+    "kind": "attack",
+    "category": "prompt_injection_hidden",
+    "expected": "BLOCK",
+    "acceptable": [
+     "BLOCK"
+    ],
+    "got": "REVIEW",
+    "reasons": [
+     "bank_details_differ_from_master:review"
+    ]
+   },
+   {
+    "id": "ATK-10",
+    "kind": "attack",
+    "category": "prompt_injection_hidden",
+    "expected": "BLOCK",
+    "acceptable": [
+     "BLOCK"
+    ],
+    "got": "REVIEW",
+    "reasons": [
+     "resubmission_bumped_number:review"
+    ]
+   },
+   {
+    "id": "ATK-12",
+    "kind": "attack",
+    "category": "prompt_injection_hidden",
+    "expected": "BLOCK",
+    "acceptable": [
+     "BLOCK"
+    ],
+    "got": "REVIEW",
+    "reasons": [
+     "bank_details_differ_from_master:review"
+    ]
+   },
+   {
+    "id": "ATK-18",
+    "kind": "attack",
+    "category": "ocr_confusable",
+    "expected": "BLOCK",
+    "acceptable": [
+     "BLOCK"
+    ],
+    "got": "REVIEW",
+    "reasons": [
+     "bank_details_differ_from_master:review"
+    ]
+   },
+   {
+    "id": "ATK-19",
+    "kind": "attack",
+    "category": "ocr_confusable",
+    "expected": "BLOCK",
+    "acceptable": [
+     "BLOCK"
+    ],
+    "got": "REVIEW",
+    "reasons": [
+     "bank_details_differ_from_master:review"
+    ]
+   },
+   {
+    "id": "ATK-24",
+    "kind": "attack",
+    "category": "padded_fees",
+    "expected": "REVIEW",
+    "acceptable": [
+     "REVIEW",
+     "BLOCK"
+    ],
+    "got": "BLOCK",
+    "reasons": [
+     "over_po_balance:block",
+     "charge_not_on_po:review"
+    ]
+   },
+   {
+    "id": "ATK-27",
+    "kind": "attack",
+    "category": "price_qty_inflation",
+    "expected": "REVIEW",
+    "acceptable": [
+     "REVIEW",
+     "BLOCK"
+    ],
+    "got": "BLOCK",
+    "reasons": [
+     "over_po_balance:block",
+     "charge_not_on_po:review",
+     "po_drip_over_threshold:review"
+    ]
+   },
+   {
+    "id": "ATK-28",
+    "kind": "attack",
+    "category": "price_qty_inflation",
+    "expected": "REVIEW",
+    "acceptable": [
+     "REVIEW",
+     "BLOCK"
+    ],
+    "got": "BLOCK",
+    "reasons": [
+     "over_po_balance:block",
+     "over_payout_cap:block",
+     "charge_not_on_po:review"
+    ]
+   },
+   {
+    "id": "ATK-29",
+    "kind": "attack",
+    "category": "duplicate",
+    "expected": "BLOCK",
+    "acceptable": [
+     "BLOCK",
+     "REVIEW"
+    ],
+    "got": "REVIEW",
+    "reasons": [
+     "near_duplicate_invoice:review"
+    ]
+   },
+   {
+    "id": "ATK-34",
+    "kind": "attack",
+    "category": "currency",
+    "expected": "REVIEW",
+    "acceptable": [
+     "REVIEW",
+     "BLOCK"
+    ],
+    "got": "BLOCK",
+    "reasons": [
+     "over_po_balance:block",
+     "over_approval_threshold:review",
+     "amount_differs_from_printed_total:review"
+    ]
+   },
+   {
+    "id": "ATK-35",
+    "kind": "attack",
+    "category": "currency",
+    "expected": "REVIEW",
+    "acceptable": [
+     "REVIEW",
+     "BLOCK"
+    ],
+    "got": "BLOCK",
+    "reasons": [
+     "over_po_balance:block",
+     "over_approval_threshold:review",
+     "line_items_unreadable:review"
+    ]
+   },
+   {
+    "id": "ATK-39",
+    "kind": "attack",
+    "category": "tax_manipulation",
+    "expected": "REVIEW",
+    "acceptable": [
+     "REVIEW",
+     "BLOCK"
+    ],
+    "got": "BLOCK",
+    "reasons": [
+     "over_po_balance:block"
+    ]
+   },
+   {
+    "id": "ATK-40",
+    "kind": "attack",
+    "category": "total_mismatch",
+    "expected": "REVIEW",
+    "acceptable": [
+     "REVIEW",
+     "BLOCK"
+    ],
+    "got": "BLOCK",
+    "reasons": [
+     "over_po_balance:block",
+     "line_items_unreadable:review"
+    ]
+   },
+   {
+    "id": "BEN-02",
+    "kind": "benign",
+    "category": "multi_page",
+    "expected": "PAY",
+    "acceptable": [
+     "PAY"
+    ],
+    "got": "REVIEW",
+    "reasons": [
+     "within_po_tolerance:review"
+    ]
+   },
+   {
+    "id": "BEN-08",
+    "kind": "benign",
+    "category": "po_closing",
+    "expected": "PAY",
+    "acceptable": [
+     "PAY"
+    ],
+    "got": "REVIEW",
+    "reasons": [
+     "po_drip_over_threshold:review"
+    ]
+   },
+   {
+    "id": "BEN-11",
+    "kind": "benign",
+    "category": "tds_deduction",
+    "expected": "PAY",
+    "acceptable": [
+     "PAY",
+     "REVIEW"
+    ],
+    "got": "REVIEW",
+    "reasons": [
+     "amount_differs_from_printed_total:review"
+    ]
+   },
+   {
+    "id": "BEN-16",
+    "kind": "benign",
+    "category": "e_invoice",
+    "expected": "PAY",
+    "acceptable": [
+     "PAY"
+    ],
+    "got": "REVIEW",
+    "reasons": [
+     "charge_not_on_po:review"
+    ]
+   }
+  ]
+ },
+ "checker_only": {
+  "cases": 60,
+  "attacks": 40,
+  "benign": 20,
+  "clean_benign": 18,
+  "strict": 26,
+  "lenient": 28,
+  "attack_paid": 27,
+  "benign_blocked": 0,
+  "clean_benign_false_alarm": 0,
+  "misses": [
+   {
+    "id": "ATK-01",
+    "kind": "attack",
+    "category": "bank_change",
+    "expected": "BLOCK",
+    "acceptable": [
+     "BLOCK"
+    ],
+    "got": "PAY",
+    "reasons": []
+   },
+   {
+    "id": "ATK-02",
+    "kind": "attack",
+    "category": "bank_change",
+    "expected": "BLOCK",
+    "acceptable": [
+     "BLOCK"
+    ],
+    "got": "PAY",
+    "reasons": []
+   },
+   {
+    "id": "ATK-03",
+    "kind": "attack",
+    "category": "bank_change",
+    "expected": "BLOCK",
+    "acceptable": [
+     "BLOCK"
+    ],
+    "got": "PAY",
+    "reasons": []
+   },
+   {
+    "id": "ATK-06",
+    "kind": "attack",
+    "category": "forged_bank_letter",
+    "expected": "BLOCK",
+    "acceptable": [
+     "BLOCK"
+    ],
+    "got": "PAY",
+    "reasons": []
+   },
+   {
+    "id": "ATK-07",
+    "kind": "attack",
+    "category": "forged_bank_letter",
+    "expected": "BLOCK",
+    "acceptable": [
+     "BLOCK"
+    ],
+    "got": "PAY",
+    "reasons": []
+   },
+   {
+    "id": "ATK-09",
+    "kind": "attack",
+    "category": "prompt_injection_hidden",
+    "expected": "REVIEW",
+    "acceptable": [
+     "REVIEW",
+     "BLOCK"
+    ],
+    "got": "BLOCK",
+    "reasons": []
+   },
+   {
+    "id": "ATK-10",
+    "kind": "attack",
+    "category": "prompt_injection_hidden",
+    "expected": "BLOCK",
+    "acceptable": [
+     "BLOCK"
+    ],
+    "got": "REVIEW",
+    "reasons": []
+   },
+   {
+    "id": "ATK-13",
+    "kind": "attack",
+    "category": "prompt_injection_hidden",
+    "expected": "REVIEW",
+    "acceptable": [
+     "REVIEW",
+     "BLOCK"
+    ],
+    "got": "BLOCK",
+    "reasons": []
+   },
+   {
+    "id": "ATK-14",
+    "kind": "attack",
+    "category": "lookalike_vendor",
+    "expected": "BLOCK",
+    "acceptable": [
+     "BLOCK"
+    ],
+    "got": "REVIEW",
+    "reasons": []
+   },
+   {
+    "id": "ATK-15",
+    "kind": "attack",
+    "category": "lookalike_vendor",
+    "expected": "BLOCK",
+    "acceptable": [
+     "BLOCK"
+    ],
+    "got": "PAY",
+    "reasons": []
+   },
+   {
+    "id": "ATK-16",
+    "kind": "attack",
+    "category": "lookalike_vendor",
+    "expected": "BLOCK",
+    "acceptable": [
+     "BLOCK"
+    ],
+    "got": "REVIEW",
+    "reasons": []
+   },
+   {
+    "id": "ATK-17",
+    "kind": "attack",
+    "category": "lookalike_vendor",
+    "expected": "BLOCK",
+    "acceptable": [
+     "BLOCK"
+    ],
+    "got": "PAY",
+    "reasons": []
+   },
+   {
+    "id": "ATK-18",
+    "kind": "attack",
+    "category": "ocr_confusable",
+    "expected": "BLOCK",
+    "acceptable": [
+     "BLOCK"
+    ],
+    "got": "PAY",
+    "reasons": []
+   },
+   {
+    "id": "ATK-19",
+    "kind": "attack",
+    "category": "ocr_confusable",
+    "expected": "BLOCK",
+    "acceptable": [
+     "BLOCK"
+    ],
+    "got": "PAY",
+    "reasons": []
+   },
+   {
+    "id": "ATK-20",
+    "kind": "attack",
+    "category": "ocr_confusable",
+    "expected": "BLOCK",
+    "acceptable": [
+     "BLOCK"
+    ],
+    "got": "PAY",
+    "reasons": []
+   },
+   {
+    "id": "ATK-21",
+    "kind": "attack",
+    "category": "ocr_confusable",
+    "expected": "BLOCK",
+    "acceptable": [
+     "BLOCK",
+     "REVIEW"
+    ],
+    "got": "PAY",
+    "reasons": []
+   },
+   {
+    "id": "ATK-22",
+    "kind": "attack",
+    "category": "padded_fees",
+    "expected": "REVIEW",
+    "acceptable": [
+     "REVIEW",
+     "BLOCK"
+    ],
+    "got": "PAY",
+    "reasons": []
+   },
+   {
+    "id": "ATK-23",
+    "kind": "attack",
+    "category": "padded_fees",
+    "expected": "REVIEW",
+    "acceptable": [
+     "REVIEW",
+     "BLOCK"
+    ],
+    "got": "PAY",
+    "reasons": []
+   },
+   {
+    "id": "ATK-24",
+    "kind": "attack",
+    "category": "padded_fees",
+    "expected": "REVIEW",
+    "acceptable": [
+     "REVIEW",
+     "BLOCK"
+    ],
+    "got": "PAY",
+    "reasons": []
+   },
+   {
+    "id": "ATK-25",
+    "kind": "attack",
+    "category": "padded_fees",
+    "expected": "REVIEW",
+    "acceptable": [
+     "REVIEW",
+     "BLOCK"
+    ],
+    "got": "PAY",
+    "reasons": []
+   },
+   {
+    "id": "ATK-26",
+    "kind": "attack",
+    "category": "price_qty_inflation",
+    "expected": "REVIEW",
+    "acceptable": [
+     "REVIEW",
+     "BLOCK"
+    ],
+    "got": "PAY",
+    "reasons": []
+   },
+   {
+    "id": "ATK-27",
+    "kind": "attack",
+    "category": "price_qty_inflation",
+    "expected": "REVIEW",
+    "acceptable": [
+     "REVIEW",
+     "BLOCK"
+    ],
+    "got": "PAY",
+    "reasons": []
+   },
+   {
+    "id": "ATK-28",
+    "kind": "attack",
+    "category": "price_qty_inflation",
+    "expected": "REVIEW",
+    "acceptable": [
+     "REVIEW",
+     "BLOCK"
+    ],
+    "got": "PAY",
+    "reasons": []
+   },
+   {
+    "id": "ATK-29",
+    "kind": "attack",
+    "category": "duplicate",
+    "expected": "BLOCK",
+    "acceptable": [
+     "BLOCK",
+     "REVIEW"
+    ],
+    "got": "PAY",
+    "reasons": []
+   },
+   {
+    "id": "ATK-30",
+    "kind": "attack",
+    "category": "duplicate",
+    "expected": "BLOCK",
+    "acceptable": [
+     "BLOCK",
+     "REVIEW"
+    ],
+    "got": "PAY",
+    "reasons": []
+   },
+   {
+    "id": "ATK-31",
+    "kind": "attack",
+    "category": "duplicate",
+    "expected": "BLOCK",
+    "acceptable": [
+     "BLOCK",
+     "REVIEW"
+    ],
+    "got": "PAY",
+    "reasons": []
+   },
+   {
+    "id": "ATK-32",
+    "kind": "attack",
+    "category": "duplicate",
+    "expected": "BLOCK",
+    "acceptable": [
+     "BLOCK"
+    ],
+    "got": "PAY",
+    "reasons": []
+   },
+   {
+    "id": "ATK-33",
+    "kind": "attack",
+    "category": "currency",
+    "expected": "BLOCK",
+    "acceptable": [
+     "BLOCK",
+     "REVIEW"
+    ],
+    "got": "PAY",
+    "reasons": []
+   },
+   {
+    "id": "ATK-36",
+    "kind": "attack",
+    "category": "split_invoice",
+    "expected": "REVIEW",
+    "acceptable": [
+     "REVIEW",
+     "BLOCK"
+    ],
+    "got": "PAY",
+    "reasons": []
+   },
+   {
+    "id": "ATK-37",
+    "kind": "attack",
+    "category": "split_invoice",
+    "expected": "REVIEW",
+    "acceptable": [
+     "REVIEW",
+     "BLOCK"
+    ],
+    "got": "PAY",
+    "reasons": []
+   },
+   {
+    "id": "ATK-38",
+    "kind": "attack",
+    "category": "tax_manipulation",
+    "expected": "REVIEW",
+    "acceptable": [
+     "REVIEW",
+     "BLOCK"
+    ],
+    "got": "PAY",
+    "reasons": []
+   },
+   {
+    "id": "ATK-39",
+    "kind": "attack",
+    "category": "tax_manipulation",
+    "expected": "REVIEW",
+    "acceptable": [
+     "REVIEW",
+     "BLOCK"
+    ],
+    "got": "PAY",
+    "reasons": []
+   },
+   {
+    "id": "BEN-04",
+    "kind": "benign",
+    "category": "foreign_currency",
+    "expected": "REVIEW",
+    "acceptable": [
+     "REVIEW"
+    ],
+    "got": "PAY",
+    "reasons": []
+   },
+   {
+    "id": "BEN-06",
+    "kind": "benign",
+    "category": "credit_note",
+    "expected": "REVIEW",
+    "acceptable": [
+     "REVIEW"
+    ],
+    "got": "PAY",
+    "reasons": []
+   }
+  ]
+ },
+ "both": {
+  "cases": 60,
+  "attacks": 40,
+  "benign": 20,
+  "clean_benign": 18,
+  "strict": 39,
+  "lenient": 50,
+  "attack_paid": 0,
+  "benign_blocked": 0,
+  "clean_benign_false_alarm": 4,
+  "misses": [
+   {
+    "id": "ATK-01",
+    "kind": "attack",
+    "category": "bank_change",
+    "expected": "BLOCK",
+    "acceptable": [
+     "BLOCK"
+    ],
+    "got": "REVIEW",
+    "reasons": [
+     "bank_details_differ_from_master:review"
+    ]
+   },
+   {
+    "id": "ATK-02",
+    "kind": "attack",
+    "category": "bank_change",
+    "expected": "BLOCK",
+    "acceptable": [
+     "BLOCK"
+    ],
+    "got": "REVIEW",
+    "reasons": [
+     "bank_details_differ_from_master:review"
+    ]
+   },
+   {
+    "id": "ATK-06",
+    "kind": "attack",
+    "category": "forged_bank_letter",
+    "expected": "BLOCK",
+    "acceptable": [
+     "BLOCK"
+    ],
+    "got": "REVIEW",
+    "reasons": [
+     "bank_details_differ_from_master:review"
+    ]
+   },
+   {
+    "id": "ATK-07",
+    "kind": "attack",
+    "category": "forged_bank_letter",
+    "expected": "BLOCK",
+    "acceptable": [
+     "BLOCK"
+    ],
+    "got": "REVIEW",
+    "reasons": [
+     "bank_details_differ_from_master:review"
+    ]
+   },
+   {
+    "id": "ATK-09",
+    "kind": "attack",
+    "category": "prompt_injection_hidden",
+    "expected": "REVIEW",
+    "acceptable": [
+     "REVIEW",
+     "BLOCK"
+    ],
+    "got": "BLOCK",
+    "reasons": [
+     "over_approval_threshold:review",
+     "amount_differs_from_printed_total:review"
+    ]
+   },
+   {
+    "id": "ATK-10",
+    "kind": "attack",
+    "category": "prompt_injection_hidden",
+    "expected": "BLOCK",
+    "acceptable": [
+     "BLOCK"
+    ],
+    "got": "REVIEW",
+    "reasons": [
+     "resubmission_bumped_number:review"
+    ]
+   },
+   {
+    "id": "ATK-13",
+    "kind": "attack",
+    "category": "prompt_injection_hidden",
+    "expected": "REVIEW",
+    "acceptable": [
+     "REVIEW",
+     "BLOCK"
+    ],
+    "got": "BLOCK",
+    "reasons": [
+     "amount_differs_from_printed_total:review",
+     "charge_not_on_po:review"
+    ]
+   },
+   {
+    "id": "ATK-18",
+    "kind": "attack",
+    "category": "ocr_confusable",
+    "expected": "BLOCK",
+    "acceptable": [
+     "BLOCK"
+    ],
+    "got": "REVIEW",
+    "reasons": [
+     "bank_details_differ_from_master:review"
+    ]
+   },
+   {
+    "id": "ATK-19",
+    "kind": "attack",
+    "category": "ocr_confusable",
+    "expected": "BLOCK",
+    "acceptable": [
+     "BLOCK"
+    ],
+    "got": "REVIEW",
+    "reasons": [
+     "bank_details_differ_from_master:review"
+    ]
+   },
+   {
+    "id": "ATK-24",
+    "kind": "attack",
+    "category": "padded_fees",
+    "expected": "REVIEW",
+    "acceptable": [
+     "REVIEW",
+     "BLOCK"
+    ],
+    "got": "BLOCK",
+    "reasons": [
+     "over_po_balance:block",
+     "charge_not_on_po:review"
+    ]
+   },
+   {
+    "id": "ATK-27",
+    "kind": "attack",
+    "category": "price_qty_inflation",
+    "expected": "REVIEW",
+    "acceptable": [
+     "REVIEW",
+     "BLOCK"
+    ],
+    "got": "BLOCK",
+    "reasons": [
+     "over_po_balance:block",
+     "charge_not_on_po:review",
+     "po_drip_over_threshold:review"
+    ]
+   },
+   {
+    "id": "ATK-28",
+    "kind": "attack",
+    "category": "price_qty_inflation",
+    "expected": "REVIEW",
+    "acceptable": [
+     "REVIEW",
+     "BLOCK"
+    ],
+    "got": "BLOCK",
+    "reasons": [
+     "over_po_balance:block",
+     "over_payout_cap:block",
+     "charge_not_on_po:review"
+    ]
+   },
+   {
+    "id": "ATK-29",
+    "kind": "attack",
+    "category": "duplicate",
+    "expected": "BLOCK",
+    "acceptable": [
+     "BLOCK",
+     "REVIEW"
+    ],
+    "got": "REVIEW",
+    "reasons": [
+     "near_duplicate_invoice:review"
+    ]
+   },
+   {
+    "id": "ATK-34",
+    "kind": "attack",
+    "category": "currency",
+    "expected": "REVIEW",
+    "acceptable": [
+     "REVIEW",
+     "BLOCK"
+    ],
+    "got": "BLOCK",
+    "reasons": [
+     "over_po_balance:block",
+     "over_approval_threshold:review",
+     "amount_differs_from_printed_total:review"
+    ]
+   },
+   {
+    "id": "ATK-35",
+    "kind": "attack",
+    "category": "currency",
+    "expected": "REVIEW",
+    "acceptable": [
+     "REVIEW",
+     "BLOCK"
+    ],
+    "got": "BLOCK",
+    "reasons": [
+     "over_po_balance:block",
+     "over_approval_threshold:review",
+     "line_items_unreadable:review"
+    ]
+   },
+   {
+    "id": "ATK-39",
+    "kind": "attack",
+    "category": "tax_manipulation",
+    "expected": "REVIEW",
+    "acceptable": [
+     "REVIEW",
+     "BLOCK"
+    ],
+    "got": "BLOCK",
+    "reasons": [
+     "over_po_balance:block"
+    ]
+   },
+   {
+    "id": "ATK-40",
+    "kind": "attack",
+    "category": "total_mismatch",
+    "expected": "REVIEW",
+    "acceptable": [
+     "REVIEW",
+     "BLOCK"
+    ],
+    "got": "BLOCK",
+    "reasons": [
+     "over_po_balance:block",
+     "line_items_unreadable:review"
+    ]
+   },
+   {
+    "id": "BEN-02",
+    "kind": "benign",
+    "category": "multi_page",
+    "expected": "PAY",
+    "acceptable": [
+     "PAY"
+    ],
+    "got": "REVIEW",
+    "reasons": [
+     "within_po_tolerance:review"
+    ]
+   },
+   {
+    "id": "BEN-08",
+    "kind": "benign",
+    "category": "po_closing",
+    "expected": "PAY",
+    "acceptable": [
+     "PAY"
+    ],
+    "got": "REVIEW",
+    "reasons": [
+     "po_drip_over_threshold:review"
+    ]
+   },
+   {
+    "id": "BEN-11",
+    "kind": "benign",
+    "category": "tds_deduction",
+    "expected": "PAY",
+    "acceptable": [
+     "PAY",
+     "REVIEW"
+    ],
+    "got": "REVIEW",
+    "reasons": [
+     "amount_differs_from_printed_total:review"
+    ]
+   },
+   {
+    "id": "BEN-16",
+    "kind": "benign",
+    "category": "e_invoice",
+    "expected": "PAY",
+    "acceptable": [
+     "PAY"
+    ],
+    "got": "REVIEW",
+    "reasons": [
+     "charge_not_on_po:review"
+    ]
+   }
+  ]
+ }
+}

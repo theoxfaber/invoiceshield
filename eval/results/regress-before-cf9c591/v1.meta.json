@@ -1,0 +1,9 @@
+{
+ "cases_sha256": "14a370497e59bfd8a66e6d177bb2cbae999ba5d73a4f2b1b49f9ccb82df62bb1",
+ "set": "v1",
+ "commit": "cf9c591",
+ "cases": 60,
+ "harness_errors": 0,
+ "ran_at_ist": "2026-10-31T06:54:24+05:30",
+ "note": "POST-FIX RE-RUN ON A SET WE HAD ALREADY SEEN: NO LONGER BLIND"
+}

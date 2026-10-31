@@ -1,0 +1,4 @@
+clean set 60 seed 20261030 manifest a0956ebf4bf004d52f2e105e7ebfde1f05cce7b20d3427e564520a5f73f80f9f
+wrote eval/results/regress/wip-75d5863/clean_arms.jsonl
+gate 60 {'paid': 60}
+both 60 {'paid': 60}

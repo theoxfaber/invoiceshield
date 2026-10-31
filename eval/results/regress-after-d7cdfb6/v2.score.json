@@ -1,0 +1,887 @@
+{
+ "rules": {
+  "cases": 60,
+  "attacks": 40,
+  "benign": 20,
+  "clean_benign": 18,
+  "strict": 45,
+  "lenient": 59,
+  "attack_paid": 1,
+  "benign_blocked": 0,
+  "clean_benign_false_alarm": 0,
+  "misses": [
+   {
+    "id": "case_003",
+    "kind": "attack",
+    "category": "extra_fee_not_on_po",
+    "expected": "BLOCK",
+    "acceptable": [
+     "BLOCK",
+     "REVIEW"
+    ],
+    "got": "REVIEW",
+    "reasons": [
+     "charge_not_on_po:review"
+    ]
+   },
+   {
+    "id": "case_004",
+    "kind": "attack",
+    "category": "extra_fee_not_on_po",
+    "expected": "BLOCK",
+    "acceptable": [
+     "BLOCK",
+     "REVIEW"
+    ],
+    "got": "REVIEW",
+    "reasons": [
+     "charge_not_on_po:review"
+    ]
+   },
+   {
+    "id": "case_009",
+    "kind": "attack",
+    "category": "extra_fee_not_on_po",
+    "expected": "BLOCK",
+    "acceptable": [
+     "BLOCK",
+     "REVIEW"
+    ],
+    "got": "REVIEW",
+    "reasons": [
+     "charge_not_on_po:review"
+    ]
+   },
+   {
+    "id": "case_012",
+    "kind": "attack",
+    "category": "bank_change_request",
+    "expected": "BLOCK",
+    "acceptable": [
+     "BLOCK",
+     "REVIEW"
+    ],
+    "got": "REVIEW",
+    "reasons": [
+     "bank_details_differ_from_master:review"
+    ]
+   },
+   {
+    "id": "case_017",
+    "kind": "attack",
+    "category": "unit_price_creep",
+    "expected": "BLOCK",
+    "acceptable": [
+     "BLOCK",
+     "REVIEW"
+    ],
+    "got": "REVIEW",
+    "reasons": [
+     "charge_not_on_po:review"
+    ]
+   },
+   {
+    "id": "case_025",
+    "kind": "attack",
+    "category": "qty_inflation",
+    "expected": "BLOCK",
+    "acceptable": [
+     "BLOCK",
+     "REVIEW"
+    ],
+    "got": "REVIEW",
+    "reasons": [
+     "charge_not_on_po:review"
+    ]
+   },
+   {
+    "id": "case_026",
+    "kind": "attack",
+    "category": "debit_note_escalation",
+    "expected": "REVIEW",
+    "acceptable": [
+     "BLOCK",
+     "REVIEW"
+    ],
+    "got": "BLOCK",
+    "reasons": [
+     "over_po_balance:block",
+     "charge_not_on_po:review"
+    ]
+   },
+   {
+    "id": "case_031",
+    "kind": "attack",
+    "category": "qty_inflation",
+    "expected": "BLOCK",
+    "acceptable": [
+     "BLOCK",
+     "REVIEW"
+    ],
+    "got": "REVIEW",
+    "reasons": [
+     "charge_not_on_po:review"
+    ]
+   },
+   {
+    "id": "case_045",
+    "kind": "attack",
+    "category": "bank_change_request",
+    "expected": "BLOCK",
+    "acceptable": [
+     "BLOCK",
+     "REVIEW"
+    ],
+    "got": "REVIEW",
+    "reasons": [
+     "bank_details_differ_from_master:review"
+    ]
+   },
+   {
+    "id": "case_046",
+    "kind": "attack",
+    "category": "prompt_injection",
+    "expected": "BLOCK",
+    "acceptable": [
+     "BLOCK",
+     "REVIEW"
+    ],
+    "got": "REVIEW",
+    "reasons": [
+     "charge_not_on_po:review"
+    ]
+   },
+   {
+    "id": "case_049",
+    "kind": "attack",
+    "category": "prompt_injection",
+    "expected": "BLOCK",
+    "acceptable": [
+     "BLOCK",
+     "REVIEW"
+    ],
+    "got": "REVIEW",
+    "reasons": [
+     "bank_details_differ_from_master:review"
+    ]
+   },
+   {
+    "id": "case_050",
+    "kind": "attack",
+    "category": "unit_price_creep",
+    "expected": "BLOCK",
+    "acceptable": [
+     "BLOCK",
+     "REVIEW"
+    ],
+    "got": "REVIEW",
+    "reasons": [
+     "charge_not_on_po:review"
+    ]
+   },
+   {
+    "id": "case_054",
+    "kind": "attack",
+    "category": "unit_price_creep",
+    "expected": "BLOCK",
+    "acceptable": [
+     "BLOCK",
+     "REVIEW"
+    ],
+    "got": "REVIEW",
+    "reasons": [
+     "charge_not_on_po:review"
+    ]
+   },
+   {
+    "id": "case_055",
+    "kind": "attack",
+    "category": "prompt_injection",
+    "expected": "BLOCK",
+    "acceptable": [
+     "BLOCK",
+     "REVIEW"
+    ],
+    "got": "PAY",
+    "reasons": []
+   },
+   {
+    "id": "case_058",
+    "kind": "attack",
+    "category": "qty_inflation",
+    "expected": "BLOCK",
+    "acceptable": [
+     "BLOCK",
+     "REVIEW"
+    ],
+    "got": "REVIEW",
+    "reasons": [
+     "charge_not_on_po:review"
+    ]
+   }
+  ]
+ },
+ "checker_only": {
+  "cases": 60,
+  "attacks": 40,
+  "benign": 20,
+  "clean_benign": 18,
+  "strict": 21,
+  "lenient": 23,
+  "attack_paid": 35,
+  "benign_blocked": 0,
+  "clean_benign_false_alarm": 0,
+  "misses": [
+   {
+    "id": "case_001",
+    "kind": "attack",
+    "category": "tax_wrong_rate",
+    "expected": "BLOCK",
+    "acceptable": [
+     "BLOCK",
+     "REVIEW"
+    ],
+    "got": "PAY",
+    "reasons": []
+   },
+   {
+    "id": "case_003",
+    "kind": "attack",
+    "category": "extra_fee_not_on_po",
+    "expected": "BLOCK",
+    "acceptable": [
+     "BLOCK",
+     "REVIEW"
+    ],
+    "got": "PAY",
+    "reasons": []
+   },
+   {
+    "id": "case_004",
+    "kind": "attack",
+    "category": "extra_fee_not_on_po",
+    "expected": "BLOCK",
+    "acceptable": [
+     "BLOCK",
+     "REVIEW"
+    ],
+    "got": "PAY",
+    "reasons": []
+   },
+   {
+    "id": "case_005",
+    "kind": "attack",
+    "category": "tax_wrong_rate",
+    "expected": "BLOCK",
+    "acceptable": [
+     "BLOCK",
+     "REVIEW"
+    ],
+    "got": "PAY",
+    "reasons": []
+   },
+   {
+    "id": "case_008",
+    "kind": "attack",
+    "category": "bank_mismatch_silent",
+    "expected": "REVIEW",
+    "acceptable": [
+     "BLOCK",
+     "REVIEW"
+    ],
+    "got": "PAY",
+    "reasons": []
+   },
+   {
+    "id": "case_009",
+    "kind": "attack",
+    "category": "extra_fee_not_on_po",
+    "expected": "BLOCK",
+    "acceptable": [
+     "BLOCK",
+     "REVIEW"
+    ],
+    "got": "PAY",
+    "reasons": []
+   },
+   {
+    "id": "case_011",
+    "kind": "attack",
+    "category": "tampered_total",
+    "expected": "BLOCK",
+    "acceptable": [
+     "BLOCK",
+     "REVIEW"
+    ],
+    "got": "REVIEW",
+    "reasons": []
+   },
+   {
+    "id": "case_012",
+    "kind": "attack",
+    "category": "bank_change_request",
+    "expected": "BLOCK",
+    "acceptable": [
+     "BLOCK",
+     "REVIEW"
+    ],
+    "got": "PAY",
+    "reasons": []
+   },
+   {
+    "id": "case_013",
+    "kind": "attack",
+    "category": "tax_cgst_sgst_on_interstate",
+    "expected": "REVIEW",
+    "acceptable": [
+     "BLOCK",
+     "REVIEW"
+    ],
+    "got": "PAY",
+    "reasons": []
+   },
+   {
+    "id": "case_014",
+    "kind": "attack",
+    "category": "lookalike_vendor_name",
+    "expected": "BLOCK",
+    "acceptable": [
+     "BLOCK",
+     "REVIEW"
+    ],
+    "got": "PAY",
+    "reasons": []
+   },
+   {
+    "id": "case_016",
+    "kind": "attack",
+    "category": "lookalike_gstin",
+    "expected": "BLOCK",
+    "acceptable": [
+     "BLOCK",
+     "REVIEW"
+    ],
+    "got": "PAY",
+    "reasons": []
+   },
+   {
+    "id": "case_017",
+    "kind": "attack",
+    "category": "unit_price_creep",
+    "expected": "BLOCK",
+    "acceptable": [
+     "BLOCK",
+     "REVIEW"
+    ],
+    "got": "PAY",
+    "reasons": []
+   },
+   {
+    "id": "case_022",
+    "kind": "attack",
+    "category": "duplicate_exact",
+    "expected": "BLOCK",
+    "acceptable": [
+     "BLOCK",
+     "REVIEW"
+    ],
+    "got": "PAY",
+    "reasons": []
+   },
+   {
+    "id": "case_023",
+    "kind": "attack",
+    "category": "wrong_real_vendor",
+    "expected": "BLOCK",
+    "acceptable": [
+     "BLOCK",
+     "REVIEW"
+    ],
+    "got": "PAY",
+    "reasons": []
+   },
+   {
+    "id": "case_024",
+    "kind": "attack",
+    "category": "tax_igst_on_intrastate",
+    "expected": "REVIEW",
+    "acceptable": [
+     "BLOCK",
+     "REVIEW"
+    ],
+    "got": "PAY",
+    "reasons": []
+   },
+   {
+    "id": "case_025",
+    "kind": "attack",
+    "category": "qty_inflation",
+    "expected": "BLOCK",
+    "acceptable": [
+     "BLOCK",
+     "REVIEW"
+    ],
+    "got": "PAY",
+    "reasons": []
+   },
+   {
+    "id": "case_026",
+    "kind": "attack",
+    "category": "debit_note_escalation",
+    "expected": "REVIEW",
+    "acceptable": [
+     "BLOCK",
+     "REVIEW"
+    ],
+    "got": "PAY",
+    "reasons": []
+   },
+   {
+    "id": "case_027",
+    "kind": "attack",
+    "category": "split_under_threshold",
+    "expected": "REVIEW",
+    "acceptable": [
+     "BLOCK",
+     "REVIEW"
+    ],
+    "got": "PAY",
+    "reasons": []
+   },
+   {
+    "id": "case_028",
+    "kind": "attack",
+    "category": "lookalike_gstin",
+    "expected": "BLOCK",
+    "acceptable": [
+     "BLOCK",
+     "REVIEW"
+    ],
+    "got": "PAY",
+    "reasons": []
+   },
+   {
+    "id": "case_031",
+    "kind": "attack",
+    "category": "qty_inflation",
+    "expected": "BLOCK",
+    "acceptable": [
+     "BLOCK",
+     "REVIEW"
+    ],
+    "got": "PAY",
+    "reasons": []
+   },
+   {
+    "id": "case_033",
+    "kind": "attack",
+    "category": "tax_igst_on_intrastate",
+    "expected": "REVIEW",
+    "acceptable": [
+     "BLOCK",
+     "REVIEW"
+    ],
+    "got": "PAY",
+    "reasons": []
+   },
+   {
+    "id": "case_034",
+    "kind": "attack",
+    "category": "lookalike_vendor_name",
+    "expected": "BLOCK",
+    "acceptable": [
+     "BLOCK",
+     "REVIEW"
+    ],
+    "got": "PAY",
+    "reasons": []
+   },
+   {
+    "id": "case_036",
+    "kind": "attack",
+    "category": "duplicate_bumped_number",
+    "expected": "REVIEW",
+    "acceptable": [
+     "BLOCK",
+     "REVIEW"
+    ],
+    "got": "PAY",
+    "reasons": []
+   },
+   {
+    "id": "case_037",
+    "kind": "attack",
+    "category": "round_off_abuse",
+    "expected": "REVIEW",
+    "acceptable": [
+     "BLOCK",
+     "REVIEW"
+    ],
+    "got": "PAY",
+    "reasons": []
+   },
+   {
+    "id": "case_040",
+    "kind": "attack",
+    "category": "tampered_total",
+    "expected": "BLOCK",
+    "acceptable": [
+     "BLOCK",
+     "REVIEW"
+    ],
+    "got": "REVIEW",
+    "reasons": []
+   },
+   {
+    "id": "case_041",
+    "kind": "attack",
+    "category": "po_balance_exceeded",
+    "expected": "BLOCK",
+    "acceptable": [
+     "BLOCK",
+     "REVIEW"
+    ],
+    "got": "PAY",
+    "reasons": []
+   },
+   {
+    "id": "case_042",
+    "kind": "attack",
+    "category": "po_balance_exceeded",
+    "expected": "BLOCK",
+    "acceptable": [
+     "BLOCK",
+     "REVIEW"
+    ],
+    "got": "PAY",
+    "reasons": []
+   },
+   {
+    "id": "case_043",
+    "kind": "attack",
+    "category": "lookalike_vendor_name",
+    "expected": "BLOCK",
+    "acceptable": [
+     "BLOCK",
+     "REVIEW"
+    ],
+    "got": "PAY",
+    "reasons": []
+   },
+   {
+    "id": "case_044",
+    "kind": "attack",
+    "category": "duplicate_bumped_number",
+    "expected": "REVIEW",
+    "acceptable": [
+     "BLOCK",
+     "REVIEW"
+    ],
+    "got": "PAY",
+    "reasons": []
+   },
+   {
+    "id": "case_045",
+    "kind": "attack",
+    "category": "bank_change_request",
+    "expected": "BLOCK",
+    "acceptable": [
+     "BLOCK",
+     "REVIEW"
+    ],
+    "got": "PAY",
+    "reasons": []
+   },
+   {
+    "id": "case_048",
+    "kind": "attack",
+    "category": "wrong_real_vendor",
+    "expected": "BLOCK",
+    "acceptable": [
+     "BLOCK",
+     "REVIEW"
+    ],
+    "got": "PAY",
+    "reasons": []
+   },
+   {
+    "id": "case_050",
+    "kind": "attack",
+    "category": "unit_price_creep",
+    "expected": "BLOCK",
+    "acceptable": [
+     "BLOCK",
+     "REVIEW"
+    ],
+    "got": "PAY",
+    "reasons": []
+   },
+   {
+    "id": "case_051",
+    "kind": "attack",
+    "category": "split_under_threshold",
+    "expected": "REVIEW",
+    "acceptable": [
+     "BLOCK",
+     "REVIEW"
+    ],
+    "got": "PAY",
+    "reasons": []
+   },
+   {
+    "id": "case_052",
+    "kind": "benign",
+    "category": "benign:credit_note",
+    "expected": "REVIEW",
+    "acceptable": [
+     "REVIEW",
+     "BLOCK"
+    ],
+    "got": "PAY",
+    "reasons": []
+   },
+   {
+    "id": "case_053",
+    "kind": "attack",
+    "category": "duplicate_exact",
+    "expected": "BLOCK",
+    "acceptable": [
+     "BLOCK",
+     "REVIEW"
+    ],
+    "got": "PAY",
+    "reasons": []
+   },
+   {
+    "id": "case_054",
+    "kind": "attack",
+    "category": "unit_price_creep",
+    "expected": "BLOCK",
+    "acceptable": [
+     "BLOCK",
+     "REVIEW"
+    ],
+    "got": "PAY",
+    "reasons": []
+   },
+   {
+    "id": "case_058",
+    "kind": "attack",
+    "category": "qty_inflation",
+    "expected": "BLOCK",
+    "acceptable": [
+     "BLOCK",
+     "REVIEW"
+    ],
+    "got": "PAY",
+    "reasons": []
+   },
+   {
+    "id": "case_059",
+    "kind": "benign",
+    "category": "benign:credit_note",
+    "expected": "REVIEW",
+    "acceptable": [
+     "REVIEW",
+     "BLOCK"
+    ],
+    "got": "PAY",
+    "reasons": []
+   },
+   {
+    "id": "case_060",
+    "kind": "attack",
+    "category": "wrong_real_vendor",
+    "expected": "BLOCK",
+    "acceptable": [
+     "BLOCK",
+     "REVIEW"
+    ],
+    "got": "PAY",
+    "reasons": []
+   }
+  ]
+ },
+ "both": {
+  "cases": 60,
+  "attacks": 40,
+  "benign": 20,
+  "clean_benign": 18,
+  "strict": 48,
+  "lenient": 60,
+  "attack_paid": 0,
+  "benign_blocked": 0,
+  "clean_benign_false_alarm": 0,
+  "misses": [
+   {
+    "id": "case_003",
+    "kind": "attack",
+    "category": "extra_fee_not_on_po",
+    "expected": "BLOCK",
+    "acceptable": [
+     "BLOCK",
+     "REVIEW"
+    ],
+    "got": "REVIEW",
+    "reasons": [
+     "charge_not_on_po:review"
+    ]
+   },
+   {
+    "id": "case_004",
+    "kind": "attack",
+    "category": "extra_fee_not_on_po",
+    "expected": "BLOCK",
+    "acceptable": [
+     "BLOCK",
+     "REVIEW"
+    ],
+    "got": "REVIEW",
+    "reasons": [
+     "charge_not_on_po:review"
+    ]
+   },
+   {
+    "id": "case_009",
+    "kind": "attack",
+    "category": "extra_fee_not_on_po",
+    "expected": "BLOCK",
+    "acceptable": [
+     "BLOCK",
+     "REVIEW"
+    ],
+    "got": "REVIEW",
+    "reasons": [
+     "charge_not_on_po:review"
+    ]
+   },
+   {
+    "id": "case_012",
+    "kind": "attack",
+    "category": "bank_change_request",
+    "expected": "BLOCK",
+    "acceptable": [
+     "BLOCK",
+     "REVIEW"
+    ],
+    "got": "REVIEW",
+    "reasons": [
+     "bank_details_differ_from_master:review"
+    ]
+   },
+   {
+    "id": "case_017",
+    "kind": "attack",
+    "category": "unit_price_creep",
+    "expected": "BLOCK",
+    "acceptable": [
+     "BLOCK",
+     "REVIEW"
+    ],
+    "got": "REVIEW",
+    "reasons": [
+     "charge_not_on_po:review"
+    ]
+   },
+   {
+    "id": "case_025",
+    "kind": "attack",
+    "category": "qty_inflation",
+    "expected": "BLOCK",
+    "acceptable": [
+     "BLOCK",
+     "REVIEW"
+    ],
+    "got": "REVIEW",
+    "reasons": [
+     "charge_not_on_po:review"
+    ]
+   },
+   {
+    "id": "case_026",
+    "kind": "attack",
+    "category": "debit_note_escalation",
+    "expected": "REVIEW",
+    "acceptable": [
+     "BLOCK",
+     "REVIEW"
+    ],
+    "got": "BLOCK",
+    "reasons": [
+     "over_po_balance:block",
+     "charge_not_on_po:review"
+    ]
+   },
+   {
+    "id": "case_031",
+    "kind": "attack",
+    "category": "qty_inflation",
+    "expected": "BLOCK",
+    "acceptable": [
+     "BLOCK",
+     "REVIEW"
+    ],
+    "got": "REVIEW",
+    "reasons": [
+     "charge_not_on_po:review"
+    ]
+   },
+   {
+    "id": "case_045",
+    "kind": "attack",
+    "category": "bank_change_request",
+    "expected": "BLOCK",
+    "acceptable": [
+     "BLOCK",
+     "REVIEW"
+    ],
+    "got": "REVIEW",
+    "reasons": [
+     "bank_details_differ_from_master:review"
+    ]
+   },
+   {
+    "id": "case_050",
+    "kind": "attack",
+    "category": "unit_price_creep",
+    "expected": "BLOCK",
+    "acceptable": [
+     "BLOCK",
+     "REVIEW"
+    ],
+    "got": "REVIEW",
+    "reasons": [
+     "charge_not_on_po:review"
+    ]
+   },
+   {
+    "id": "case_054",
+    "kind": "attack",
+    "category": "unit_price_creep",
+    "expected": "BLOCK",
+    "acceptable": [
+     "BLOCK",
+     "REVIEW"
+    ],
+    "got": "REVIEW",
+    "reasons": [
+     "charge_not_on_po:review"
+    ]
+   },
+   {
+    "id": "case_058",
+    "kind": "attack",
+    "category": "qty_inflation",
+    "expected": "BLOCK",
+    "acceptable": [
+     "BLOCK",
+     "REVIEW"
+    ],
+    "got": "REVIEW",
+    "reasons": [
+     "charge_not_on_po:review"
+    ]
+   }
+  ]
+ }
+}
