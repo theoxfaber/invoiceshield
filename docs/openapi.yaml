@@ -59,7 +59,7 @@ paths:
                 value:
                   proposal: { vendor_id: V001, invoice_no: SOS/26-27/0231, amount_paise: 4500000, po_ref: PO-2026-0101, document_sha256: 3f0c...e9 }
                   signed_evidence: { payload: '{"doc_sha256":"3f0c...e9","email_sha256":"...","evidence":{...},"extractor_version":"...","issued_at":1793000000,"key_id":"...","nonce":"...","sandbox":{...},"status":"ok","v":1}', sig: "<base64 Ed25519 signature>" }
-                  checker_raw: '{"signals":[]}'
+                  signed_checker: { payload: '{"doc_sha256":"3f0c...e9","evidence_nonce":"<nonce of signed_evidence>","issued_at":1793000000,"key_id":"...","kind":"checker","raw":"...","v":1}', sig: "<base64 Ed25519 signature by the checker key>" }
       parameters:
         - in: header
           name: Idempotency-Key
@@ -139,6 +139,48 @@ paths:
         "429": { $ref: "#/components/responses/RateLimited" }
         "409": { description: "Decision is not a pending REVIEW (unknown, already resolved, ALLOW or BLOCK)" }
         "422": { description: "Body does not match the schema" }
+  /v1/decisions/{id}/reopen:
+    post:
+      tags: [operator]
+      summary: Reopen a human-REJECTED decision (operator or approver; never the proposer; audited)
+      description: |
+        A REVIEW that a human rejected stays rejected permanently: the same invoice (vendor + number,
+        IRN, or same document text) is BLOCKed with rule `previously_rejected`, with no time window.
+        This endpoint records an explicit, audited reopen (who, why, when) after which the invoice can
+        be proposed again and goes through every rule. The rejection itself is never erased. Once only.
+      security:
+        - operatorKey: []
+        - approverKey: []
+      parameters:
+        - $ref: "#/components/parameters/DecisionId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              required: [reason]
+              properties:
+                reason: { type: string, minLength: 1, maxLength: 500 }
+      responses:
+        "200":
+          description: Reopen recorded (audit record appended)
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  decision_id: { type: string }
+                  reopened: { type: boolean }
+                  by: { type: string }
+                  reason: { type: string }
+        "400": { description: "reason_required_1_to_500_chars" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { description: "Not an operator/approver, or the caller proposed this payment (maker_checker_proposer_cannot_reopen)" }
+        "409": { description: "not_a_human_rejected_decision (unknown, not rejected, or already reopened)" }
+        "422": { description: "Body does not match the schema" }
+        "429": { $ref: "#/components/responses/RateLimited" }
   /v1/reviews:
     get:
       tags: [operator]
@@ -438,10 +480,26 @@ components:
         evidence:
           description: "DEV/TEST ONLY: caller-supplied evidence, read only when the server runs with GOVERNOR_DEV_UNSIGNED_EVIDENCE=1 (requires GOVERNOR_EVAL_CLOCK=1). Ignored when signed_evidence is present; without signed_evidence in a normal deployment the decision is REVIEW (evidence_unsigned)."
           allOf: [{ $ref: "#/components/schemas/Evidence" }]
+        signed_checker: { $ref: "#/components/schemas/SignedChecker" }
         checker_raw:
           type: string
           nullable: true
-          description: Raw quarantined-checker output, parsed fail-closed (anything other than exactly {"signals":[...]} → REVIEW signal checker_unparseable). Absent → checker_missing.
+          description: "LEGACY: unsigned checker output. Read only when GOVERNOR_CHECKER_UNSIGNED_OK=1 (or on the dev unsigned-evidence path); otherwise it is ignored and the decision gets the REVIEW signal checker_unsigned. Use signed_checker."
+    SignedChecker:
+      type: object
+      additionalProperties: false
+      required: [payload, sig]
+      description: |
+        Quarantined-checker output signed by the checker's own Ed25519 key (GOVERNOR_CHECKER_PUBKEY; never
+        an extractor key). `payload` is canonical JSON with v=1, kind="checker", key_id, doc_sha256,
+        evidence_nonce (the nonce of the signed_evidence in the same request), issued_at and raw (the
+        checker's output, parsed fail-closed). Missing, unsigned, forged, edited, stale, for another
+        document or bound to other evidence → one REVIEW signal (checker_missing, checker_unsigned,
+        checker_signature_invalid, checker_payload_invalid, checker_stale, checker_document_mismatch,
+        checker_nonce_mismatch). It can never lower a verdict.
+      properties:
+        payload: { type: string }
+        sig: { type: string, description: base64 Ed25519 signature over payload bytes }
     SignedEvidence:
       type: object
       additionalProperties: false
@@ -451,7 +509,9 @@ components:
         `payload` is canonical JSON (sorted keys, no whitespace) with v, key_id, doc_sha256, email_sha256,
         extractor_version, issued_at, nonce, status (ok|failed), sandbox, and evidence (status ok) or failure.
         The governor verifies key id, signature, freshness (GOVERNOR_EVIDENCE_MAX_AGE_SECS / _MAX_SKEW_SECS,
-        wall clock), nonce replay and that doc_sha256 equals proposal.document_sha256 before any rule runs.
+        wall clock), nonce replay (nonces persisted in the state DB, so a restart does not reopen the window)
+        and that doc_sha256 equals proposal.document_sha256 before any rule runs. sandbox.network_namespace
+        must be true, else REVIEW sandbox_network_not_isolated (unless GOVERNOR_ALLOW_NO_NETNS=1).
       properties:
         payload: { type: string }
         sig: { type: string, description: base64 Ed25519 signature over payload bytes }
