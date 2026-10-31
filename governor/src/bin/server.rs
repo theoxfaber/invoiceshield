@@ -46,7 +46,7 @@ use axum::{
 use invoiceshield_governor::anchor;
 use invoiceshield_governor::auth::{bearer, Identity, KeyRing, Role};
 use invoiceshield_governor::master_store::{CallbackReport, McError, McResult, NewDetails};
-use invoiceshield_governor::persist::{ActionOutcome, Fault, ResolveOutcome, Store};
+use invoiceshield_governor::persist::{ActionOutcome, Fault, ReopenOutcome, ResolveOutcome, Store};
 use invoiceshield_governor::ratelimit::{Check, Limits};
 use invoiceshield_governor::review_queue;
 use invoiceshield_governor::TrustVerifier;
@@ -318,6 +318,48 @@ async fn resolve(
     }
 }
 
+#[derive(Deserialize)]
+#[serde(deny_unknown_fields)]
+struct Reopen {
+    reason: String,
+}
+
+/// Reopen a human-REJECTED decision so the invoice can be proposed again (operator or approver,
+/// never the identity that proposed it). Audited; the rejection itself is never erased.
+async fn reopen(
+    State(s): State<Shared>,
+    Extension(who): Extension<Identity>,
+    h: HeaderMap,
+    Path(id): Path<String>,
+    Json(r): Json<Reopen>,
+) -> impl IntoResponse {
+    if let Some(resp) = require(&who, &[Role::Operator, Role::Approver]) {
+        return resp;
+    }
+    let reason = r.reason.trim().to_string();
+    if reason.is_empty() || reason.chars().count() > 500 {
+        return err(StatusCode::BAD_REQUEST, "reason_required_1_to_500_chars");
+    }
+    let t = now(&h, s.eval_clock);
+    let id2 = id.clone();
+    let name = who.name.clone();
+    let reason2 = reason.clone();
+    match with_store(&s, move |st| st.reopen_as(&id2, &name, &reason2, t)).await {
+        Some(Ok(ReopenOutcome::Reopened)) => Json(
+            serde_json::json!({"decision_id": id, "reopened": true, "by": who.name, "reason": reason}),
+        )
+        .into_response(),
+        Some(Ok(ReopenOutcome::NotRejected)) => {
+            err(StatusCode::CONFLICT, "not_a_human_rejected_decision")
+        }
+        Some(Ok(ReopenOutcome::SelfReopen)) => err(
+            StatusCode::FORBIDDEN,
+            "maker_checker_proposer_cannot_reopen",
+        ),
+        _ => err(StatusCode::SERVICE_UNAVAILABLE, "state_unavailable"),
+    }
+}
+
 fn mc_response(
     r: Option<invoiceshield_governor::persist::Result<McResult>>,
 ) -> axum::response::Response {
@@ -570,6 +612,15 @@ async fn main() {
     if tcfg.dev_unsigned {
         tracing::warn!(event = "dev_unsigned_evidence", "DEV MODE: unsigned caller-supplied evidence is accepted. Never run this in production.");
     }
+    if tcfg.checker_keys.is_empty() && !tcfg.checker_unsigned_ok && !tcfg.dev_unsigned {
+        tracing::warn!(event = "checker_key_missing", "GOVERNOR_CHECKER_PUBKEY is not set: no checker report can be verified, so every signed decision gets a REVIEW checker signal (fail closed)");
+    }
+    if tcfg.checker_unsigned_ok {
+        tracing::warn!(event = "checker_unsigned_ok", "GOVERNOR_CHECKER_UNSIGNED_OK=1: unsigned checker_raw from the agent is trusted; a compromised agent can drop the model layer. Use a checker key instead.");
+    }
+    if tcfg.allow_no_netns {
+        tracing::warn!(event = "allow_no_netns", "GOVERNOR_ALLOW_NO_NETNS=1: evidence extracted WITHOUT a network namespace is accepted (sandbox network isolation reduced to Python socket patching)");
+    }
     let db = std::env::var("GOVERNOR_DB").unwrap_or_else(|_| {
         if eval_clock {
             ":memory:".into()
@@ -681,6 +732,7 @@ async fn main() {
         .route("/v1/reviews", get(list_reviews))
         .route("/v1/decisions/:id", get(get_decision))
         .route("/v1/decisions/:id/resolve", post(resolve))
+        .route("/v1/decisions/:id/reopen", post(reopen))
         .route("/v1/audit/verify", get(audit_verify))
         .route("/v1/eval/reset", post(eval_reset))
         .route("/v1/master-changes", post(mc_create))

@@ -117,6 +117,7 @@ fn run(evidence: Evidence, proposed: Option<Vec<ItemLine>>) -> invoiceshield_gov
             evidence,
             checker_raw: Some(CLEAN.into()),
             proposed_item_lines: proposed,
+            ..Default::default()
         },
         1_000,
     )
@@ -252,6 +253,7 @@ fn model_lines_cannot_clear_another_review() {
             evidence: ev(TEXT, Some(35_400_00)),
             checker_raw: Some(CLEAN.into()),
             proposed_item_lines: Some(good_lines()),
+            ..Default::default()
         },
         1_000,
     );

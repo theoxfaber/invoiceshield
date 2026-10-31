@@ -11,7 +11,7 @@
 //! GOVERNOR_ANCHOR_KEY_FILE. Verifiers pin the public key (GOVERNOR_ANCHOR_PUBKEY or
 //! `--pubkey`); the key inside an anchor line is informational and never trusted.
 use crate::audit::{AuditLog, AuditRecord};
-use ed25519_dalek::{Signature, Signer, SigningKey, Verifier, VerifyingKey};
+use ed25519_dalek::{Signature, Signer, SigningKey, VerifyingKey};
 use serde::{Deserialize, Serialize};
 use std::io::{BufRead, Write};
 use std::path::Path;
@@ -54,8 +54,10 @@ pub fn check_sig(a: &Anchor, trusted: &VerifyingKey) -> bool {
         return false;
     };
     a.v == 1
+        // verify_strict (finding 5): rejects small-order keys and non-canonical signatures,
+        // the same check trust.rs applies to evidence.
         && trusted
-            .verify(
+            .verify_strict(
                 &message(a.seq, &a.head_hash, a.ts),
                 &Signature::from_bytes(&arr),
             )
@@ -235,4 +237,42 @@ pub async fn post(url: &str, a: &Anchor) -> Result<u16, String> {
     tokio::time::timeout(std::time::Duration::from_secs(5), fut)
         .await
         .map_err(|_| "timeout".to_string())?
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use ed25519_dalek::Verifier;
+
+    /// Finding 5: a small-order (identity) public key with the all-zero-scalar signature passes
+    /// the lenient `verify` but must fail `check_sig`, which now uses `verify_strict`.
+    #[test]
+    fn weak_key_signature_rejected_by_strict_check() {
+        let mut id = [0u8; 32];
+        id[0] = 1; // compressed Edwards identity
+        let weak = VerifyingKey::from_bytes(&id).expect("identity decodes");
+        let mut sig = [0u8; 64];
+        sig[0] = 1; // R = identity, S = 0
+        let msg = message(7, "abc", 1_800_000_000);
+        assert!(
+            weak.verify(&msg, &Signature::from_bytes(&sig)).is_ok(),
+            "precondition: the lenient check accepts this forgery"
+        );
+        let a = Anchor {
+            v: 1,
+            seq: 7,
+            head_hash: "abc".into(),
+            ts: 1_800_000_000,
+            pubkey: hex::encode(id),
+            sig: hex::encode(sig),
+        };
+        assert!(!check_sig(&a, &weak));
+    }
+
+    #[test]
+    fn genuine_anchor_still_verifies() {
+        let k = generate_key();
+        let a = sign(&k, 3, "deadbeef", 1_800_000_000);
+        assert!(check_sig(&a, &k.verifying_key()));
+    }
 }

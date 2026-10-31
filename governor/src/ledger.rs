@@ -38,6 +38,10 @@ pub struct Entry {
     /// prints a quantity and a rate (lump-sum "as per PO" billing).
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub lines_key: Option<String>,
+    /// A human-rejected entry an operator/approver explicitly reopened (persist.rs
+    /// `rejection_reopens`). Never stored in the entry JSON; set when the ledger is loaded.
+    #[serde(default, skip_serializing)]
+    pub reopened: bool,
 }
 
 fn inr() -> String {
@@ -54,6 +58,41 @@ impl Ledger {
         self.entries
             .iter()
             .filter(|e| e.status != EntryStatus::Rejected)
+    }
+
+    /// A human-REJECTED entry for this invoice that nobody reopened: same vendor and normalised
+    /// number, or same IRN, or (same vendor) the same document text. No time window: a rejection
+    /// is permanent until an operator/approver reopens it.
+    pub fn previously_rejected(
+        &self,
+        vendor_id: &str,
+        invoice_key: &str,
+        irn: Option<&str>,
+        content_key: Option<&str>,
+    ) -> Option<&Entry> {
+        self.entries.iter().find(|e| {
+            e.status == EntryStatus::Rejected
+                && !e.reopened
+                && ((e.vendor_id == vendor_id
+                    && (e.invoice_key == invoice_key
+                        || (content_key.is_some() && e.content_key.as_deref() == content_key)))
+                    || (irn.is_some() && e.irn.as_deref() == irn))
+        })
+    }
+
+    /// Mark a human-rejected entry as reopened. False unless it is rejected and not yet reopened.
+    pub fn reopen(&mut self, decision_id: &str) -> bool {
+        match self
+            .entries
+            .iter_mut()
+            .find(|e| e.decision_id == decision_id)
+        {
+            Some(e) if e.status == EntryStatus::Rejected && !e.reopened => {
+                e.reopened = true;
+                true
+            }
+            _ => false,
+        }
     }
 
     pub fn exact_duplicate(

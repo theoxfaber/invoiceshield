@@ -692,7 +692,7 @@ fn invalid_new_details_are_refused() {
 // ------------------------------------------------------------------ migration
 
 #[test]
-fn v1_database_migrates_to_v2_and_keeps_its_data() {
+fn v1_database_migrates_to_latest_and_keeps_its_data() {
     let dir = tmpdir("mig");
     let db = dir.join("v1.db");
     // Build a v1 database exactly as Phase 3 wrote it: create a v2 store, then strip it back.
@@ -703,7 +703,9 @@ fn v1_database_migrates_to_v2_and_keeps_its_data() {
     {
         let c = Connection::open(&db).unwrap();
         c.execute_batch(
-            "DROP TRIGGER review_checker_not_proposer; DROP TABLE review_resolutions;
+            "DROP TRIGGER reopen_only_rejected; DROP TRIGGER reopen_not_proposer;
+             DROP TRIGGER rejection_reopens_no_update; DROP TABLE rejection_reopens; DROP TABLE used_nonces;
+             DROP TRIGGER review_checker_not_proposer; DROP TABLE review_resolutions;
              DROP TRIGGER master_change_checker_not_maker; DROP TABLE master_change_approvals;
              DROP TRIGGER master_change_final; DROP INDEX master_changes_one_open; DROP TABLE master_changes;
              ALTER TABLE decisions DROP COLUMN proposed_by; PRAGMA user_version = 1;",
@@ -715,7 +717,7 @@ fn v1_database_migrates_to_v2_and_keeps_its_data() {
         .conn()
         .query_row("PRAGMA user_version", [], |r| r.get(0))
         .unwrap();
-    assert_eq!((v, SCHEMA_VERSION), (2, 2));
+    assert_eq!((v, SCHEMA_VERSION), (3, 3));
     let d = fresh(s.act(&body("INV-OLD", 1_000), 10, None).unwrap());
     assert_eq!(
         d.verdict,
