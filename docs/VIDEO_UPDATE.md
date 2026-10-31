@@ -1,6 +1,6 @@
 # Video update: final numbers (Oct 31, 2026)
 
-Use only these numbers in the re-recorded video and its captions. Each comes from a file in `eval/results/`; the frozen commit for the held-out run is `55fb679`. Say which set a number is from every time it appears.
+Use only these numbers in the re-recorded video and its captions. Each comes from the file named next to it (all under `eval/results/`); the frozen commit for the held-out run is `55fb679`. Say which set a number is from every time it appears.
 
 ## Numbers to say
 
@@ -45,3 +45,18 @@ Sources: `ui/console.html` (evidence console, static, opens from disk, banner "R
 | 10 Close (callback) | **Real approver queue** (`/v1/ui/review`, served by the governor) with three recorded REVIEWs held: X04 (V001 Sharma Office Supplies, ₹59,000, `bank_details_differ_from_master`, "Payment can only go to the account on file; confirm with the vendor by phone."), X_ifsc (V002, ₹17,700), X_hi (V009, ₹23,600, + `checker_unparseable`). Each card shows "Pays (vendor master): BENE_V001 · Bank of Baroda". | `make review-demo`, then the printed URL + key | `approver-signin.png`, `approver-queue.png` | **L02 and OC1 cannot be shown in this queue**: both are BLOCK, which is final, and the queue lists only pending REVIEWs (`governor/src/review_queue.rs`). Showing them there would need a gate change, which the freeze rules out. Use **X04** for the callback (same supplier, same ₹59,000, swapped account, REVIEW) and change the VO so it does not claim it is the cold-open invoice, e.g. "A swapped-account invoice from that same supplier waits in a queue while someone calls them on the number on file." The page shows normalised invoice keys (`SOS26270232`) and "Signed in as operator" (the demo approver identity). |
 
 Not built: a live (non-recorded) Muse Spark Open take, and B01-photo in the same queue as X04 (same vendor, PO and amount: with X04 pending, the gate counts both against the PO's open balance and would BLOCK the second as `over_po_balance`; `ui/review_demo.py` shows it judged on its own instead).
+
+## v3-prep re-runs (Oct 31, after the fixes; NOT blind)
+
+These numbers come from re-running v1 and v2 **after** fixes written while looking at both sets. They may appear on screen only with the label **"re-run on seen documents, not blind"**, never as a held-out or blind result, and never in place of the v2 row above (the one held-out run stays `eval/results/heldout-v2-run2-55fb679.score.json`).
+
+| Number | Exact wording to use | File |
+|---|---|---|
+| v2 re-run, rules + model: 0/40 attacks paid, 18/18 genuine paid (before the fixes 0/40 and 6/18) | "After the fixes, re-running the second set (which we had now seen): no attack paid, and all 18 genuine invoices went through. Not a blind number." | `eval/results/regress-after-d7cdfb6/summary.json`, `eval/results/regress-before-cf9c591/summary.json` |
+| v2 re-run, rules alone: 1/40 attacks paid (`case_055`), 18/18 genuine paid | "Rules alone now let one prompt injection through, to the vendor's own account; with Muse Spark Open's checker it was blocked." | `eval/results/regress-after-d7cdfb6/v2.score.json`, `eval/results/model_marginal.json` |
+| v1 re-run, rules + model: 0/40 attacks paid, 14/18 genuine paid | "On the first set's re-run: still no attack paid; 4 genuine invoices still go to a human." | `eval/results/regress-after-d7cdfb6/summary.json` |
+| Item tables read: v2 0/60 → 58/60 PDFs | "The parser now reads 58 of those 60 invoice tables. On documents we had seen." | `eval/results/regress-before-cf9c591/summary.json`, `eval/results/regress-after-d7cdfb6/summary.json` |
+| Model marginal: changes 3/60 v2 verdicts and 5/60 v1 verdicts; never cost a genuine payment | "On these re-runs the model changed 3 of 60 verdicts on the second set, all toward the label, and never stopped a genuine payment." | `eval/results/model_marginal.json` |
+| Clean set: 60/60 paid on both paths | "Sixty genuine invoices from our generator: all paid." | `eval/results/regress-after-d7cdfb6/clean_arms.jsonl` |
+
+Do not say the gate now "reads any layout" or quote 58/60 without "seen documents". The sandbox (`docs/SANDBOX.md`) is **not deployed**: do not show a public URL or a live counter.

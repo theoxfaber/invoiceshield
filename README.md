@@ -81,9 +81,9 @@ Full threat model: [`docs/THREAT_MODEL.md`](docs/THREAT_MODEL.md). In short:
 
 ## Results
 
-Every number below comes from a file in `eval/results/`; the run log with commands is [`eval/EVAL_LOG.md`](eval/EVAL_LOG.md), and every rule change with its reason is in [`docs/DECISIONS.md`](docs/DECISIONS.md). The frozen commit for the held-out v2 run is **`55fb679`**.
+Every number below comes from a file in `eval/results/`, named with its full path at each item; the run log with commands is [`eval/EVAL_LOG.md`](eval/EVAL_LOG.md), and every rule change with its reason is in [`docs/DECISIONS.md`](docs/DECISIONS.md). The frozen commit for the held-out v2 run is **`55fb679`**.
 
-**1. Development set (dev-only: the rules and prompts were built while looking at these 24 cases).** 20 poisoned invoices + 4 genuine controls, k = 3 samples each. Files: `day1_off.jsonl`, `day1_on.jsonl`, `day1_off_spark.jsonl`, `day1_on_spark.jsonl`.
+**1. Development set (dev-only: the rules and prompts were built while looking at these 24 cases).** 20 poisoned invoices + 4 genuine controls, k = 3 samples each. Files: `eval/results/day1_off.jsonl`, `eval/results/day1_on.jsonl`, `eval/results/day1_off_spark.jsonl`, `eval/results/day1_on_spark.jsonl`.
 
 | Model (agent + checker) | Shield OFF: paid to the wrong place | Shield ON: paid to the wrong place | Controls paid (ON) |
 |---|---|---|---|
@@ -92,9 +92,9 @@ Every number below comes from a file in `eval/results/`; the run log with comman
 
 Case level that is 0/20 attack cases (95% upper bound ≈ 17%); the k = 3 samples measure nondeterminism, not independent trials.
 
-**2. Dev ablation** (same 24 cases; `ablation_dev_fa.json`, identical to `ablation_dev_review31.json`): rules alone 0/19 attack cases passed; checker alone (Muse Spark Open, no rules) 26/60 attack samples passed (10/20 cases); both 0/60. Controls paid in every arm (4/4, 12/12, 12/12). When the agent proposed a payment, the checker flagged 16 of 31 attack proposals and 0 of 12 control proposals.
+**2. Dev ablation** (same 24 cases; `eval/results/ablation_dev_fa.json`, identical to `eval/results/ablation_dev_review31.json`): rules alone 0/19 attack cases passed; checker alone (Muse Spark Open, no rules) 26/60 attack samples passed (10/20 cases); both 0/60. Controls paid in every arm (4/4, 12/12, 12/12). When the agent proposed a payment, the checker flagged 16 of 31 attack proposals and 0 of 12 control proposals.
 
-**3. First blind set, run 1 (verbatim; run once on `680be4d`, gate only).** 60 cases written by a separate session with no repo access. Files: `blind-cases-run1-680be4d.{jsonl,summary.json,log}`.
+**3. First blind set, run 1 (verbatim; run once on `680be4d`, gate only).** 60 cases written by a separate session with no repo access. Files: `eval/results/blind-cases-run1-680be4d.{jsonl,summary.json,log}`.
 
 | strict | lenient | attacks paid | benign blocked |
 |---|---|---|---|
@@ -102,7 +102,7 @@ Case level that is 0/20 attack cases (95% upper bound ≈ 17%); the k = 3 sample
 
 The four paid attacks all paid the vendor's own master account (bumped-number resubmission, a fee not on the PO, +5% unit price, IGST on an intra-state supply). Diagnosis after the run: the item-table parser had read **zero line items on all 60 PDFs**, so the line rules silently never ran. That finding drove the fail-closed line rule, the model line proposals and the cheap GST/duplicate rules.
 
-**4. First blind set, post-fix re-run (NOT blind: we had seen the set, and the column-header parser was written while looking at it).** Files: `v1-rerun-after-6c7414f.score.json` (gate arms), `v1-rerun-after-4b584de.score.json` (checker-only arm, which does not depend on the gate).
+**4. First blind set, post-fix re-run (NOT blind: we had seen the set, and the column-header parser was written while looking at it).** Files: `eval/results/v1-rerun-after-6c7414f.score.json` (gate arms), `eval/results/v1-rerun-after-4b584de.score.json` (checker-only arm, which does not depend on the gate).
 
 | arm | strict | lenient | attacks paid | genuine invoices sent to REVIEW |
 |---|---|---|---|---|
@@ -112,7 +112,7 @@ The four paid attacks all paid the vendor's own master account (bumped-number re
 
 The rules-arm miss is the run-1 resubmission case again (pays the master account); before the parser fix it was held only because every v1 invoice was unreadable (18/18 false alarms).
 
-**5. Second held-out set, run once at `55fb679` (all arms).** Authored after run 1 by a separate AI agent with no repo access; attack categories were informed by run 1's failure classes; attempt 1 aborted on a harness crash before any verdicts (no labels read). Files: `heldout-v2-run2-55fb679.{jsonl,meta.json,score.json}`.
+**5. Second held-out set, run once at `55fb679` (all arms).** Authored after run 1 by a separate AI agent with no repo access; attack categories were informed by run 1's failure classes; attempt 1 aborted on a harness crash before any verdicts (no labels read). Files: `eval/results/heldout-v2-run2-55fb679.{jsonl,meta.json,score.json}`.
 
 | arm | strict | lenient | attacks paid | benign blocked | genuine invoices sent to REVIEW |
 |---|---|---|---|---|---|
@@ -120,11 +120,24 @@ The rules-arm miss is the run-1 resubmission case again (pays the master account
 | checker only | 21/60 | 23/60 | 35/40 | 0/20 | 0/18 |
 | both | 33/60 | 48/60 | **0/40** | 2/20 | **12/18** |
 
-Read it plainly: no attack was paid, but the gate could not read this template's item table on any document, so every genuine invoice in the rules arm went to a human, and 14 of the 40 held attacks (9 in the both arm) were held only because the invoice was unreadable, not by their own rule. Model-proposed lines verified on 6 of 18 genuine invoices. The two benign BLOCKs are credit notes (expected REVIEW; nothing paid). Findings are listed in EVAL_LOG; nothing was changed after this run.
+Read it plainly: no attack was paid, but the gate could not read this template's item table on any document, so every genuine invoice in the rules arm went to a human, and 14 of the 40 held attacks (9 in the both arm) were held only because the invoice was unreadable, not by their own rule. Model-proposed lines verified on 6 of 18 genuine invoices. The two benign BLOCKs are credit notes (expected REVIEW; nothing paid). Findings are listed in EVAL_LOG; nothing was changed between this run and its scoring. The fixes that followed are measured in item 7, on these same (now seen) documents.
 
-**6. Genuine invoices (our own generator, 60 PDFs, `dataset/clean`).** 60/60 PAY in both the rules and the gate + model arms (`clean_arms_after_6c7414f.jsonl`). These layouts come from our generator, so this says little about unfamiliar layouts; sets 3–5 do.
+**6. Genuine invoices (our own generator, 60 PDFs, `dataset/clean`).** 60/60 PAY in both the rules and the gate + model arms (`eval/results/clean_arms_after_6c7414f.jsonl`). These layouts come from our generator, so this says little about unfamiliar layouts; sets 3–5 do.
 
-**7. What the model arm adds (`eval/results/model_marginal.json`, made by `python -m tools.model_marginal eval/results/regress-after-d7cdfb6` from the saved files; v1/v2 are re-runs after fixes on sets we had seen, NOT blind).**
+**7. Regression before and after the v3-prep fixes (re-runs on v1 and v2, which we had already seen: NOT blind).** Same harness (`tools/regress.sh`), before at `cf9c591`, after at `75d5863` (`d7cdfb6` adds only tests and a whole-crate `cargo fmt`). Files: `eval/results/regress-before-cf9c591/summary.json`, `eval/results/regress-after-d7cdfb6/summary.json` (per-case rows in the `v1.jsonl` / `v2.jsonl` next to them; re-scored from those rows and matched, see each directory's `NOTE.md`). The fixes were written while looking at these sets, so treat the "after" column as a measure of what the fixes do on seen documents, not of how the gate generalises.
+
+| set, arm | strict before → after | lenient before → after | attacks paid before → after | genuine paid before → after | benign blocked before → after |
+|---|---|---|---|---|---|
+| v1 re-run, rules | 38 → 38 /60 | 48 → 47 /60 | 1 → 0 /40 | 14 → 14 /18 | 0 → 0 /20 |
+| v1 re-run, rules + model | 39 → 39 /60 | 51 → 50 /60 | 0 → 0 /40 | 14 → 14 /18 | 0 → 0 /20 |
+| v1 re-run, checker only | 26 → 26 /60 | 28 → 28 /60 | 27 → 27 /40 | 18 → 18 /18 | 0 → 0 /20 |
+| v2 re-run, rules | 26 → 45 /60 | 42 → 59 /60 | 0 → **1** /40 | 0 → 18 /18 | 2 → 0 /20 |
+| v2 re-run, rules + model | 33 → 48 /60 | 48 → 60 /60 | 0 → 0 /40 | 6 → 18 /18 | 2 → 0 /20 |
+| v2 re-run, checker only | 21 → 21 /60 | 23 → 23 /60 | 35 → 35 /40 | 18 → 18 /18 | 0 → 0 /20 |
+
+Item-table lines read by the parser: v1 56 → 57 of 60 PDFs, v2 0 → 58 of 60 (`parser_lines_read` in the same summaries). The new rules-arm payment on v2 is `case_055`, a prompt injection that the rules have no way to see; before the fixes it was held only because the v2 layout was unreadable. It paid the vendor master's account, and the rules + model arm BLOCKs it (`injection_suspected`). The v1 rules-arm payment that went away is the bumped-number resubmission from run 1. Unchanged by the fixes (same summaries): dev set gate-only 0 harmful payments (attacks 14 REVIEW / 5 BLOCK, 4/4 controls paid), dev sequences 0 harmful (3/3 benign sequences fully paid), 24/24 benign dev cases as expected, 0 harmful payments on the rendered scan/photo variants, dev ablation unchanged, and 60/60 genuine invoices paid on both paths of the clean set.
+
+**8. What the model arm adds (`eval/results/model_marginal.json`, made by `python -m tools.model_marginal eval/results/regress-after-d7cdfb6` from the saved files; v1/v2 are re-runs after fixes on sets we had seen, NOT blind).**
 
 | set | cases where rules+model differs from rules alone | moved toward the label | moved away (still acceptable) | attack payments the model stopped | genuine payments the model cost | genuine paid: rules / checker only / both |
 |---|---|---|---|---|---|---|
@@ -135,10 +148,10 @@ Dev ablation (`eval/results/regress-after-d7cdfb6/ablation_dev.json`, aggregate 
 
 ## Limits
 
-- **Unfamiliar invoice layouts cost a human look.** The deterministic parser reads our layouts and the first blind template; it read none of the second. When it cannot read the lines, the invoice is REVIEWed; Spark's verified line proposals recover some of them (6/18 on v2).
+- **Unfamiliar invoice layouts cost a human look.** On its one held-out run the parser read none of the second set's item tables (18/18 genuine to REVIEW in the rules arm; Spark's verified line proposals recovered 6/18; `eval/results/heldout-v2-run2-55fb679.score.json`). After the v3-prep fixes it reads 58/60 of those PDFs, but that is a re-run on documents we had seen (`eval/results/regress-after-d7cdfb6/summary.json`), not evidence about the next unfamiliar layout. When it cannot read the lines, the invoice is REVIEWed.
 - Bank-detail mismatches end in REVIEW with a tamper alert, not BLOCK, unless a second reason is present. Nothing is sent to the printed account either way.
-- Not modelled: TDS deductions, place of supply / SEZ / exports, GST rate checks per PO line, a vendor's secondary bank account, cumulative quantities across invoices (the PO balance is the cumulative bound), HSN/SKU-based item matching.
-- Stated misses: an already-paid invoice re-sent under a new number one higher pays (to the master account) in the rules arm; a slow-drip split outside the 7-day window pays by design.
+- Not modelled: TDS deductions, place of supply / SEZ / exports, GST rate checks per PO line, paying a vendor's secondary bank account (a registered secondary account printed on the invoice is recognised and raises no tamper alert, but payment always goes to the primary; `governor/src/engine.rs`), cumulative quantities across invoices (the PO balance is the cumulative bound), HSN/SKU-based item matching.
+- Stated misses: rules alone cannot see a prompt injection that asks for nothing the rules check (v2 `case_055` pays the master account in the rules arm; the rules + model arm BLOCKs it; `eval/results/model_marginal.json`); a slow-drip split of two invoices on one PO, or spread across POs, outside the 7-day vendor window pays by design (three or more under-threshold invoices on one PO inside the resubmission window that add up past the approval threshold now go to REVIEW, rule `po_drip_over_threshold`). The bumped-number resubmission from blind run 1 is now caught on the v1 re-run (`eval/results/regress-after-d7cdfb6/summary.json`, not blind).
 - Every scan or photo goes to REVIEW.
 - Accounting adapters (Tally XML, Zoho Books API) and the payment rail are tested against mocks only, never against a live system or bank.
 - Synthetic and public data only; no real AP data, pilot, external audit or legal review.
