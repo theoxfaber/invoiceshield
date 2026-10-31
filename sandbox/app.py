@@ -66,7 +66,7 @@ IP_PER_MIN = env_int("SANDBOX_IP_PER_MIN", 4)
 IP_BURST = env_int("SANDBOX_IP_BURST", 4)
 IP_PER_DAY = env_int("SANDBOX_IP_PER_DAY", 40)
 DAILY_CAP = env_int("SANDBOX_DAILY_CAP", 500)
-MODEL_CALLS_PER_DAY = env_int("SANDBOX_MODEL_CALLS_PER_DAY", 100)
+MODEL_CALLS_PER_DAY = env_int("SANDBOX_MODEL_CALLS_PER_DAY", 50)  # = the Render deployment (README)
 
 
 def env_float(name: str, default: float) -> float:
@@ -81,7 +81,7 @@ def env_float(name: str, default: float) -> float:
 # proposal with page images, up to 6000 output tokens); check it against the provider's bill and lower
 # SANDBOX_SPEND_CAP_USD if real calls cost more. The ceiling can only be lowered, never raised past $10.
 HARD_SPEND_CEILING_USD = 9.50
-SPEND_CAP_USD = min(env_float("SANDBOX_SPEND_CAP_USD", 9.00), HARD_SPEND_CEILING_USD)
+SPEND_CAP_USD = min(env_float("SANDBOX_SPEND_CAP_USD", 5.00), HARD_SPEND_CEILING_USD)  # $5 -> 250 calls at $0.02
 USD_PER_MODEL_CALL = max(env_float("SANDBOX_USD_PER_MODEL_CALL", 0.02), 0.001)
 MODEL_CALLS_TOTAL = int(SPEND_CAP_USD / USD_PER_MODEL_CALL)
 MAX_BYTES = env_int("SANDBOX_MAX_BYTES", 2 * 1024 * 1024)

@@ -18,8 +18,8 @@ master's beneficiary id.
 | Per-IP daily cap | 40 requests | `SANDBOX_IP_PER_DAY` | HTTP 429 |
 | Global daily cap | 500 requests | `SANDBOX_DAILY_CAP` | HTTP 429 for everyone until 00:00 UTC |
 | Tracked IPs | 50,000 per day | (constant) | new IPs get HTTP 429 (fail closed) |
-| Daily model calls | 100 | `SANDBOX_MODEL_CALLS_PER_DAY` | no model call; no checker report, so the governor answers **REVIEW** |
-| Lifetime model calls (spend cap) | floor(9.00 / 0.02) = 450 calls | `SANDBOX_SPEND_CAP_USD` (clamped to at most 9.50), `SANDBOX_USD_PER_MODEL_CALL` | no model call ever again for this state file; every request is **REVIEW** at most |
+| Daily model calls | 50 | `SANDBOX_MODEL_CALLS_PER_DAY` | no model call; no checker report, so the governor answers **REVIEW** |
+| Lifetime model calls (spend cap) | floor(5.00 / 0.02) = 250 calls ($5) | `SANDBOX_SPEND_CAP_USD` (clamped to at most 9.50), `SANDBOX_USD_PER_MODEL_CALL` | no model call ever again for this state file; every request is **REVIEW** at most |
 
 - **Spend stays under $10.** The lifetime cap is counted in the state file (`SANDBOX_STATE`, a volume in
   compose), so a restart does not reset it. The spend ceiling cannot be raised past $9.50 by configuration
