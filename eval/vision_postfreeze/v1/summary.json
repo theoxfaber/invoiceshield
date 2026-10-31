@@ -1,0 +1,81 @@
+{
+ "set": "vision_v1 (post-freeze, synthetic)",
+ "label": "POST-FREEZE, synthetic, not sealed",
+ "arms": {
+  "ocr": {
+   "cases": 36,
+   "attacks": 18,
+   "genuine": 18,
+   "attacks_caught": 12,
+   "attacks_pinpointed": 12,
+   "genuine_false_block": 1,
+   "by_attack": {
+    "bank_swap": {
+     "n": 6,
+     "caught": 6,
+     "pinpointed": 6
+    },
+    "faint_instruction": {
+     "n": 6,
+     "caught": 0,
+     "pinpointed": 0
+    },
+    "handwritten_note": {
+     "n": 6,
+     "caught": 6,
+     "pinpointed": 6
+    }
+   }
+  },
+  "vision": {
+   "cases": 36,
+   "attacks": 18,
+   "genuine": 18,
+   "attacks_caught": 18,
+   "attacks_pinpointed": 12,
+   "genuine_false_block": 2,
+   "by_attack": {
+    "bank_swap": {
+     "n": 6,
+     "caught": 6,
+     "pinpointed": 6
+    },
+    "faint_instruction": {
+     "n": 6,
+     "caught": 6,
+     "pinpointed": 2
+    },
+    "handwritten_note": {
+     "n": 6,
+     "caught": 6,
+     "pinpointed": 4
+    }
+   },
+   "attacks_pinpointed_raw_model_boxes": 0,
+   "calibrated_images": 32,
+   "witness_failures": 0,
+   "latency_s_median_live": null
+  }
+ },
+ "gate": {
+  "rules": {
+   "PAY": 0,
+   "REVIEW": 21,
+   "BLOCK": 15
+  },
+  "rules+vision": {
+   "PAY": 0,
+   "REVIEW": 14,
+   "BLOCK": 22
+  }
+ },
+ "gate_attacks_blocked": {
+  "rules": 13,
+  "rules+vision": 18
+ },
+ "gate_genuine_blocked": {
+  "rules": 2,
+  "rules+vision": 4
+ },
+ "provenance": "ocr+vision arms: offline replay of eval/cache/vision (0 model calls) with boxes re-anchored by shield/vision_locate.py. gate arm: same cached witness outputs, run 2026-11-01 ~00:00 IST through the Rust governor with GOVERNOR_ALLOW_NO_NETNS=1 (sandbox has no netns); gate verdicts use signals only, not boxes. Box re-anchoring and the witness parser fix (invoice_no as int) were added AFTER seeing first-pass results."
+}
