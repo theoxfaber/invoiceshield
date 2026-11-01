@@ -6,6 +6,8 @@
 
 > Built during the Meta Global AI Developer Hackathon (Oct 26 – Nov 4, 2026). All vendors, GSTINs, accounts and invoices in this repo are fictional; any match with a real business, account or domain is coincidental. No real payment, bank, customer or pilot is involved. Not financial, tax or legal advice.
 
+**Prior art:** the author's earlier open-source project [`agentic-payment-risk-governor`](https://github.com/theoxfaber/agentic-payment-risk-governor) (a Rust payment gateway) inspired the idea of a fail-closed governor. It is cited as prior work only; no code, data or fixtures were copied, and everything in this repository was written during the event ([`docs/BUILD_LOG.md`](docs/BUILD_LOG.md)).
+
 **Live sandbox:** <https://invoiceshield-sandbox.onrender.com> (Render free tier, may take about a minute to wake). Hard caps: $5 lifetime model spend, 50 model calls a day (past either cap the gate answers REVIEW at most), synthetic data only; do not upload real invoices. Details in [`docs/SANDBOX.md`](docs/SANDBOX.md).
 
 **What makes it different:** the model has no bank field to fill in (a proposal that carries one is BLOCKed); the invoice's issuer GSTIN is checksum-validated and must match the vendor master; any account or IFSC printed anywhere in the document (format-checked, look-alike characters flagged) is compared with the master and a mismatch is a tamper alert; and changing a vendor's bank details on the server requires a call-back to the number on file, two approvers who are not the maker, and a cooling-off period (72 h by default) before it takes effect.
@@ -161,6 +163,18 @@ Item-table lines read by the parser: v1 56 → 57 of 60 PDFs, v2 0 → 58 of 60 
 | v2 re-run | 3/60 | 3 (case_046, case_049: REVIEW to BLOCK; case_055: PAY to BLOCK) | 0 | 1 (case_055, a prompt injection the rules alone paid to the master account) | 0 | 18/18 / 18/18 / 18/18 |
 
 Dev ablation (`eval/results/regress-after-d7cdfb6/ablation_dev.json`, aggregate only): attacks passed 0/19 rules, 26/60 checker only, 0/60 both; controls paid 4/4, 12/12, 12/12. Clean set (`eval/results/regress-after-d7cdfb6/clean_arms.jsonl`): 60/60 paid on both paths. So the model's measurable job here is narrow: it caught one injection the rules let through and made a few holds stricter, and on these sets it never cost a genuine payment.
+
+**9. Phone photos and scans: the Spark Open photo witness (post-freeze, synthetic, NOT sealed; `eval/vision_postfreeze/v1/summary.json`, write-up in [`docs/META_VISION.md`](docs/META_VISION.md)).** Muse Spark Open reads the page image and reports payee, account, IFSC, total and any notices with the exact text it saw; deterministic code compares that with the vendor master and can only escalate (never approve). 36 synthetic photo/scan images (18 genuine, 18 attacks, 6 per class), replayed offline from `eval/cache/vision` with 0 model calls:
+
+| | gate rules alone | gate + Spark Open witness |
+|---|---|---|
+| Faint printed "bank details changed" instruction | 1/6 blocked | **6/6 blocked** (tesseract OCR witness: 0/6) |
+| Bank swap / handwritten note | 6/6 / 6/6 | 6/6 / 6/6 |
+| All attacks blocked | 13/18 | **18/18** |
+| Genuine photos blocked | 2/18 | 4/18 |
+| Genuine photos paid automatically | 0 | 0 (photos never auto-PAY) |
+
+This is the case where the model, not the rules, catches the attack: OCR misses the faint line, Meta's model reads it. The cost is two extra false blocks (P20 and P23, genuine invoices with a benign "Approved for GRN" pen note), which we have not tuned away. Box re-anchoring and a parser fix were added after seeing the first pass (disclosed in `docs/META_VISION.md`).
 
 ## Limits
 
