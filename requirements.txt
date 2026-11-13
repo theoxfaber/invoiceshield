@@ -2,7 +2,7 @@
 # Kept in sync with [project.dependencies] in pyproject.toml.
 httpx==0.28.1
 pydantic==2.14.2
-pypdf==6.21.4
+pypdf==7.0.0
 reportlab==5.1.0
 Pillow==13.0.0
 cryptography==50.0.2
