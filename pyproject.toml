@@ -12,7 +12,7 @@ requires-python = ">=3.11"
 # Pinned to the versions in requirements.txt (keep the two in sync; Dependabot bumps both).
 dependencies = [
   "httpx==0.28.1",
-  "pydantic==2.14.2",
+  "pydantic==2.14.3",
   "pypdf==6.21.4",
   "reportlab==5.1.0",
   "Pillow==13.0.0",
@@ -20,8 +20,8 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
-test = ["pytest==9.2.0", "hypothesis==6.170.14"]
-dev = ["pytest==9.2.0", "hypothesis==6.170.14", "ruff==0.17.3", "pip-audit==2.10.1"]
+test = ["pytest==9.2.0", "hypothesis==6.170.15"]
+dev = ["pytest==9.2.0", "hypothesis==6.170.15", "ruff==0.17.4", "pip-audit==2.10.1"]
 
 [tool.setuptools.packages.find]
 include = ["agent*", "integrations*", "assembler*", "extractor*", "checker*", "providers*", "shield*", "structural*", "dataset*", "eval*", "ui*"]
